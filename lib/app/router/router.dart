@@ -1,8 +1,12 @@
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:numu/features/home/home_screen.dart';
 import 'package:numu/features/profile/profile_screen.dart';
 import 'package:numu/features/settings/settings_screen.dart';
 import 'package:numu/features/tasks/tasks_screen.dart';
+import 'package:numu/features/habits/screens/habits_screen.dart';
+import 'package:numu/features/habits/screens/add_habit_screen.dart';
+import 'package:numu/features/habits/screens/habit_detail_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:numu/app/shell/numu_app_shell.dart';
 
@@ -44,6 +48,33 @@ final routerProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => NoTransitionPage(
               child: TasksScreen(),
             ),
+          ),
+          
+          GoRoute(
+            path: '/habits',
+            name: 'habits',
+            pageBuilder: (context, state) => NoTransitionPage(
+              child: const HabitsScreen(),
+            ),
+            routes: [
+              GoRoute(
+                path: 'add',
+                name: 'add-habit',
+                pageBuilder: (context, state) => const MaterialPage(
+                  child: AddHabitScreen(),
+                ),
+              ),
+              GoRoute(
+                path: ':id',
+                name: 'habit-detail',
+                pageBuilder: (context, state) {
+                  final habitId = int.parse(state.pathParameters['id']!);
+                  return MaterialPage(
+                    child: HabitDetailScreen(habitId: habitId),
+                  );
+                },
+              ),
+            ],
           ),
         ],
       ),

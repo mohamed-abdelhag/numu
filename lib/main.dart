@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:numu/app/app.dart';
 import 'package:numu/core/utils/core_logging_utility.dart';
-import 'package:sqflite/sqflite.dart';
 
 void main() {
   // ...no FFI initialization needed for mobile...

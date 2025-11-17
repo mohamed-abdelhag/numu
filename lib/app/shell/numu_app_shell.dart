@@ -22,6 +22,8 @@ class NumuAppShell extends StatelessWidget {
         return 'Profile';
       case '/settings':
         return 'Settings';
+      case '/habits':
+        return 'Habits';
       default:
         return 'App';
     }
@@ -76,6 +78,14 @@ class NumuAppShell extends StatelessWidget {
               onTap: () {
                 Navigator.pop(context);
                 context.go('/tasks');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.track_changes),
+              title: const Text('Habits'),
+              onTap: () {
+                Navigator.pop(context);
+                context.go('/habits');
               },
             ),
             ListTile(

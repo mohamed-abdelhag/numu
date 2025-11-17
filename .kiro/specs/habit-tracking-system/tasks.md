@@ -4,7 +4,7 @@ This implementation plan breaks down the habit tracking system into discrete, ac
 
 ## Phase 1: Core Foundation (MVP)
 
-- [-] 1. Set up database schema and core models
+- [x] 1. Set up database schema and core models
 - [x] 1.1 Update DatabaseService to create habits and habit_events tables with indexes
   - Modify `lib/core/services/database_service.dart`
   - Add table creation SQL for habits table with all basic fields
@@ -37,8 +37,8 @@ This implementation plan breaks down the habit tracking system into discrete, ac
   - Implement `copyWith()` method
   - _Requirements: 4.4, 4.5, 4.6_
 
-- [ ] 2. Implement repository layer for data access
-- [ ] 2.1 Create HabitRepository with basic CRUD operations
+- [x] 2. Implement repository layer for data access
+- [x] 2.1 Create HabitRepository with basic CRUD operations
   - Create `lib/features/habits/repositories/habit_repository.dart`
   - Implement `getActiveHabits()` method to fetch all active habits ordered by sort_order
   - Implement `getHabitById(int id)` method
@@ -48,21 +48,21 @@ This implementation plan breaks down the habit tracking system into discrete, ac
   - Use DatabaseService.instance for all database operations
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.11, 3.12_
 
-- [ ] 2.2 Add event logging methods to HabitRepository
+- [x] 2.2 Add event logging methods to HabitRepository
   - Implement `logEvent(HabitEvent event)` method
   - Implement `getEventsForDate(int habitId, DateTime date)` method
   - Implement `getEventsForHabit(int habitId, {DateTime? startDate, DateTime? endDate})` method with date range filtering
   - _Requirements: 3.7, 3.8_
 
-- [ ] 3. Create provider layer for state management
-- [ ] 3.1 Set up HabitsProvider with Riverpod code generation
+- [x] 3. Create provider layer for state management
+- [x] 3.1 Set up HabitsProvider with Riverpod code generation
   - Create `lib/features/habits/providers/habits_provider.dart`
   - Use `@riverpod` annotation and extend `_$HabitsNotifier`
   - Implement `build()` method to load active habits
   - Add `part 'habits_provider.g.dart'` directive
   - _Requirements: 5.1, 5.2, 5.8, 5.9_
 
-- [ ] 3.2 Add habit management methods to HabitsProvider
+- [x] 3.2 Add habit management methods to HabitsProvider
   - Implement `addHabit(Habit habit)` method with AsyncValue.guard
   - Implement `updateHabit(Habit habit)` method
   - Implement `archiveHabit(int id)` method
@@ -70,13 +70,13 @@ This implementation plan breaks down the habit tracking system into discrete, ac
   - Each method should refresh the habit list after operation
   - _Requirements: 5.3, 5.4, 5.5, 5.6, 5.7, 5.10_
 
-- [ ] 3.3 Generate Riverpod code
+- [x] 3.3 Generate Riverpod code
   - Run `dart run build_runner build --delete-conflicting-outputs`
   - Verify `habits_provider.g.dart` is generated correctly
   - _Requirements: 5.1_
 
-- [ ] 4. Build habits list screen
-- [ ] 4.1 Create HabitsScreen with basic layout
+- [x] 4. Build habits list screen
+- [x] 4.1 Create HabitsScreen with basic layout
   - Create `lib/features/habits/screens/habits_screen.dart`
   - Use Scaffold with NumuAppBar
   - Add Consumer widget to watch habitsNotifierProvider
@@ -85,19 +85,19 @@ This implementation plan breaks down the habit tracking system into discrete, ac
   - Add FloatingActionButton to navigate to add habit screen
   - _Requirements: 6.1, 6.4, 6.5, 6.6, 6.7, 15.4, 15.5_
 
-- [ ] 4.2 Create EmptyHabitsState widget
+- [x] 4.2 Create EmptyHabitsState widget
   - Create `lib/features/habits/widgets/empty_habits_state.dart`
   - Display icon, "No habits yet" message, and "Add Habit" button
   - Button navigates to add habit screen
   - _Requirements: 6.2, 15.1, 15.2, 15.3_
 
-- [ ] 4.3 Display habit list in HabitsScreen
+- [x] 4.3 Display habit list in HabitsScreen
   - Use ListView.builder when habits list is not empty
   - Display HabitListItem for each habit
   - _Requirements: 6.1, 6.3_
 
-- [ ] 5. Create reusable habit list item widget
-- [ ] 5.1 Build HabitListItem widget structure
+- [x] 5. Create reusable habit list item widget
+- [x] 5.1 Build HabitListItem widget structure
   - Create `lib/features/habits/widgets/habit_list_item.dart`
   - Accept Habit model as parameter
   - Use Card with InkWell for tap handling
@@ -106,7 +106,7 @@ This implementation plan breaks down the habit tracking system into discrete, ac
   - Navigate to habit detail screen on tap
   - _Requirements: 7.1, 7.2, 7.3, 7.8, 7.10_
 
-- [ ] 5.2 Add quick log button to HabitListItem
+- [x] 5.2 Add quick log button to HabitListItem
   - Create `lib/features/habits/widgets/habit_quick_log_button.dart`
   - Show check icon for binary habits
   - Show plus icon for value/timed habits
@@ -114,8 +114,8 @@ This implementation plan breaks down the habit tracking system into discrete, ac
   - Show LogHabitEventDialog for value/timed habits
   - _Requirements: 7.9, 7.10_
 
-- [ ] 6. Build add habit screen with basic form
-- [ ] 6.1 Create AddHabitScreen scaffold and form structure
+- [x] 6. Build add habit screen with basic form
+- [x] 6.1 Create AddHabitScreen scaffold and form structure
   - Create `lib/features/habits/screens/add_habit_screen.dart`
   - Use Scaffold with app bar
   - Create Form widget with GlobalKey
@@ -125,39 +125,39 @@ This implementation plan breaks down the habit tracking system into discrete, ac
   - Navigate back on successful save
   - _Requirements: 8.1, 8.2, 8.10, 8.11, 8.12, 8.13_
 
-- [ ] 6.2 Create TrackingTypeSelector widget
+- [x] 6.2 Create TrackingTypeSelector widget
   - Create `lib/features/habits/widgets/forms/tracking_type_selector.dart`
   - Use SegmentedButton with binary, value, timed options
   - Accept value and onChanged callback parameters
   - _Requirements: 8.3, 14.1, 14.9, 14.10, 14.11_
 
-- [ ] 6.3 Create GoalTypeSelector widget
+- [x] 6.3 Create GoalTypeSelector widget
   - Create `lib/features/habits/widgets/forms/goal_type_selector.dart`
   - Use SegmentedButton with none, minimum, maximum options
   - Accept value and onChanged callback parameters
   - _Requirements: 8.4, 14.2, 14.9, 14.10, 14.11_
 
-- [ ] 6.4 Create FrequencySelector widget
+- [x] 6.4 Create FrequencySelector widget
   - Create `lib/features/habits/widgets/forms/frequency_selector.dart`
   - Use SegmentedButton with daily, weekly, monthly options (custom for later phase)
   - Accept value and onChanged callback parameters
   - _Requirements: 8.7, 14.3, 14.9, 14.10, 14.11_
 
-- [ ] 6.5 Create IconPicker widget
+- [x] 6.5 Create IconPicker widget
   - Create `lib/features/habits/widgets/forms/icon_picker.dart`
   - Display grid of common emoji icons
   - Highlight selected icon
   - Accept selectedIcon and onIconSelected callback parameters
   - _Requirements: 8.8, 14.4, 14.9, 14.10, 14.11_
 
-- [ ] 6.6 Create ColorPicker widget
+- [x] 6.6 Create ColorPicker widget
   - Create `lib/features/habits/widgets/forms/color_picker.dart`
   - Display row of color circles
   - Highlight selected color with check icon
   - Accept selectedColor and onColorSelected callback parameters
   - _Requirements: 8.9, 14.5, 14.9, 14.10, 14.11_
 
-- [ ] 6.7 Integrate form widgets into AddHabitScreen
+- [x] 6.7 Integrate form widgets into AddHabitScreen
   - Add TrackingTypeSelector to form
   - Add GoalTypeSelector to form
   - Add target value TextFormField (shown when goal type is minimum/maximum)
@@ -168,7 +168,7 @@ This implementation plan breaks down the habit tracking system into discrete, ac
   - Wire up all callbacks to update form state
   - _Requirements: 8.3, 8.4, 8.5, 8.6, 8.7, 8.8, 8.9_
 
-- [ ] 6.8 Implement form submission in AddHabitScreen
+- [x] 6.8 Implement form submission in AddHabitScreen
   - Validate all required fields
   - Create Habit object with form data
   - Set default values for optional fields (activeDaysMode: all, requireMode: each, etc.)
@@ -178,15 +178,15 @@ This implementation plan breaks down the habit tracking system into discrete, ac
   - Navigate back on success
   - _Requirements: 8.10, 8.11, 8.12, 8.13_
 
-- [ ] 7. Add navigation and routing
-- [ ] 7.1 Register habits routes in router
+- [x] 7. Add navigation and routing
+- [x] 7.1 Register habits routes in router
   - Update `lib/app/router/router.dart`
   - Add '/habits' route with HabitsScreen
   - Add '/habits/add' route with AddHabitScreen
   - Add '/habits/:id' route with HabitDetailScreen (placeholder for now)
   - _Requirements: 1.4_
 
-- [ ] 7.2 Add Habits menu item to app shell drawer
+- [x] 7.2 Add Habits menu item to app shell drawer
   - Update `lib/app/shell/numu_app_shell.dart`
   - Add ListTile with "Habits" label and track_changes icon
   - Navigate to '/habits' on tap
@@ -194,24 +194,24 @@ This implementation plan breaks down the habit tracking system into discrete, ac
 
 ## Phase 2: Value Tracking & Streaks
 
-- [ ] 8. Implement streak calculation service
-- [ ] 8.1 Create streak-related database tables
+- [x] 8. Implement streak calculation service
+- [x] 8.1 Create streak-related database tables
   - Update DatabaseService to create habit_streaks table
   - Add streak_type enum file
   - _Requirements: 2.4, 4.7_
 
-- [ ] 8.2 Create HabitStreak model
+- [x] 8.2 Create HabitStreak model
   - Create `lib/features/habits/models/habit_streak.dart`
   - Define all fields from database schema
   - Implement fromMap, toMap, and copyWith methods
   - _Requirements: 4.9_
 
-- [ ] 8.3 Add streak methods to HabitRepository
+- [x] 8.3 Add streak methods to HabitRepository
   - Implement `getStreakForHabit(int habitId, StreakType type)` method
   - Implement `saveStreak(HabitStreak streak)` method
   - _Requirements: 3.1_
 
-- [ ] 8.4 Create StreakCalculationService class
+- [x] 8.4 Create StreakCalculationService class
   - Create `lib/features/habits/services/streak_calculation_service.dart`
   - Implement `recalculateStreaks(int habitId)` method
   - Implement `_calculateStreak(Habit habit, StreakType type)` private method
@@ -221,19 +221,19 @@ This implementation plan breaks down the habit tracking system into discrete, ac
   - Walk backwards from today to calculate current streak
   - _Requirements: 12.1, 12.2, 12.3, 12.4, 12.6, 12.8, 12.10_
 
-- [ ] 8.5 Integrate streak calculation into HabitsProvider
+- [x] 8.5 Integrate streak calculation into HabitsProvider
   - Update `logEvent()` method to call StreakCalculationService after logging
   - _Requirements: 12.10_
 
-- [ ] 9. Build habit detail screen
-- [ ] 9.1 Create HabitDetailProvider
+- [x] 9. Build habit detail screen
+- [x] 9.1 Create HabitDetailProvider
   - Create `lib/features/habits/providers/habit_detail_provider.dart`
   - Use @riverpod with habitId parameter
   - Load habit, events, and streaks in build() method
   - Create HabitDetailState class to hold all data
   - _Requirements: 5.1_
 
-- [ ] 9.2 Create HabitDetailScreen layout
+- [x] 9.2 Create HabitDetailScreen layout
   - Create `lib/features/habits/screens/habit_detail_screen.dart`
   - Display habit icon, name, and description
   - Add edit button in app bar that navigates to edit screen
@@ -241,7 +241,7 @@ This implementation plan breaks down the habit tracking system into discrete, ac
   - Use Consumer to watch habitDetailProvider
   - _Requirements: 10.1, 10.2, 10.8, 10.9, 10.10_
 
-- [ ] 9.3 Create HabitStreakDisplay widget
+- [x] 9.3 Create HabitStreakDisplay widget
   - Create `lib/features/habits/widgets/habit_streak_display.dart`
   - Display current streak count
   - Display longest streak
@@ -249,23 +249,23 @@ This implementation plan breaks down the habit tracking system into discrete, ac
   - Accept habitId parameter and load streak data
   - _Requirements: 10.3, 10.4, 10.5_
 
-- [ ] 9.4 Add streak display to HabitDetailScreen
+- [x] 9.4 Add streak display to HabitDetailScreen
   - Integrate HabitStreakDisplay widget
   - Show completion streak by default
   - _Requirements: 10.3, 10.4, 10.5_
 
-- [ ] 9.5 Add recent activity list to HabitDetailScreen
+- [x] 9.5 Add recent activity list to HabitDetailScreen
   - Display list of recent events with timestamps
   - Show completion status or value for each event
   - Limit to last 10 events
   - _Requirements: 10.7_
 
-- [ ] 9.6 Update HabitListItem to show streak
+- [x] 9.6 Update HabitListItem to show streak
   - Integrate HabitStreakDisplay widget into HabitListItem
   - Show compact version with just current streak
   - _Requirements: 7.4_
 
-- [ ] 10. Create log habit event dialog
+- [-] 10. Create log habit event dialog
 - [ ] 10.1 Build LogHabitEventDialog for binary habits
   - Create `lib/features/habits/widgets/log_habit_event_dialog.dart`
   - Accept Habit parameter

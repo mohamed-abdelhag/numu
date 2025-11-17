@@ -26,7 +26,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -36,6 +36,10 @@ class DatabaseService {
     if (oldVersion < 2) {
       // Add habits and habit_events tables
       await _createHabitTables(db);
+    }
+    if (oldVersion < 3) {
+      // Add habit_streaks table
+      await _createStreakTables(db);
     }
   }
 
@@ -67,6 +71,9 @@ class DatabaseService {
 
     // Create habit tables
     await _createHabitTables(db);
+    
+    // Create streak tables
+    await _createStreakTables(db);
   }
 
   Future<void> _createHabitTables(Database db) async {
@@ -139,6 +146,34 @@ class DatabaseService {
 
     await db.execute('''
       CREATE INDEX idx_habit_events_habit_date ON habit_events (habit_id, event_date)
+    ''');
+  }
+
+  Future<void> _createStreakTables(Database db) async {
+    // Create habit_streaks table
+    await db.execute('''
+      CREATE TABLE habit_streaks (
+        streak_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        habit_id INTEGER NOT NULL,
+        streak_type TEXT NOT NULL,
+        current_streak INTEGER NOT NULL DEFAULT 0,
+        current_streak_start_date TEXT,
+        longest_streak INTEGER NOT NULL DEFAULT 0,
+        longest_streak_start_date TEXT,
+        longest_streak_end_date TEXT,
+        total_completions INTEGER NOT NULL DEFAULT 0,
+        total_days_active INTEGER NOT NULL DEFAULT 0,
+        consistency_rate REAL NOT NULL DEFAULT 0,
+        last_calculated_at TEXT NOT NULL,
+        last_event_date TEXT,
+        FOREIGN KEY (habit_id) REFERENCES $habitsTable (habit_id) ON DELETE CASCADE,
+        UNIQUE (habit_id, streak_type)
+      )
+    ''');
+
+    // Create index for fast streak lookups
+    await db.execute('''
+      CREATE INDEX idx_habit_streaks_habit_type ON habit_streaks (habit_id, streak_type)
     ''');
   }
 
