@@ -38,5 +38,9 @@ lib/
 │   │   └── presentation/
 │   │
 │   │   See [Settings Feature Documentation](settings/settings_screen.md) for details.
+│   │
+│   │
+│   │
+│   ├── habits/
 │
 └── main.dart                        # Entry point

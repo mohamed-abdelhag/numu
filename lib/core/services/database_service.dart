@@ -26,9 +26,17 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Add habits and habit_events tables
+      await _createHabitTables(db);
+    }
   }
 
   // Create all tables here
@@ -51,18 +59,86 @@ class DatabaseService {
     ''');
 
     await db.execute('''
-      CREATE TABLE $habitsTable (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        frequency TEXT NOT NULL
-      )
-    ''');
-
-    await db.execute('''
       CREATE TABLE $notesTable (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         text TEXT NOT NULL
       )
+    ''');
+
+    // Create habit tables
+    await _createHabitTables(db);
+  }
+
+  Future<void> _createHabitTables(Database db) async {
+    // Create habits table with all configuration fields
+    await db.execute('''
+      CREATE TABLE $habitsTable (
+        habit_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        category_id INTEGER,
+        icon TEXT NOT NULL,
+        color TEXT NOT NULL,
+        tracking_type TEXT NOT NULL,
+        goal_type TEXT NOT NULL,
+        target_value REAL,
+        unit TEXT,
+        frequency TEXT NOT NULL,
+        custom_period_days INTEGER,
+        period_start_date TEXT,
+        active_days_mode TEXT NOT NULL,
+        active_weekdays TEXT,
+        require_mode TEXT NOT NULL,
+        time_window_enabled INTEGER NOT NULL DEFAULT 0,
+        time_window_start TEXT,
+        time_window_end TEXT,
+        time_window_mode TEXT,
+        quality_layer_enabled INTEGER NOT NULL DEFAULT 0,
+        quality_layer_label TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        is_template INTEGER NOT NULL DEFAULT 0,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        archived_at TEXT
+      )
+    ''');
+
+    // Create habit_events table
+    await db.execute('''
+      CREATE TABLE habit_events (
+        event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        habit_id INTEGER NOT NULL,
+        event_date TEXT NOT NULL,
+        event_timestamp TEXT NOT NULL,
+        completed INTEGER,
+        value REAL,
+        value_delta REAL,
+        time_recorded TEXT,
+        within_time_window INTEGER,
+        quality_achieved INTEGER,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (habit_id) REFERENCES $habitsTable (habit_id) ON DELETE CASCADE
+      )
+    ''');
+
+    // Create indexes for performance
+    await db.execute('''
+      CREATE INDEX idx_habits_is_active ON $habitsTable (is_active)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX idx_habit_events_habit_id ON habit_events (habit_id)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX idx_habit_events_event_date ON habit_events (event_date)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX idx_habit_events_habit_date ON habit_events (habit_id, event_date)
     ''');
   }
 
