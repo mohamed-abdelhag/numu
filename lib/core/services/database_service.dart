@@ -13,6 +13,8 @@ class DatabaseService {
   static const String categoriesTable = 'categories';
   static const String habitsTable = 'habits';
   static const String notesTable = 'notes';
+  static const String userProfileTable = 'user_profile';
+  static const String tutorialCardsTable = 'tutorial_cards';
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -26,7 +28,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -44,6 +46,10 @@ class DatabaseService {
     if (oldVersion < 4) {
       // Add habit_period_progress table
       await _createPeriodProgressTables(db);
+    }
+    if (oldVersion < 5) {
+      // Add user_profile and tutorial_cards tables
+      await _createProfileAndTutorialTables(db);
     }
   }
 
@@ -81,6 +87,9 @@ class DatabaseService {
     
     // Create period progress tables
     await _createPeriodProgressTables(db);
+    
+    // Create profile and tutorial tables
+    await _createProfileAndTutorialTables(db);
   }
 
   Future<void> _createHabitTables(Database db) async {
@@ -208,6 +217,39 @@ class DatabaseService {
     // Create index for fast period progress lookups
     await db.execute('''
       CREATE INDEX idx_period_progress_habit ON habit_period_progress (habit_id, period_start_date)
+    ''');
+  }
+
+  Future<void> _createProfileAndTutorialTables(Database db) async {
+    // Create user_profile table
+    await db.execute('''
+      CREATE TABLE $userProfileTable (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT,
+        profile_picture_path TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    // Create tutorial_cards table
+    await db.execute('''
+      CREATE TABLE $tutorialCardsTable (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        content TEXT NOT NULL,
+        icon_name TEXT NOT NULL,
+        sort_order INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    // Create index for tutorial cards sort order
+    await db.execute('''
+      CREATE INDEX idx_tutorial_cards_sort_order ON $tutorialCardsTable (sort_order)
     ''');
   }
 

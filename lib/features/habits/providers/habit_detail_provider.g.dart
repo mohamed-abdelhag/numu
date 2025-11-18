@@ -57,7 +57,7 @@ final class HabitDetailNotifierProvider
 }
 
 String _$habitDetailNotifierHash() =>
-    r'90b22487035a3efdacf0754f0cb261596fb9dd83';
+    r'5103ece769227a9f59d9be436058bf13285659e8';
 
 /// Provider for managing a single habit's detail view
 /// Loads habit data, events, and streak information

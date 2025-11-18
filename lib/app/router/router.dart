@@ -8,14 +8,32 @@ import 'package:numu/features/habits/screens/habits_screen.dart';
 import 'package:numu/features/habits/screens/add_habit_screen.dart';
 import 'package:numu/features/habits/screens/habit_detail_screen.dart';
 import 'package:numu/features/habits/screens/edit_habit_screen.dart';
+import 'package:numu/features/onboarding/screens/splash_screen.dart';
+import 'package:numu/features/onboarding/screens/onboarding_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:numu/core/widgets/shell/numu_app_shell.dart';
 
 // Router provider
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/home',
+    initialLocation: '/splash',
     routes: [
+      // Splash screen route (outside ShellRoute - no drawer)
+      GoRoute(
+        path: '/splash',
+        name: 'splash',
+        pageBuilder: (context, state) => const NoTransitionPage(
+          child: SplashScreen(),
+        ),
+      ),
+      // Onboarding screen route (outside ShellRoute - no drawer)
+      GoRoute(
+        path: '/onboarding',
+        name: 'onboarding',
+        pageBuilder: (context, state) => const MaterialPage(
+          child: OnboardingScreen(),
+        ),
+      ),
       ShellRoute(
         builder: (context, state, child) {
           return NumuAppShell(child: child);
