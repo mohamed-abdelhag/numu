@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/habit_detail_provider.dart';
 import '../widgets/habit_streak_display.dart';
+import '../widgets/log_habit_event_dialog.dart';
 
 /// Screen displaying detailed information about a single habit
 /// Shows habit info, streak statistics, and recent activity
@@ -99,11 +100,9 @@ class HabitDetailScreen extends ConsumerWidget {
       floatingActionButton: habitDetailAsync.when(
         data: (state) => FloatingActionButton(
           onPressed: () {
-            // TODO: Open log event dialog
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Log event dialog coming in next phase'),
-              ),
+            showDialog(
+              context: context,
+              builder: (context) => LogHabitEventDialog(habit: state.habit),
             );
           },
           child: const Icon(Icons.add),

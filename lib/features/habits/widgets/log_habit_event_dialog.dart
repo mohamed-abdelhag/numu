@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/habit.dart';
 import '../models/habit_event.dart';
 import '../models/enums/tracking_type.dart';
+import '../models/enums/goal_type.dart';
 import '../providers/habits_provider.dart';
+import '../repositories/habit_repository.dart';
 
 /// Dialog for logging habit events
 /// Supports binary, value, and timed tracking types
@@ -22,9 +25,10 @@ class LogHabitEventDialog extends ConsumerStatefulWidget {
 class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
   late DateTime _selectedDate;
   late TimeOfDay _selectedTime;
-  final _valueController = TextEditingController();
-  final _notesController = TextEditingController();
+  final TextEditingController _valueController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
   bool _isLoading = false;
+  double? _todayTotal;
 
   @override
   void initState() {
@@ -32,6 +36,11 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
     final now = DateTime.now();
     _selectedDate = DateTime(now.year, now.month, now.day);
     _selectedTime = TimeOfDay.fromDateTime(now);
+    
+    // Load today's total for value habits
+    if (widget.habit.trackingType == TrackingType.value) {
+      _loadTodayTotal();
+    }
   }
 
   @override
@@ -39,6 +48,22 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
     _valueController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  /// Load today's total value for value-based habits
+  Future<void> _loadTodayTotal() async {
+    try {
+      final repository = HabitRepository();
+      final events = await repository.getEventsForDate(widget.habit.id!, _selectedDate);
+      final total = events.fold<double>(0, (sum, event) => sum + (event.valueDelta ?? 0));
+      if (mounted) {
+        setState(() {
+          _todayTotal = total;
+        });
+      }
+    } catch (e) {
+      // Silently fail - not critical
+    }
   }
 
   @override
@@ -77,22 +102,16 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
             // Date picker
             _buildDatePicker(),
             const SizedBox(height: 16),
-
-            // Time picker for timed tracking
-            if (widget.habit.trackingType == TrackingType.timed)
-              ...[
-                _buildTimePicker(),
-                const SizedBox(height: 16),
-              ],
-
-            // Value input for value tracking
+            
+            // Tracking type specific inputs
             if (widget.habit.trackingType == TrackingType.value)
-              ...[
-                _buildValueInput(),
-                const SizedBox(height: 16),
-              ],
-
-            // Notes field
+              ..._buildValueInputs(),
+            
+            if (widget.habit.trackingType == TrackingType.timed)
+              ..._buildTimedInputs(),
+            
+            // Notes field (optional for all types)
+            const SizedBox(height: 16),
             _buildNotesField(),
           ],
         ),
@@ -110,7 +129,9 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : Text(_getSaveButtonLabel()),
+              : Text(widget.habit.trackingType == TrackingType.binary
+                  ? 'Mark Complete'
+                  : 'Save'),
         ),
       ],
     );
@@ -118,7 +139,7 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
 
   Widget _buildDatePicker() {
     return InkWell(
-      onTap: _selectDate,
+      onTap: _pickDate,
       child: InputDecorator(
         decoration: const InputDecoration(
           labelText: 'Date',
@@ -133,35 +154,88 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
     );
   }
 
-  Widget _buildTimePicker() {
-    return InkWell(
-      onTap: _selectTime,
-      child: InputDecorator(
-        decoration: const InputDecoration(
-          labelText: 'Time',
-          border: OutlineInputBorder(),
-          suffixIcon: Icon(Icons.access_time),
+  List<Widget> _buildValueInputs() {
+    return [
+      TextField(
+        controller: _valueController,
+        decoration: InputDecoration(
+          labelText: 'Amount',
+          border: const OutlineInputBorder(),
+          suffixText: widget.habit.unit ?? '',
+          helperText: widget.habit.unit != null ? null : 'Enter value',
         ),
-        child: Text(
-          _selectedTime.format(context),
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+        ],
+        autofocus: true,
       ),
+      const SizedBox(height: 16),
+      
+      // Show today's total and progress
+      if (_todayTotal != null) ...[
+        _buildTodayProgress(),
+        const SizedBox(height: 8),
+      ],
+    ];
+  }
+
+  Widget _buildTodayProgress() {
+    final currentTotal = _todayTotal ?? 0;
+    final valueToAdd = double.tryParse(_valueController.text) ?? 0;
+    final newTotal = currentTotal + valueToAdd;
+    final target = widget.habit.targetValue ?? 0;
+    
+    double progress = 0;
+    if (target > 0) {
+      if (widget.habit.goalType == GoalType.minimum) {
+        progress = (newTotal / target).clamp(0.0, 1.0);
+      } else if (widget.habit.goalType == GoalType.maximum) {
+        progress = newTotal <= target ? 1.0 : 0.0;
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Today's Total: ${newTotal.toStringAsFixed(1)}${widget.habit.unit != null ? ' ${widget.habit.unit}' : ''}",
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        if (widget.habit.goalType != GoalType.none && target > 0) ...[
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: progress,
+            backgroundColor: Colors.grey[300],
+            minHeight: 8,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${(progress * 100).toStringAsFixed(0)}% of ${target.toStringAsFixed(1)}${widget.habit.unit != null ? ' ${widget.habit.unit}' : ''}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ],
     );
   }
 
-  Widget _buildValueInput() {
-    return TextField(
-      controller: _valueController,
-      decoration: InputDecoration(
-        labelText: 'Value',
-        border: const OutlineInputBorder(),
-        suffixText: widget.habit.unit ?? '',
-        helperText: 'Enter the amount to log',
+  List<Widget> _buildTimedInputs() {
+    return [
+      InkWell(
+        onTap: _pickTime,
+        child: InputDecorator(
+          decoration: const InputDecoration(
+            labelText: 'Time',
+            border: OutlineInputBorder(),
+            suffixIcon: Icon(Icons.access_time),
+          ),
+          child: Text(
+            _selectedTime.format(context),
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+        ),
       ),
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      autofocus: true,
-    );
+    ];
   }
 
   Widget _buildNotesField() {
@@ -177,7 +251,7 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
     );
   }
 
-  Future<void> _selectDate() async {
+  Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
@@ -185,71 +259,40 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
       lastDate: DateTime.now(),
     );
 
-    if (picked != null && picked != _selectedDate) {
+    if (picked != null && mounted) {
       setState(() {
         _selectedDate = picked;
       });
+      
+      // Reload today's total if date changed for value habits
+      if (widget.habit.trackingType == TrackingType.value) {
+        _loadTodayTotal();
+      }
     }
   }
 
-  Future<void> _selectTime() async {
+  Future<void> _pickTime() async {
     final picked = await showTimePicker(
       context: context,
       initialTime: _selectedTime,
     );
 
-    if (picked != null && picked != _selectedTime) {
+    if (picked != null && mounted) {
       setState(() {
         _selectedTime = picked;
       });
     }
   }
 
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-
-    if (date == today) {
-      return 'Today';
-    } else if (date == yesterday) {
-      return 'Yesterday';
-    } else {
-      return '${date.month}/${date.day}/${date.year}';
-    }
-  }
-
-  String _getSaveButtonLabel() {
-    switch (widget.habit.trackingType) {
-      case TrackingType.binary:
-        return 'Mark Complete';
-      case TrackingType.value:
-        return 'Save';
-      case TrackingType.timed:
-        return 'Save';
-    }
-  }
-
   Future<void> _saveEvent() async {
-    // Validate value input for value tracking
+    // Validate value input for value habits
     if (widget.habit.trackingType == TrackingType.value) {
-      final valueText = _valueController.text.trim();
-      if (valueText.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please enter a value'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-
-      final value = double.tryParse(valueText);
+      final value = double.tryParse(_valueController.text);
       if (value == null || value <= 0) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Please enter a valid positive number'),
-            backgroundColor: Colors.orange,
+            content: Text('Please enter a valid value'),
+            backgroundColor: Colors.red,
           ),
         );
         return;
@@ -262,29 +305,10 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
 
     try {
       final now = DateTime.now();
-      final event = HabitEvent(
-        habitId: widget.habit.id!,
-        eventDate: _selectedDate,
-        eventTimestamp: now,
-        completed: widget.habit.trackingType == TrackingType.binary ? true : null,
-        value: widget.habit.trackingType == TrackingType.value
-            ? double.parse(_valueController.text.trim())
-            : null,
-        valueDelta: widget.habit.trackingType == TrackingType.value
-            ? double.parse(_valueController.text.trim())
-            : null,
-        timeRecorded: widget.habit.trackingType == TrackingType.timed
-            ? _selectedTime
-            : null,
-        notes: _notesController.text.trim().isNotEmpty
-            ? _notesController.text.trim()
-            : null,
-        createdAt: now,
-        updatedAt: now,
-      );
-
+      final event = _createEvent(now);
+      
       await ref.read(habitsProvider.notifier).logEvent(event);
-
+      
       if (mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -295,11 +319,10 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
         );
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-
       if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to log event: $e'),
@@ -307,6 +330,78 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
           ),
         );
       }
+    }
+  }
+
+  HabitEvent _createEvent(DateTime now) {
+    switch (widget.habit.trackingType) {
+      case TrackingType.binary:
+        return HabitEvent(
+          habitId: widget.habit.id!,
+          eventDate: _selectedDate,
+          eventTimestamp: DateTime(
+            _selectedDate.year,
+            _selectedDate.month,
+            _selectedDate.day,
+            now.hour,
+            now.minute,
+          ),
+          completed: true,
+          notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+          createdAt: now,
+          updatedAt: now,
+        );
+      
+      case TrackingType.value:
+        final value = double.parse(_valueController.text);
+        return HabitEvent(
+          habitId: widget.habit.id!,
+          eventDate: _selectedDate,
+          eventTimestamp: DateTime(
+            _selectedDate.year,
+            _selectedDate.month,
+            _selectedDate.day,
+            now.hour,
+            now.minute,
+          ),
+          valueDelta: value,
+          value: (_todayTotal ?? 0) + value,
+          notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+          createdAt: now,
+          updatedAt: now,
+        );
+      
+      case TrackingType.timed:
+        return HabitEvent(
+          habitId: widget.habit.id!,
+          eventDate: _selectedDate,
+          eventTimestamp: DateTime(
+            _selectedDate.year,
+            _selectedDate.month,
+            _selectedDate.day,
+            _selectedTime.hour,
+            _selectedTime.minute,
+          ),
+          timeRecorded: _selectedTime,
+          completed: true,
+          notes: _notesController.text.isNotEmpty ? _notesController.text : null,
+          createdAt: now,
+          updatedAt: now,
+        );
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    
+    if (date == today) {
+      return 'Today';
+    } else if (date == yesterday) {
+      return 'Yesterday';
+    } else {
+      return '${date.month}/${date.day}/${date.year}';
     }
   }
 }

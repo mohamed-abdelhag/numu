@@ -4,6 +4,7 @@ import '../models/habit.dart';
 import '../models/habit_event.dart';
 import '../models/enums/tracking_type.dart';
 import '../providers/habits_provider.dart';
+import 'log_habit_event_dialog.dart';
 
 /// Quick log button for habits
 /// Shows check icon for binary habits with quick log functionality
@@ -71,15 +72,10 @@ class HabitQuickLogButton extends ConsumerWidget {
   }
 
   /// Show dialog for value/timed habits
-  /// TODO: Implement LogHabitEventDialog in Phase 2 (task 10.1)
   void _showLogDialog(BuildContext context, WidgetRef ref) {
-    // Placeholder for LogHabitEventDialog
-    // This will be implemented in Phase 2 when the dialog is created
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Log dialog for ${habit.name} - Coming in Phase 2'),
-        duration: const Duration(seconds: 2),
-      ),
+    showDialog(
+      context: context,
+      builder: (context) => LogHabitEventDialog(habit: habit),
     );
   }
 }

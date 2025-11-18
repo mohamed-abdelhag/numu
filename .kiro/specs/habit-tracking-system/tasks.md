@@ -265,8 +265,8 @@ This implementation plan breaks down the habit tracking system into discrete, ac
   - Show compact version with just current streak
   - _Requirements: 7.4_
 
-- [-] 10. Create log habit event dialog
-- [ ] 10.1 Build LogHabitEventDialog for binary habits
+- [x] 10. Create log habit event dialog
+- [x] 10.1 Build LogHabitEventDialog for binary habits
   - Create `lib/features/habits/widgets/log_habit_event_dialog.dart`
   - Accept Habit parameter
   - Show habit name and icon
@@ -277,14 +277,14 @@ This implementation plan breaks down the habit tracking system into discrete, ac
   - Close dialog on success
   - _Requirements: 11.1, 11.2, 11.7, 11.9, 11.10, 11.11_
 
-- [ ] 10.2 Extend LogHabitEventDialog for value habits
+- [x] 10.2 Extend LogHabitEventDialog for value habits
   - Add numeric TextField for value input when tracking type is value
   - Display unit label next to input
   - Calculate and show today's total after adding value
   - Show progress bar toward target
   - _Requirements: 11.3, 11.4_
 
-- [ ] 10.3 Add time picker to LogHabitEventDialog
+- [x] 10.3 Add time picker to LogHabitEventDialog
   - Add time picker for timed tracking type
   - Store time in time_recorded field
   - _Requirements: 11.4_
