@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:numu/core/providers/navigation_provider.dart';
 import 'package:numu/core/utils/core_logging_utility.dart';
+import 'package:numu/features/profile/providers/user_profile_provider.dart';
 
 class NumuAppShell extends ConsumerWidget {
   final Widget child;
@@ -27,21 +28,78 @@ class NumuAppShell extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.inversePrimary,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Icon(
-                    Icons.account_circle,
-                    size: 64,
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Numu App',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ],
+              child: Consumer(
+                builder: (context, ref, child) {
+                  final profileAsync = ref.watch(userProfileProvider);
+                  
+                  return profileAsync.when(
+                    data: (profile) {
+                      final userName = profile?.name ?? 'Guest';
+                      CoreLoggingUtility.info(
+                        'NumuAppShell',
+                        'DrawerHeader',
+                        'Displaying user name: $userName',
+                      );
+                      
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Icon(
+                            Icons.account_circle,
+                            size: 64,
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Welcome, $userName',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ],
+                      );
+                    },
+                    loading: () => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Icon(
+                          Icons.account_circle,
+                          size: 64,
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Welcome, Guest',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                      ],
+                    ),
+                    error: (error, stack) {
+                      CoreLoggingUtility.error(
+                        'NumuAppShell',
+                        'DrawerHeader',
+                        'Error loading user profile: $error',
+                      );
+                      
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Icon(
+                            Icons.account_circle,
+                            size: 64,
+                            color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Welcome, Guest',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
               ),
             ),
             // Dynamically generate navigation items

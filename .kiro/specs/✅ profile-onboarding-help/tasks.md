@@ -81,14 +81,14 @@
     - Exit edit mode after successful save
     - _Requirements: 3.5, 3.6_
 
-- [ ] 7. Update Side Panel to display user name
+- [x] 7. Update Side Panel to display user name
   - Modify NumuAppShell drawer header to use Consumer widget
   - Display user name from userProfileProvider
   - Show "Welcome, Guest" as default when no name is set
   - Ensure real-time updates when profile changes
   - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
 
-- [ ] 8. Build Help Screen with tutorial cards
+- [-] 8. Build Help Screen with tutorial cards
   - [ ] 8.1 Create HelpScreen with tutorial card list
     - Display list of tutorial cards from tutorialCardsProvider
     - Create TutorialCardWidget for list items
@@ -102,7 +102,7 @@
     - Style content for readability
     - _Requirements: 5.3, 6.6_
   
-  - [ ] 8.3 Initialize default tutorial content
+  - [x] 8.3 Initialize default tutorial content
     - Create 5 default tutorial cards with placeholder content
     - "What's this app?" card
     - "Enjoy using the app" card
@@ -111,20 +111,20 @@
     - One additional placeholder card
     - _Requirements: 5.2, 6.2, 6.3, 6.4, 6.5_
 
-- [ ] 9. Update navigation and routing
-  - [ ] 9.1 Add new routes to GoRouter
+- [x] 9. Update navigation and routing
+  - [x] 9.1 Add new routes to GoRouter
     - Add /splash route (outside ShellRoute)
     - Add /onboarding route (outside ShellRoute)
     - Add /help route (inside ShellRoute)
     - Add /help/:tutorialId route for detail view
     - _Requirements: 1.5, 2.1, 2.6, 2.7, 5.3_
   
-  - [ ] 9.2 Update initial route to splash screen
+  - [x] 9.2 Update initial route to splash screen
     - Change initialLocation in routerProvider to '/splash'
     - Ensure splash screen is first screen on app launch
     - _Requirements: 1.1, 2.1_
   
-  - [ ] 9.3 Add Help navigation to side panel
+  - [x] 9.3 Add Help navigation to side panel
     - Add Help list item to drawer in NumuAppShell
     - Add appropriate icon (Icons.help_outline)
     - Navigate to /help on tap
@@ -132,7 +132,7 @@
 
 
 
-- [ ] 10. Implement error handling and loading states
+- [x] 10. Implement error handling and loading states
   - Add error handling for database operations in repositories
   - Add loading indicators in profile screen while saving
   - Add error messages for validation failures

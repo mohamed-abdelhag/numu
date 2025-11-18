@@ -21,6 +21,7 @@ Future<OnboardingRepository> onboardingRepository(Ref ref) async {
 
 /// Provider for checking onboarding completion status
 /// Returns true if onboarding has been completed, false otherwise
+/// Fails gracefully by returning false if SharedPreferences is unavailable
 @riverpod
 Future<bool> onboardingCompleted(Ref ref) async {
   try {
@@ -36,13 +37,16 @@ Future<bool> onboardingCompleted(Ref ref) async {
     CoreLoggingUtility.error(
       'OnboardingProvider',
       'onboardingCompleted',
-      'Failed to check onboarding status: $e\n$stackTrace',
+      'Failed to check onboarding status, defaulting to false: $e\n$stackTrace',
     );
-    rethrow;
+    // Fail gracefully - if we can't check, assume onboarding is not completed
+    // This ensures users see the onboarding rather than getting stuck
+    return false;
   }
 }
 
 /// Provider for full onboarding state including completion date
+/// Fails gracefully by returning incomplete state if SharedPreferences is unavailable
 @riverpod
 Future<OnboardingState> onboardingState(Ref ref) async {
   try {
@@ -66,9 +70,13 @@ Future<OnboardingState> onboardingState(Ref ref) async {
     CoreLoggingUtility.error(
       'OnboardingProvider',
       'onboardingState',
-      'Failed to load onboarding state: $e\n$stackTrace',
+      'Failed to load onboarding state, returning default: $e\n$stackTrace',
     );
-    rethrow;
+    // Fail gracefully - return incomplete state
+    return const OnboardingState(
+      isCompleted: false,
+      completedAt: null,
+    );
   }
 }
 
@@ -92,6 +100,7 @@ class OnboardingNotifier extends _$OnboardingNotifier {
   }
 
   /// Mark onboarding as completed
+  /// Handles SharedPreferences failures gracefully
   Future<void> markCompleted() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
@@ -115,7 +124,17 @@ class OnboardingNotifier extends _$OnboardingNotifier {
           'markCompleted',
           'Failed to mark onboarding as completed: $e\n$stackTrace',
         );
-        rethrow;
+        // Even if saving fails, we'll mark it as completed in memory
+        // to allow the user to proceed
+        CoreLoggingUtility.info(
+          'OnboardingNotifier',
+          'markCompleted',
+          'Proceeding with in-memory completion despite save failure',
+        );
+        return OnboardingState(
+          isCompleted: true,
+          completedAt: DateTime.now(),
+        );
       }
     });
   }

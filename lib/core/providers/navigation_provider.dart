@@ -51,13 +51,22 @@ class NavigationNotifier extends _$NavigationNotifier {
       order: 3,
     ),
     const NavigationItem(
+      id: 'help',
+      label: 'Help',
+      icon: Icons.help_outline,
+      route: '/help',
+      isHome: false,
+      isEnabled: true,
+      order: 4,
+    ),
+    const NavigationItem(
       id: 'settings',
       label: 'Settings',
       icon: Icons.settings,
       route: '/settings',
       isHome: false,
       isEnabled: true,
-      order: 4,
+      order: 5,
     ),
   ];
 

@@ -51,14 +51,25 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         'Failed to complete onboarding: $e\n$stackTrace',
       );
       
-      // Show error and navigate anyway
+      // Show error but navigate anyway (fail gracefully)
+      // The onboarding provider already handles this by returning in-memory state
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to save onboarding status'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.warning_amber, color: Colors.white),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text('Note: Onboarding status may not be saved'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 3),
           ),
         );
+        // Still navigate to home - user can proceed
         context.go('/home');
       }
     }
@@ -225,22 +236,56 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             );
             
             return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Failed to load onboarding content'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _skipOnboarding,
-                    child: const Text('Continue Anyway'),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Failed to Load Onboarding',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Unable to load onboarding content',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: () {
+                            CoreLoggingUtility.info(
+                              'OnboardingScreen',
+                              'retry',
+                              'User requested retry for loading tutorials',
+                            );
+                            ref.invalidate(tutorialCardsProvider);
+                          },
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Retry'),
+                        ),
+                        const SizedBox(width: 12),
+                        OutlinedButton(
+                          onPressed: _skipOnboarding,
+                          child: const Text('Skip'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             );
           },

@@ -8,42 +8,51 @@ class TutorialCardsRepository {
 
   /// Fetch all tutorial cards ordered by sort_order
   Future<List<TutorialCardModel>> getAllTutorials() async {
-    final database = await _db.database;
-    final results = await database.query(
-      DatabaseService.tutorialCardsTable,
-      orderBy: 'sort_order ASC',
-    );
+    try {
+      final database = await _db.database;
+      final results = await database.query(
+        DatabaseService.tutorialCardsTable,
+        orderBy: 'sort_order ASC',
+      );
 
-    return results.map((map) => TutorialCardModel.fromMap(map)).toList();
+      return results.map((map) => TutorialCardModel.fromMap(map)).toList();
+    } catch (e) {
+      throw Exception('Failed to fetch tutorial cards: $e');
+    }
   }
 
   /// Fetch a specific tutorial card by id
   Future<TutorialCardModel?> getTutorialById(String id) async {
-    final database = await _db.database;
-    final results = await database.query(
-      DatabaseService.tutorialCardsTable,
-      where: 'id = ?',
-      whereArgs: [id],
-      limit: 1,
-    );
+    try {
+      final database = await _db.database;
+      final results = await database.query(
+        DatabaseService.tutorialCardsTable,
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      );
 
-    if (results.isEmpty) {
-      return null;
+      if (results.isEmpty) {
+        return null;
+      }
+
+      return TutorialCardModel.fromMap(results.first);
+    } catch (e) {
+      throw Exception('Failed to fetch tutorial card with id $id: $e');
     }
-
-    return TutorialCardModel.fromMap(results.first);
   }
 
   /// Initialize default tutorial cards
   /// This should be called on first app launch or when the table is empty
   Future<void> initializeDefaultTutorials() async {
-    final database = await _db.database;
+    try {
+      final database = await _db.database;
 
-    // Check if tutorials already exist
-    final existing = await getAllTutorials();
-    if (existing.isNotEmpty) {
-      return; // Already initialized
-    }
+      // Check if tutorials already exist
+      final existing = await getAllTutorials();
+      if (existing.isNotEmpty) {
+        return; // Already initialized
+      }
 
     final now = DateTime.now();
     final defaultTutorials = [
@@ -220,42 +229,71 @@ Happy tracking! 🌟
       ),
     ];
 
-    // Insert all default tutorials
-    for (final tutorial in defaultTutorials) {
-      await database.insert(
-        DatabaseService.tutorialCardsTable,
-        tutorial.toMap(),
-      );
+      // Insert all default tutorials
+      for (final tutorial in defaultTutorials) {
+        await database.insert(
+          DatabaseService.tutorialCardsTable,
+          tutorial.toMap(),
+        );
+      }
+    } catch (e) {
+      throw Exception('Failed to initialize default tutorial cards: $e');
     }
   }
 
   /// Create a new tutorial card
   Future<void> createTutorial(TutorialCardModel tutorial) async {
-    final database = await _db.database;
-    await database.insert(
-      DatabaseService.tutorialCardsTable,
-      tutorial.toMap(),
-    );
+    try {
+      final database = await _db.database;
+      await database.insert(
+        DatabaseService.tutorialCardsTable,
+        tutorial.toMap(),
+      );
+    } catch (e) {
+      throw Exception('Failed to create tutorial card: $e');
+    }
   }
 
   /// Update an existing tutorial card
   Future<void> updateTutorial(TutorialCardModel tutorial) async {
-    final database = await _db.database;
-    await database.update(
-      DatabaseService.tutorialCardsTable,
-      tutorial.toMap(),
-      where: 'id = ?',
-      whereArgs: [tutorial.id],
-    );
+    try {
+      final database = await _db.database;
+      final rowsAffected = await database.update(
+        DatabaseService.tutorialCardsTable,
+        tutorial.toMap(),
+        where: 'id = ?',
+        whereArgs: [tutorial.id],
+      );
+
+      if (rowsAffected == 0) {
+        throw Exception('Tutorial card not found with id: ${tutorial.id}');
+      }
+    } catch (e) {
+      if (e.toString().contains('not found')) {
+        rethrow;
+      }
+      throw Exception('Failed to update tutorial card: $e');
+    }
   }
 
   /// Delete a tutorial card
   Future<void> deleteTutorial(String id) async {
-    final database = await _db.database;
-    await database.delete(
-      DatabaseService.tutorialCardsTable,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    try {
+      final database = await _db.database;
+      final rowsAffected = await database.delete(
+        DatabaseService.tutorialCardsTable,
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+
+      if (rowsAffected == 0) {
+        throw Exception('Tutorial card not found with id: $id');
+      }
+    } catch (e) {
+      if (e.toString().contains('not found')) {
+        rethrow;
+      }
+      throw Exception('Failed to delete tutorial card: $e');
+    }
   }
 }

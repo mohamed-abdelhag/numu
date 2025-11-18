@@ -41,10 +41,43 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) {
+      // Show validation error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please fix the errors in the form'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
       return;
     }
 
-    final currentProfile = ref.read(userProfileNotifierProvider).value;
+    // Show loading indicator
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 16),
+              Text('Saving profile...'),
+            ],
+          ),
+          duration: Duration(minutes: 1), // Will be dismissed manually
+        ),
+      );
+    }
+
+    final currentProfile = ref.read(userProfileProvider).value;
     final now = DateTime.now();
 
     try {
@@ -64,16 +97,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
 
       if (currentProfile == null) {
-        await ref.read(userProfileNotifierProvider.notifier).createProfile(updatedProfile);
+        await ref.read(userProfileProvider.notifier).createProfile(updatedProfile);
       } else {
-        await ref.read(userProfileNotifierProvider.notifier).updateProfile(updatedProfile);
+        await ref.read(userProfileProvider.notifier).updateProfile(updatedProfile);
       }
 
       if (mounted) {
+        // Dismiss loading indicator
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Profile saved successfully'),
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 16),
+                Text('Profile saved successfully'),
+              ],
+            ),
             backgroundColor: Colors.green,
             duration: Duration(seconds: 2),
           ),
@@ -90,11 +132,37 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
 
       if (mounted) {
+        // Dismiss loading indicator
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        
+        // Show user-friendly error message
+        String errorMessage = 'Failed to save profile';
+        if (e.toString().contains('already exists')) {
+          errorMessage = 'A profile already exists';
+        } else if (e.toString().contains('without an id')) {
+          errorMessage = 'Invalid profile data';
+        } else if (e.toString().contains('not found')) {
+          errorMessage = 'Profile not found. Please try again.';
+        } else if (e.toString().contains('database')) {
+          errorMessage = 'Database error. Please try again.';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to save profile: $e'),
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 16),
+                Expanded(child: Text(errorMessage)),
+              ],
+            ),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: _saveProfile,
+            ),
           ),
         );
       }
@@ -150,23 +218,61 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             loading: () => const Center(
               child: CircularProgressIndicator(),
             ),
-            error: (error, stack) => Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('Error loading profile: $error'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      ref.invalidate(userProfileNotifierProvider);
-                    },
-                    child: const Text('Retry'),
+            error: (error, stack) {
+              CoreLoggingUtility.error(
+                'ProfileScreen',
+                'build',
+                'Error loading profile: $error\n$stack',
+              );
+              
+              // Determine user-friendly error message
+              String errorMessage = 'Unable to load profile';
+              if (error.toString().contains('database')) {
+                errorMessage = 'Database error occurred';
+              } else if (error.toString().contains('Failed to fetch')) {
+                errorMessage = 'Could not retrieve profile data';
+              }
+              
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        errorMessage,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Please try again or contact support if the problem persists',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton.icon(
+                        onPressed: () {
+                          ref.invalidate(userProfileProvider);
+                        },
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry'),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
       ],
@@ -326,7 +432,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     onPressed: () {
                       // Reset form and exit edit mode
                       _formKey.currentState?.reset();
-                      final profile = ref.read(userProfileNotifierProvider).value;
+                      final profile = ref.read(userProfileProvider).value;
                       if (profile != null) {
                         _nameController.text = profile.name;
                         _emailController.text = profile.email ?? '';

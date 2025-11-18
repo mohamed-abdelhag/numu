@@ -10,6 +10,8 @@ import 'package:numu/features/habits/screens/habit_detail_screen.dart';
 import 'package:numu/features/habits/screens/edit_habit_screen.dart';
 import 'package:numu/features/onboarding/screens/splash_screen.dart';
 import 'package:numu/features/onboarding/screens/onboarding_screen.dart';
+import 'package:numu/features/help/screens/help_screen.dart';
+import 'package:numu/features/help/screens/tutorial_detail_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:numu/core/widgets/shell/numu_app_shell.dart';
 
@@ -104,6 +106,26 @@ final routerProvider = Provider<GoRouter>((ref) {
                     },
                   ),
                 ],
+              ),
+            ],
+          ),
+          
+          GoRoute(
+            path: '/help',
+            name: 'help',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: HelpScreen(),
+            ),
+            routes: [
+              GoRoute(
+                path: ':tutorialId',
+                name: 'tutorial-detail',
+                pageBuilder: (context, state) {
+                  final tutorialId = state.pathParameters['tutorialId']!;
+                  return MaterialPage(
+                    child: TutorialDetailScreen(tutorialId: tutorialId),
+                  );
+                },
               ),
             ],
           ),

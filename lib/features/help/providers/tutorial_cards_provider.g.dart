@@ -64,13 +64,13 @@ String _$tutorialCardsRepositoryHash() =>
 /// Provider for fetching all tutorial cards
 /// Returns a list of tutorial cards ordered by sort_order
 
-@ProviderFor(tutorialCards)
-const tutorialCardsProvider = TutorialCardsProvider._();
+@ProviderFor(allTutorialCards)
+const allTutorialCardsProvider = AllTutorialCardsProvider._();
 
 /// Provider for fetching all tutorial cards
 /// Returns a list of tutorial cards ordered by sort_order
 
-final class TutorialCardsProvider
+final class AllTutorialCardsProvider
     extends
         $FunctionalProvider<
           AsyncValue<List<TutorialCardModel>>,
@@ -82,19 +82,19 @@ final class TutorialCardsProvider
         $FutureProvider<List<TutorialCardModel>> {
   /// Provider for fetching all tutorial cards
   /// Returns a list of tutorial cards ordered by sort_order
-  const TutorialCardsProvider._()
+  const AllTutorialCardsProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'tutorialCardsProvider',
+        name: r'allTutorialCardsProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$tutorialCardsHash();
+  String debugGetCreateSourceHash() => _$allTutorialCardsHash();
 
   @$internal
   @override
@@ -104,11 +104,11 @@ final class TutorialCardsProvider
 
   @override
   FutureOr<List<TutorialCardModel>> create(Ref ref) {
-    return tutorialCards(ref);
+    return allTutorialCards(ref);
   }
 }
 
-String _$tutorialCardsHash() => r'324917bce64e532db745d46d5fc96c01b156d60a';
+String _$allTutorialCardsHash() => r'1dd86970181b7aa05ade070e0bcc64f1177926b0';
 
 /// Provider for fetching a specific tutorial card by ID
 

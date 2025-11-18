@@ -16,7 +16,7 @@ TutorialCardsRepository tutorialCardsRepository(Ref ref) {
 /// Provider for fetching all tutorial cards
 /// Returns a list of tutorial cards ordered by sort_order
 @riverpod
-Future<List<TutorialCardModel>> tutorialCards(Ref ref) async {
+Future<List<TutorialCardModel>> allTutorialCards(Ref ref) async {
   try {
     final repository = ref.watch(tutorialCardsRepositoryProvider);
     
@@ -26,14 +26,14 @@ Future<List<TutorialCardModel>> tutorialCards(Ref ref) async {
     final tutorials = await repository.getAllTutorials();
     CoreLoggingUtility.info(
       'TutorialCardsProvider',
-      'tutorialCards',
+      'allTutorialCards',
       'Successfully loaded ${tutorials.length} tutorial cards',
     );
     return tutorials;
   } catch (e, stackTrace) {
     CoreLoggingUtility.error(
       'TutorialCardsProvider',
-      'tutorialCards',
+      'allTutorialCards',
       'Failed to load tutorial cards: $e\n$stackTrace',
     );
     rethrow;
