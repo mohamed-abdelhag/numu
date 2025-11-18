@@ -7,6 +7,7 @@ import 'package:numu/features/tasks/tasks_screen.dart';
 import 'package:numu/features/habits/screens/habits_screen.dart';
 import 'package:numu/features/habits/screens/add_habit_screen.dart';
 import 'package:numu/features/habits/screens/habit_detail_screen.dart';
+import 'package:numu/features/habits/screens/edit_habit_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:numu/app/shell/numu_app_shell.dart';
 
@@ -73,6 +74,18 @@ final routerProvider = Provider<GoRouter>((ref) {
                     child: HabitDetailScreen(habitId: habitId),
                   );
                 },
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    name: 'edit-habit',
+                    pageBuilder: (context, state) {
+                      final habitId = int.parse(state.pathParameters['id']!);
+                      return MaterialPage(
+                        child: EditHabitScreen(habitId: habitId),
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),

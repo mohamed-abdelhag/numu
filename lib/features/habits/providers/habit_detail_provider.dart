@@ -3,7 +3,9 @@ import '../models/habit.dart';
 import '../models/habit_event.dart';
 import '../models/habit_streak.dart';
 import '../models/enums/streak_type.dart';
+import '../models/exceptions/habit_exception.dart';
 import '../repositories/habit_repository.dart';
+import '../../../core/utils/core_logging_utility.dart';
 
 part 'habit_detail_provider.g.dart';
 
@@ -42,19 +44,42 @@ class HabitDetailNotifier extends _$HabitDetailNotifier {
   Future<HabitDetailState> build(int habitId) async {
     _repository = HabitRepository();
 
-    final habit = await _repository.getHabitById(habitId);
-    if (habit == null) {
-      throw Exception('Habit not found');
+    try {
+      final habit = await _repository.getHabitById(habitId);
+      if (habit == null) {
+        CoreLoggingUtility.warning(
+          'HabitDetailProvider',
+          'build',
+          'Habit with ID $habitId not found',
+        );
+        throw HabitNotFoundException(habitId);
+      }
+
+      final events = await _repository.getEventsForHabit(habitId);
+      final streaks = await _loadStreaks(habitId);
+
+      CoreLoggingUtility.info(
+        'HabitDetailProvider',
+        'build',
+        'Successfully loaded habit detail for ID: $habitId',
+      );
+
+      return HabitDetailState(
+        habit: habit,
+        events: events,
+        streaks: streaks,
+      );
+    } catch (e, stackTrace) {
+      if (e is HabitNotFoundException) {
+        rethrow;
+      }
+      CoreLoggingUtility.error(
+        'HabitDetailProvider',
+        'build',
+        'Failed to load habit detail for ID $habitId: $e\n$stackTrace',
+      );
+      rethrow;
     }
-
-    final events = await _repository.getEventsForHabit(habitId);
-    final streaks = await _loadStreaks(habitId);
-
-    return HabitDetailState(
-      habit: habit,
-      events: events,
-      streaks: streaks,
-    );
   }
 
   /// Load all streak types for the habit
@@ -73,22 +98,52 @@ class HabitDetailNotifier extends _$HabitDetailNotifier {
   Future<void> refresh() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final habitId = state.value?.habit.id;
-      if (habitId == null) throw Exception('No habit ID available');
-      
-      final habit = await _repository.getHabitById(habitId);
-      if (habit == null) {
-        throw Exception('Habit not found');
+      try {
+        final habitId = state.value?.habit.id;
+        if (habitId == null) {
+          CoreLoggingUtility.error(
+            'HabitDetailProvider',
+            'refresh',
+            'No habit ID available for refresh',
+          );
+          throw Exception('No habit ID available');
+        }
+        
+        final habit = await _repository.getHabitById(habitId);
+        if (habit == null) {
+          CoreLoggingUtility.warning(
+            'HabitDetailProvider',
+            'refresh',
+            'Habit with ID $habitId not found during refresh',
+          );
+          throw HabitNotFoundException(habitId);
+        }
+
+        final events = await _repository.getEventsForHabit(habitId);
+        final streaks = await _loadStreaks(habitId);
+
+        CoreLoggingUtility.info(
+          'HabitDetailProvider',
+          'refresh',
+          'Successfully refreshed habit detail for ID: $habitId',
+        );
+
+        return HabitDetailState(
+          habit: habit,
+          events: events,
+          streaks: streaks,
+        );
+      } catch (e, stackTrace) {
+        if (e is HabitNotFoundException) {
+          rethrow;
+        }
+        CoreLoggingUtility.error(
+          'HabitDetailProvider',
+          'refresh',
+          'Failed to refresh habit detail: $e\n$stackTrace',
+        );
+        rethrow;
       }
-
-      final events = await _repository.getEventsForHabit(habitId);
-      final streaks = await _loadStreaks(habitId);
-
-      return HabitDetailState(
-        habit: habit,
-        events: events,
-        streaks: streaks,
-      );
     });
   }
 }

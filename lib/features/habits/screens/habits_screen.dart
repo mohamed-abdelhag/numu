@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/habits_provider.dart';
 import '../widgets/empty_habits_state.dart';
 import '../widgets/habit_list_item.dart';
+import '../models/exceptions/habit_exception.dart';
 
 /// Main screen displaying the list of active habits
 /// Handles loading, error, and empty states
@@ -19,35 +20,7 @@ class HabitsScreen extends ConsumerWidget {
         loading: () => const Center(
           child: CircularProgressIndicator(),
         ),
-        error: (error, stackTrace) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Failed to load habits',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                error.toString(),
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                onPressed: () => ref.refresh(habitsProvider),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
-              ),
-            ],
-          ),
-        ),
+        error: (error, stackTrace) => _buildErrorState(context, ref, error),
         data: (habits) {
           if (habits.isEmpty) {
             return const EmptyHabitsState();
@@ -65,6 +38,64 @@ class HabitsScreen extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/habits/add'),
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  /// Build error state with specific error messages and retry button
+  Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error) {
+    String title = 'Failed to load habits';
+    String message = 'An unexpected error occurred. Please try again.';
+    IconData icon = Icons.error_outline;
+
+    // Customize message based on error type
+    if (error is HabitValidationException) {
+      title = 'Validation Error';
+      message = error.message;
+      icon = Icons.warning_amber_outlined;
+    } else if (error is HabitDatabaseException) {
+      title = 'Database Error';
+      message = 'There was a problem accessing the database. Please try again.';
+      icon = Icons.storage_outlined;
+    } else if (error is HabitNotFoundException) {
+      title = 'Habit Not Found';
+      message = error.message;
+      icon = Icons.search_off_outlined;
+    }
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 64,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => ref.refresh(habitsProvider),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }

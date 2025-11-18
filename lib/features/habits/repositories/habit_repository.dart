@@ -3,7 +3,10 @@ import '../../../core/services/database_service.dart';
 import '../models/habit.dart';
 import '../models/habit_event.dart';
 import '../models/habit_streak.dart';
+import '../models/habit_period_progress.dart';
 import '../models/enums/streak_type.dart';
+import '../models/enums/goal_type.dart';
+import '../models/exceptions/habit_exception.dart';
 
 /// Repository layer for habit data access
 /// Handles all database operations related to habits and events
@@ -27,7 +30,7 @@ class HabitRepository {
 
       return maps.map((map) => Habit.fromMap(map)).toList();
     } catch (e) {
-      throw Exception('Failed to fetch active habits: $e');
+      throw HabitDatabaseException('Failed to fetch active habits', originalError: e);
     }
   }
 
@@ -48,18 +51,27 @@ class HabitRepository {
 
       return Habit.fromMap(maps.first);
     } catch (e) {
-      throw Exception('Failed to fetch habit by ID: $e');
+      throw HabitDatabaseException('Failed to fetch habit by ID', originalError: e);
     }
   }
 
   /// Create a new habit with validation
   Future<Habit> createHabit(Habit habit) async {
-    try {
-      // Validate habit name
-      if (habit.name.trim().isEmpty) {
-        throw ArgumentError('Habit name cannot be empty');
-      }
+    // Validate habit name
+    if (habit.name.trim().isEmpty) {
+      throw HabitValidationException('Habit name cannot be empty');
+    }
 
+    // Validate target value when goal type requires it
+    if (habit.goalType == GoalType.minimum || habit.goalType == GoalType.maximum) {
+      if (habit.targetValue == null || habit.targetValue! <= 0) {
+        throw HabitValidationException(
+          'Target value is required and must be greater than 0 for ${habit.goalType.name} goal type',
+        );
+      }
+    }
+
+    try {
       final db = await _dbService.database;
       final id = await db.insert(
         DatabaseService.habitsTable,
@@ -68,23 +80,34 @@ class HabitRepository {
       );
 
       return habit.copyWith(id: id);
+    } on HabitValidationException {
+      rethrow;
     } catch (e) {
-      throw Exception('Failed to create habit: $e');
+      throw HabitDatabaseException('Failed to create habit', originalError: e);
     }
   }
 
   /// Update an existing habit
   Future<void> updateHabit(Habit habit) async {
+    if (habit.id == null) {
+      throw HabitValidationException('Cannot update habit without an ID');
+    }
+
+    // Validate habit name
+    if (habit.name.trim().isEmpty) {
+      throw HabitValidationException('Habit name cannot be empty');
+    }
+
+    // Validate target value when goal type requires it
+    if (habit.goalType == GoalType.minimum || habit.goalType == GoalType.maximum) {
+      if (habit.targetValue == null || habit.targetValue! <= 0) {
+        throw HabitValidationException(
+          'Target value is required and must be greater than 0 for ${habit.goalType.name} goal type',
+        );
+      }
+    }
+
     try {
-      if (habit.id == null) {
-        throw ArgumentError('Cannot update habit without an ID');
-      }
-
-      // Validate habit name
-      if (habit.name.trim().isEmpty) {
-        throw ArgumentError('Habit name cannot be empty');
-      }
-
       final db = await _dbService.database;
       final updatedHabit = habit.copyWith(
         updatedAt: DateTime.now(),
@@ -96,8 +119,10 @@ class HabitRepository {
         where: 'habit_id = ?',
         whereArgs: [habit.id],
       );
+    } on HabitValidationException {
+      rethrow;
     } catch (e) {
-      throw Exception('Failed to update habit: $e');
+      throw HabitDatabaseException('Failed to update habit', originalError: e);
     }
   }
 
@@ -116,7 +141,7 @@ class HabitRepository {
         whereArgs: [id],
       );
     } catch (e) {
-      throw Exception('Failed to archive habit: $e');
+      throw HabitDatabaseException('Failed to archive habit', originalError: e);
     }
   }
 
@@ -136,7 +161,7 @@ class HabitRepository {
 
       return event.copyWith(id: id);
     } catch (e) {
-      throw Exception('Failed to log event: $e');
+      throw HabitDatabaseException('Failed to log event', originalError: e);
     }
   }
 
@@ -162,7 +187,7 @@ class HabitRepository {
 
       return maps.map((map) => HabitEvent.fromMap(map)).toList();
     } catch (e) {
-      throw Exception('Failed to fetch events for date: $e');
+      throw HabitDatabaseException('Failed to fetch events for date', originalError: e);
     }
   }
 
@@ -197,7 +222,7 @@ class HabitRepository {
 
       return maps.map((map) => HabitEvent.fromMap(map)).toList();
     } catch (e) {
-      throw Exception('Failed to fetch events for habit: $e');
+      throw HabitDatabaseException('Failed to fetch events for habit', originalError: e);
     }
   }
 
@@ -222,7 +247,7 @@ class HabitRepository {
 
       return HabitStreak.fromMap(maps.first);
     } catch (e) {
-      throw Exception('Failed to fetch streak for habit: $e');
+      throw HabitDatabaseException('Failed to fetch streak for habit', originalError: e);
     }
   }
 
@@ -238,7 +263,78 @@ class HabitRepository {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     } catch (e) {
-      throw Exception('Failed to save streak: $e');
+      throw HabitDatabaseException('Failed to save streak', originalError: e);
+    }
+  }
+
+  // ============================================================================
+  // PERIOD PROGRESS OPERATIONS
+  // ============================================================================
+
+  /// Get current period progress for a habit
+  Future<HabitPeriodProgress?> getCurrentPeriodProgress(int habitId) async {
+    try {
+      final db = await _dbService.database;
+      final now = DateTime.now();
+      
+      // Query for the most recent period that includes today
+      final List<Map<String, dynamic>> maps = await db.query(
+        'habit_period_progress',
+        where: 'habit_id = ? AND period_start_date <= ? AND period_end_date >= ?',
+        whereArgs: [
+          habitId,
+          now.toIso8601String(),
+          now.toIso8601String(),
+        ],
+        orderBy: 'period_start_date DESC',
+        limit: 1,
+      );
+
+      if (maps.isEmpty) {
+        return null;
+      }
+
+      return HabitPeriodProgress.fromMap(maps.first);
+    } catch (e) {
+      throw HabitDatabaseException('Failed to fetch current period progress', originalError: e);
+    }
+  }
+
+  /// Save or update period progress for a habit
+  Future<void> savePeriodProgress(HabitPeriodProgress progress) async {
+    try {
+      final db = await _dbService.database;
+      
+      // Check if a record exists for this habit and period
+      final existing = await db.query(
+        'habit_period_progress',
+        where: 'habit_id = ? AND period_start_date = ? AND period_end_date = ?',
+        whereArgs: [
+          progress.habitId,
+          progress.periodStartDate.toIso8601String(),
+          progress.periodEndDate.toIso8601String(),
+        ],
+        limit: 1,
+      );
+
+      if (existing.isNotEmpty) {
+        // Update existing record
+        await db.update(
+          'habit_period_progress',
+          progress.toMap(),
+          where: 'progress_id = ?',
+          whereArgs: [existing.first['progress_id']],
+        );
+      } else {
+        // Insert new record
+        await db.insert(
+          'habit_period_progress',
+          progress.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+    } catch (e) {
+      throw HabitDatabaseException('Failed to save period progress', originalError: e);
     }
   }
 }

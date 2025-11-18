@@ -26,7 +26,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -40,6 +40,10 @@ class DatabaseService {
     if (oldVersion < 3) {
       // Add habit_streaks table
       await _createStreakTables(db);
+    }
+    if (oldVersion < 4) {
+      // Add habit_period_progress table
+      await _createPeriodProgressTables(db);
     }
   }
 
@@ -74,6 +78,9 @@ class DatabaseService {
     
     // Create streak tables
     await _createStreakTables(db);
+    
+    // Create period progress tables
+    await _createPeriodProgressTables(db);
   }
 
   Future<void> _createHabitTables(Database db) async {
@@ -174,6 +181,33 @@ class DatabaseService {
     // Create index for fast streak lookups
     await db.execute('''
       CREATE INDEX idx_habit_streaks_habit_type ON habit_streaks (habit_id, streak_type)
+    ''');
+  }
+
+  Future<void> _createPeriodProgressTables(Database db) async {
+    // Create habit_period_progress table
+    await db.execute('''
+      CREATE TABLE habit_period_progress (
+        progress_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        habit_id INTEGER NOT NULL,
+        period_type TEXT NOT NULL,
+        period_start_date TEXT NOT NULL,
+        period_end_date TEXT NOT NULL,
+        target_value REAL NOT NULL,
+        current_value REAL NOT NULL DEFAULT 0,
+        completed INTEGER NOT NULL DEFAULT 0,
+        completion_date TEXT,
+        time_window_completions INTEGER NOT NULL DEFAULT 0,
+        quality_completions INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (habit_id) REFERENCES $habitsTable (habit_id) ON DELETE CASCADE
+      )
+    ''');
+
+    // Create index for fast period progress lookups
+    await db.execute('''
+      CREATE INDEX idx_period_progress_habit ON habit_period_progress (habit_id, period_start_date)
     ''');
   }
 
