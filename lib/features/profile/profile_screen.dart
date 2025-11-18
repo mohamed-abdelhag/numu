@@ -105,7 +105,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget build(BuildContext context) {
     CoreLoggingUtility.info('ProfileScreen', 'build', 'Building profile screen');
     
-    final profileAsync = ref.watch(userProfileNotifierProvider);
+    final profileAsync = ref.watch(userProfileProvider);
 
     return Column(
       children: [
