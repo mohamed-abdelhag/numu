@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:numu/core/utils/core_logging_utility.dart';
+import 'package:numu/core/widgets/shell/numu_app_bar.dart';
 import 'package:numu/features/tasks/tasks_provider.dart';
 
 class TasksScreen extends ConsumerWidget {
@@ -13,12 +14,16 @@ class TasksScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     try {
+      CoreLoggingUtility.info('TasksScreen', 'build', 'Building tasks screen');
       CoreLoggingUtility.info('tasks screen', 'Building tasks screen widget', 'build method started');
       
       final tasksAsync = ref.watch(tasksProvider);
       
       return Column(
         children: [
+          const NumuAppBar(
+            title: 'Tasks',
+          ),
           // Add task section
           Padding(
             padding: const EdgeInsets.all(16.0),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:numu/core/utils/core_logging_utility.dart';
+import 'package:numu/core/widgets/shell/numu_app_bar.dart';
 import '../providers/habits_provider.dart';
 import '../widgets/empty_habits_state.dart';
 import '../widgets/habit_list_item.dart';
@@ -13,32 +15,48 @@ class HabitsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    CoreLoggingUtility.info('HabitsScreen', 'build', 'Building habits screen');
     final habitsAsync = ref.watch(habitsProvider);
 
-    return Scaffold(
-      body: habitsAsync.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
+    return Column(
+      children: [
+        const NumuAppBar(
+          title: 'Habits',
         ),
-        error: (error, stackTrace) => _buildErrorState(context, ref, error),
-        data: (habits) {
-          if (habits.isEmpty) {
-            return const EmptyHabitsState();
-          }
+        Expanded(
+          child: Stack(
+            children: [
+              habitsAsync.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+                error: (error, stackTrace) => _buildErrorState(context, ref, error),
+                data: (habits) {
+                  if (habits.isEmpty) {
+                    return const EmptyHabitsState();
+                  }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: habits.length,
-            itemBuilder: (context, index) {
-              return HabitListItem(habit: habits[index]);
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/habits/add'),
-        child: const Icon(Icons.add),
-      ),
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: habits.length,
+                    itemBuilder: (context, index) {
+                      return HabitListItem(habit: habits[index]);
+                    },
+                  );
+                },
+              ),
+              Positioned(
+                right: 16,
+                bottom: 16,
+                child: FloatingActionButton(
+                  onPressed: () => context.push('/habits/add'),
+                  child: const Icon(Icons.add),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 

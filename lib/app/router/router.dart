@@ -9,7 +9,7 @@ import 'package:numu/features/habits/screens/add_habit_screen.dart';
 import 'package:numu/features/habits/screens/habit_detail_screen.dart';
 import 'package:numu/features/habits/screens/edit_habit_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:numu/app/shell/numu_app_shell.dart';
+import 'package:numu/core/widgets/shell/numu_app_shell.dart';
 
 // Router provider
 final routerProvider = Provider<GoRouter>((ref) {

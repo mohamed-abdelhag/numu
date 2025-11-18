@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:numu/core/utils/core_logging_utility.dart';
 import '../providers/habit_detail_provider.dart';
 import '../widgets/habit_streak_display.dart';
 import '../widgets/habit_calendar_view.dart';
 import '../widgets/log_habit_event_dialog.dart';
 import '../models/enums/streak_type.dart';
 import '../models/exceptions/habit_exception.dart';
+import 'package:numu/core/widgets/shell/numu_app_bar.dart';
 
 /// Screen displaying detailed information about a single habit
 /// Shows habit info, streak statistics, and recent activity
@@ -27,82 +29,111 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    CoreLoggingUtility.info('HabitDetailScreen', 'build', 'Building habit detail screen for habit ID: ${widget.habitId}');
     final habitDetailAsync = ref.watch(habitDetailProvider(widget.habitId));
 
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        centerTitle: true,
-        title: Text(
-          habitDetailAsync.when(
+    return Column(
+      children: [
+        NumuAppBar(
+          title: habitDetailAsync.when(
             data: (state) => state.habit.name,
             loading: () => 'Loading...',
             error: (_, __) => 'Error',
           ),
-        ),
-        actions: [
-          habitDetailAsync.when(
-            data: (state) => IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () {
-                context.push('/habits/${widget.habitId}/edit');
-              },
-            ),
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
+          showDrawerButton: false,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              CoreLoggingUtility.info('HabitDetailScreen', 'back', 'User navigating back from habit detail');
+              context.pop();
+            },
           ),
-        ],
-      ),
-      body: habitDetailAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => _buildErrorState(context, ref, error),
-        data: (state) => SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          actions: [
+            habitDetailAsync.when(
+              data: (state) => IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () {
+                  CoreLoggingUtility.info('HabitDetailScreen', 'edit', 'User tapped edit for habit ID: ${widget.habitId}');
+                  context.go('/habits/${widget.habitId}/edit');
+                },
+              ),
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
+          ],
+        ),
+        Expanded(
+          child: Stack(
             children: [
-              // Habit header with icon and name
-              _buildHabitHeader(context, state),
-              const SizedBox(height: 24),
+              habitDetailAsync.when(
+                loading: () {
+                  CoreLoggingUtility.info('HabitDetailScreen', 'loading', 'Loading habit details');
+                  return const Center(child: CircularProgressIndicator());
+                },
+                error: (error, stack) {
+                  CoreLoggingUtility.error('HabitDetailScreen', 'error', 'Error loading habit details: $error');
+                  return _buildErrorState(context, ref, error);
+                },
+                data: (state) {
+                  CoreLoggingUtility.info('HabitDetailScreen', 'data', 'Habit details loaded successfully');
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Habit header with icon and name
+                        _buildHabitHeader(context, state),
+                        const SizedBox(height: 24),
 
-              // Streak type selector (if advanced features enabled)
-              if (state.habit.timeWindowEnabled || state.habit.qualityLayerEnabled)
-                _buildStreakTypeSelector(context, state),
+                        // Streak type selector (if advanced features enabled)
+                        if (state.habit.timeWindowEnabled || state.habit.qualityLayerEnabled)
+                          _buildStreakTypeSelector(context, state),
 
-              // Streak display
-              HabitStreakDisplay(
-                habitId: widget.habitId,
-                compact: false,
-                streakType: _selectedStreakType,
+                        // Streak display
+                        HabitStreakDisplay(
+                          habitId: widget.habitId,
+                          compact: false,
+                          streakType: _selectedStreakType,
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Calendar view showing last 4 weeks
+                        HabitCalendarView(
+                          habitId: widget.habitId,
+                          weeksToShow: 4,
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Recent activity section
+                        _buildRecentActivitySection(context, state),
+                        const SizedBox(height: 80), // Space for FAB
+                      ],
+                    ),
+                  );
+                },
               ),
-              const SizedBox(height: 24),
-
-              // Calendar view showing last 4 weeks
-              HabitCalendarView(
-                habitId: widget.habitId,
-                weeksToShow: 4,
+              Positioned(
+                right: 16,
+                bottom: 16,
+                child: habitDetailAsync.when(
+                  data: (state) => FloatingActionButton(
+                    onPressed: () {
+                      CoreLoggingUtility.info('HabitDetailScreen', 'logEvent', 'User tapped to log habit event');
+                      showDialog(
+                        context: context,
+                        builder: (context) => LogHabitEventDialog(habit: state.habit),
+                      );
+                    },
+                    child: const Icon(Icons.add),
+                  ),
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, __) => const SizedBox.shrink(),
+                ),
               ),
-              const SizedBox(height: 24),
-
-              // Recent activity section
-              _buildRecentActivitySection(context, state),
             ],
           ),
         ),
-      ),
-      floatingActionButton: habitDetailAsync.when(
-        data: (state) => FloatingActionButton(
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (context) => LogHabitEventDialog(habit: state.habit),
-            );
-          },
-          child: const Icon(Icons.add),
-        ),
-        loading: () => null,
-        error: (_, __) => null,
-      ),
+      ],
     );
   }
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:numu/app/shell/numu_app_bar.dart';
+import 'package:numu/core/utils/core_logging_utility.dart';
 
 
 
@@ -12,32 +12,10 @@ class NumuAppShell extends StatelessWidget {
     required this.child,
   });
 
-  String _getTitle(BuildContext context) {
-    final location = GoRouterState.of(context).uri.path;
-    
-    switch (location) {
-      case '/home':
-        return 'Home';
-      case '/profile':
-        return 'Profile';
-      case '/settings':
-        return 'Settings';
-      case '/habits':
-        return 'Habits';
-      default:
-        return 'App';
-    }
-  }
-
-
-
   @override
   Widget build(BuildContext context) {
+    CoreLoggingUtility.info('NumuAppShell', 'build', 'Building shell with drawer');
     return Scaffold(
-      appBar: NumuAppBar(
-        title: _getTitle(context),
-        showMenuButton: true,
-      ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
@@ -67,6 +45,7 @@ class NumuAppShell extends StatelessWidget {
               leading: const Icon(Icons.home),
               title: const Text('Home'),
               onTap: () {
+                CoreLoggingUtility.info('NumuAppShell', 'Drawer', 'Home item tapped');
                 Navigator.pop(context);
                 context.go('/home');
               },
@@ -76,6 +55,7 @@ class NumuAppShell extends StatelessWidget {
               leading: const Icon(Icons.task),
               title: const Text('Tasks'),
               onTap: () {
+                CoreLoggingUtility.info('NumuAppShell', 'Drawer', 'Tasks item tapped');
                 Navigator.pop(context);
                 context.go('/tasks');
               },
@@ -84,6 +64,7 @@ class NumuAppShell extends StatelessWidget {
               leading: const Icon(Icons.track_changes),
               title: const Text('Habits'),
               onTap: () {
+                CoreLoggingUtility.info('NumuAppShell', 'Drawer', 'Habits item tapped');
                 Navigator.pop(context);
                 context.go('/habits');
               },
@@ -92,6 +73,7 @@ class NumuAppShell extends StatelessWidget {
               leading: const Icon(Icons.person),
               title: const Text('Profile'),
               onTap: () {
+                CoreLoggingUtility.info('NumuAppShell', 'Drawer', 'Profile item tapped');
                 Navigator.pop(context);
                 context.go('/profile');
               },
@@ -101,6 +83,7 @@ class NumuAppShell extends StatelessWidget {
               leading: const Icon(Icons.settings),
               title: const Text('Settings'),
               onTap: () {
+                CoreLoggingUtility.info('NumuAppShell', 'Drawer', 'Settings item tapped');
                 Navigator.pop(context);
                 context.go('/settings');
               },
