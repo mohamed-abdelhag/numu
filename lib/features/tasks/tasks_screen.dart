@@ -272,17 +272,14 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
               child: Row(
                 children: [
                   if (category.icon != null)
-                    Icon(
-                      IconData(
-                        int.parse(category.icon!),
-                        fontFamily: 'MaterialIcons',
-                      ),
-                      color: Color(int.parse(category.color.replaceFirst('0x', ''), radix: 16)),
+                    Text(
+                      category.icon!,
+                      style: const TextStyle(fontSize: 20),
                     )
                   else
                     Icon(
                       Icons.category,
-                      color: Color(int.parse(category.color.replaceFirst('0x', ''), radix: 16)),
+                      color: _getCategoryColor(category.color),
                     ),
                   const SizedBox(width: 12),
                   Text(
@@ -322,13 +319,9 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
           child: Row(
             children: [
               if (selectedCategory.icon != null)
-                Icon(
-                  IconData(
-                    int.parse(selectedCategory.icon!),
-                    fontFamily: 'MaterialIcons',
-                  ),
-                  size: 16,
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                Text(
+                  selectedCategory.icon!,
+                  style: const TextStyle(fontSize: 16),
                 )
               else
                 Icon(
@@ -588,5 +581,10 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
         ],
       ),
     );
+  }
+
+  /// Helper method to safely create Color from string
+  Color _getCategoryColor(String colorString) {
+    return Color(int.parse(colorString.replaceFirst('0x', ''), radix: 16));
   }
 }
