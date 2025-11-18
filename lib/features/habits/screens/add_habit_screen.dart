@@ -216,11 +216,11 @@ class _AddHabitScreenState extends ConsumerState<AddHabitScreen> {
                   ),
                   data: (categories) {
                     return DropdownButtonFormField<int?>(
-                      value: _selectedCategoryId,
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         hintText: 'Select a category',
                       ),
+                      initialValue: _selectedCategoryId,
                       items: [
                         const DropdownMenuItem<int?>(
                           value: null,

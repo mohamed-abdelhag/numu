@@ -15,14 +15,23 @@ class TasksNotifier extends _$TasksNotifier {
     return await _repository.getTasks();
   }
 
-  Future<void> addTask(String text) async {
+  Future<void> addTask(String text, [int? categoryId]) async {
     if (text.trim().isEmpty) return;
 
     state = const AsyncValue.loading();
 
     state = await AsyncValue.guard(() async {
-      final newTask = Task(text: text);
+      final newTask = Task(text: text, categoryId: categoryId);
       await _repository.createTask(newTask);
+      return await _repository.getTasks();
+    });
+  }
+
+  Future<void> updateTask(Task task) async {
+    state = const AsyncValue.loading();
+
+    state = await AsyncValue.guard(() async {
+      await _repository.updateTask(task);
       return await _repository.getTasks();
     });
   }

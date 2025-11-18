@@ -10,6 +10,7 @@ import '../models/enums/require_mode.dart';
 import '../models/enums/time_window_mode.dart';
 import '../models/exceptions/habit_exception.dart';
 import '../providers/habits_provider.dart';
+import '../providers/categories_provider.dart';
 import '../repositories/habit_repository.dart';
 import '../widgets/forms/tracking_type_selector.dart';
 import '../widgets/forms/goal_type_selector.dart';
@@ -40,6 +41,7 @@ class _EditHabitScreenState extends ConsumerState<EditHabitScreen> {
   final _unitController = TextEditingController();
 
   // Form state
+  int? _selectedCategoryId;
   TrackingType _trackingType = TrackingType.binary;
   GoalType _goalType = GoalType.none;
   Frequency _frequency = Frequency.daily;
@@ -90,6 +92,7 @@ class _EditHabitScreenState extends ConsumerState<EditHabitScreen> {
         // Populate form fields
         _nameController.text = habit.name;
         _descriptionController.text = habit.description ?? '';
+        _selectedCategoryId = habit.categoryId;
         _trackingType = habit.trackingType;
         _goalType = habit.goalType;
         _targetValueController.text = habit.targetValue?.toString() ?? '';
@@ -172,6 +175,7 @@ class _EditHabitScreenState extends ConsumerState<EditHabitScreen> {
         description: _descriptionController.text.trim().isEmpty
             ? null
             : _descriptionController.text.trim(),
+        categoryId: _selectedCategoryId,
         icon: _selectedIcon,
         color: _selectedColor,
         trackingType: _trackingType,
@@ -365,6 +369,64 @@ class _EditHabitScreenState extends ConsumerState<EditHabitScreen> {
               ),
               maxLines: 3,
               textCapitalization: TextCapitalization.sentences,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Category (optional)',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Consumer(
+              builder: (context, ref, child) {
+                final categoriesAsync = ref.watch(categoriesProvider);
+                
+                return categoriesAsync.when(
+                  loading: () => const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                  error: (error, stack) => Text(
+                    'Failed to load categories',
+                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  ),
+                  data: (categories) {
+                    return DropdownButtonFormField<int?>(
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Select a category',
+                      ),
+                      initialValue: _selectedCategoryId,
+                      items: [
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text('None'),
+                        ),
+                        ...categories.map((category) {
+                          return DropdownMenuItem<int?>(
+                            value: category.id,
+                            child: Row(
+                              children: [
+                                if (category.icon != null) ...[
+                                  Text(category.icon!, style: const TextStyle(fontSize: 20)),
+                                  const SizedBox(width: 8),
+                                ],
+                                Text(category.name),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedCategoryId = value;
+                        });
+                      },
+                    );
+                  },
+                );
+              },
             ),
             const SizedBox(height: 24),
             Text(

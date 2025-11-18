@@ -4,6 +4,8 @@ import '../models/navigation_item.dart';
 import '../services/settings_repository.dart';
 import '../utils/core_logging_utility.dart';
 import 'theme_provider.dart';
+import '../../features/habits/models/category.dart';
+import '../../features/habits/repositories/category_repository.dart';
 
 part 'navigation_provider.g.dart';
 
@@ -11,6 +13,7 @@ part 'navigation_provider.g.dart';
 @riverpod
 class NavigationNotifier extends _$NavigationNotifier {
   late final SettingsRepository _repository;
+  late final CategoryRepository _categoryRepository;
 
   /// Default navigation items for the app
   static final List<NavigationItem> _defaultItems = [
@@ -73,6 +76,7 @@ class NavigationNotifier extends _$NavigationNotifier {
   @override
   Future<List<NavigationItem>> build() async {
     _repository = ref.read(settingsRepositoryProvider);
+    _categoryRepository = CategoryRepository();
     CoreLoggingUtility.info(
       'NavigationNotifier',
       'build',
@@ -107,6 +111,27 @@ class NavigationNotifier extends _$NavigationNotifier {
         }).toList();
       }
 
+      // Load pinned categories and convert to navigation items
+      final pinnedCategories = await _categoryRepository.getPinnedCategories();
+      final categoryNavItems = pinnedCategories
+          .map((category) => _categoryToNavigationItem(category))
+          .toList();
+
+      CoreLoggingUtility.info(
+        'NavigationNotifier',
+        '_loadNavigationItems',
+        'Loaded ${categoryNavItems.length} pinned category items',
+      );
+
+      // Insert category items before settings
+      final settingsIndex = items.indexWhere((item) => item.id == 'settings');
+      if (settingsIndex != -1) {
+        items.insertAll(settingsIndex, categoryNavItems);
+      } else {
+        // If settings not found, add at the end
+        items.addAll(categoryNavItems);
+      }
+
       // Apply saved order preferences
       if (order.isNotEmpty) {
         // Create a map for quick lookup
@@ -131,6 +156,9 @@ class NavigationNotifier extends _$NavigationNotifier {
         }
         
         items = reorderedItems;
+      } else {
+        // If no saved order, recalculate order values
+        items = _recalculateOrder(items);
       }
 
       // Validate loaded data and repair if necessary
@@ -159,62 +187,98 @@ class NavigationNotifier extends _$NavigationNotifier {
     }
   }
 
+  /// Converts a Category to a NavigationItem
+  NavigationItem _categoryToNavigationItem(Category category) {
+    // Parse icon - if it's an emoji, use a default icon
+    IconData iconData = Icons.folder;
+    
+    // For now, use a default folder icon for categories
+    // In the future, this could be enhanced to support custom icons
+    
+    return NavigationItem(
+      id: 'category_${category.id}',
+      label: category.name,
+      icon: iconData,
+      route: '/categories/${category.id}',
+      isHome: false,
+      isEnabled: true,
+      order: 0, // Will be recalculated
+    );
+  }
+
+  /// Recalculates order values for all navigation items
+  List<NavigationItem> _recalculateOrder(List<NavigationItem> items) {
+    return items.asMap().entries.map((entry) {
+      return entry.value.copyWith(order: entry.key);
+    }).toList();
+  }
+
   /// Repairs corrupted navigation data by ensuring critical items are valid
   List<NavigationItem> _repairNavigationData(List<NavigationItem> items) {
     try {
-      // Ensure Home item exists and is first
-      final homeIndex = items.indexWhere((item) => item.isHome);
+      // Separate category items from system items
+      final categoryItems = items.where((item) => item.id.startsWith('category_')).toList();
+      final systemItems = items.where((item) => !item.id.startsWith('category_')).toList();
+
+      // Ensure Home item exists and is first in system items
+      final homeIndex = systemItems.indexWhere((item) => item.isHome);
       if (homeIndex == -1) {
         CoreLoggingUtility.warning(
           'NavigationNotifier',
           '_repairNavigationData',
           'Home item missing, adding default',
         );
-        items.insert(0, _defaultItems.firstWhere((item) => item.isHome));
+        systemItems.insert(0, _defaultItems.firstWhere((item) => item.isHome));
       } else if (homeIndex != 0) {
         CoreLoggingUtility.warning(
           'NavigationNotifier',
           '_repairNavigationData',
           'Home item not first, moving to first position',
         );
-        final homeItem = items.removeAt(homeIndex);
-        items.insert(0, homeItem);
+        final homeItem = systemItems.removeAt(homeIndex);
+        systemItems.insert(0, homeItem);
       }
 
       // Ensure Home is enabled
-      if (!items.first.isEnabled) {
+      if (!systemItems.first.isEnabled) {
         CoreLoggingUtility.warning(
           'NavigationNotifier',
           '_repairNavigationData',
           'Home item disabled, enabling it',
         );
-        items[0] = items.first.copyWith(isEnabled: true);
+        systemItems[0] = systemItems.first.copyWith(isEnabled: true);
       }
 
       // Ensure Settings item exists and is enabled
-      final settingsIndex = items.indexWhere((item) => item.id == 'settings');
+      final settingsIndex = systemItems.indexWhere((item) => item.id == 'settings');
       if (settingsIndex == -1) {
         CoreLoggingUtility.warning(
           'NavigationNotifier',
           '_repairNavigationData',
           'Settings item missing, adding default',
         );
-        items.add(_defaultItems.firstWhere((item) => item.id == 'settings'));
-      } else if (!items[settingsIndex].isEnabled) {
+        systemItems.add(_defaultItems.firstWhere((item) => item.id == 'settings'));
+      } else if (!systemItems[settingsIndex].isEnabled) {
         CoreLoggingUtility.warning(
           'NavigationNotifier',
           '_repairNavigationData',
           'Settings item disabled, enabling it',
         );
-        items[settingsIndex] = items[settingsIndex].copyWith(isEnabled: true);
+        systemItems[settingsIndex] = systemItems[settingsIndex].copyWith(isEnabled: true);
       }
 
+      // Rebuild items list: system items (except settings) + category items + settings
+      final settingsItem = systemItems.firstWhere((item) => item.id == 'settings');
+      final nonSettingsSystemItems = systemItems.where((item) => item.id != 'settings').toList();
+      
+      items = [
+        ...nonSettingsSystemItems,
+        ...categoryItems,
+        settingsItem,
+      ];
+
       // Fix order values to be sequential
-      for (int i = 0; i < items.length; i++) {
-        if (items[i].order != i) {
-          items[i] = items[i].copyWith(order: i);
-        }
-      }
+      items = _recalculateOrder(items);
 
       CoreLoggingUtility.info(
         'NavigationNotifier',
@@ -423,6 +487,80 @@ class NavigationNotifier extends _$NavigationNotifier {
     }
   }
 
+  /// Removes a category navigation item by category ID
+  Future<void> removeCategoryItem(int categoryId) async {
+    if (!state.hasValue) {
+      CoreLoggingUtility.warning(
+        'NavigationNotifier',
+        'removeCategoryItem',
+        'Cannot remove category item: state not loaded',
+      );
+      return;
+    }
+
+    try {
+      final currentState = state.requireValue;
+      final categoryItemId = 'category_$categoryId';
+
+      CoreLoggingUtility.info(
+        'NavigationNotifier',
+        'removeCategoryItem',
+        'Removing category navigation item: $categoryItemId',
+      );
+
+      // Filter out the category item
+      final updatedItems = currentState
+          .where((item) => item.id != categoryItemId)
+          .toList();
+
+      // Recalculate order values
+      final reorderedItems = _recalculateOrder(updatedItems);
+
+      state = AsyncValue.data(reorderedItems);
+
+      CoreLoggingUtility.info(
+        'NavigationNotifier',
+        'removeCategoryItem',
+        'Successfully removed category navigation item',
+      );
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'NavigationNotifier',
+        'removeCategoryItem',
+        'Failed to remove category item: $e',
+      );
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
+  /// Refreshes navigation items to sync with current pinned categories
+  Future<void> refresh() async {
+    try {
+      CoreLoggingUtility.info(
+        'NavigationNotifier',
+        'refresh',
+        'Refreshing navigation items',
+      );
+
+      state = const AsyncValue.loading();
+      final items = await _loadNavigationItems();
+      state = AsyncValue.data(items);
+
+      CoreLoggingUtility.info(
+        'NavigationNotifier',
+        'refresh',
+        'Successfully refreshed navigation items',
+      );
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'NavigationNotifier',
+        'refresh',
+        'Failed to refresh navigation items: $e',
+      );
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
   /// Validates navigation state before saving
   void _validateNavigationState(List<NavigationItem> items) {
     // Ensure Home is first
@@ -436,9 +574,12 @@ class NavigationNotifier extends _$NavigationNotifier {
       throw Exception('Home item must be enabled');
     }
 
-    // Ensure Settings is enabled
-    final settingsItem = items.firstWhere((item) => item.id == 'settings');
-    if (!settingsItem.isEnabled) {
+    // Ensure Settings exists and is enabled
+    final settingsItems = items.where((item) => item.id == 'settings');
+    if (settingsItems.isEmpty) {
+      throw Exception('Settings item must exist');
+    }
+    if (!settingsItems.first.isEnabled) {
       throw Exception('Settings item must be enabled');
     }
 

@@ -12,6 +12,10 @@ import 'package:numu/features/onboarding/screens/splash_screen.dart';
 import 'package:numu/features/onboarding/screens/onboarding_screen.dart';
 import 'package:numu/features/help/screens/help_screen.dart';
 import 'package:numu/features/help/screens/tutorial_detail_screen.dart';
+import 'package:numu/features/habits/screens/categories_screen.dart';
+import 'package:numu/features/habits/screens/create_category_screen.dart';
+import 'package:numu/features/habits/screens/edit_category_screen.dart';
+import 'package:numu/features/habits/screens/category_detail_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:numu/core/widgets/shell/numu_app_shell.dart';
 
@@ -126,6 +130,45 @@ final routerProvider = Provider<GoRouter>((ref) {
                     child: TutorialDetailScreen(tutorialId: tutorialId),
                   );
                 },
+              ),
+            ],
+          ),
+          
+          GoRoute(
+            path: '/categories',
+            name: 'categories',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: CategoriesScreen(),
+            ),
+            routes: [
+              GoRoute(
+                path: 'create',
+                name: 'create-category',
+                pageBuilder: (context, state) => const MaterialPage(
+                  child: CreateCategoryScreen(),
+                ),
+              ),
+              GoRoute(
+                path: ':id',
+                name: 'category-detail',
+                pageBuilder: (context, state) {
+                  final categoryId = int.parse(state.pathParameters['id']!);
+                  return MaterialPage(
+                    child: CategoryDetailScreen(categoryId: categoryId),
+                  );
+                },
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    name: 'edit-category',
+                    pageBuilder: (context, state) {
+                      final categoryId = int.parse(state.pathParameters['id']!);
+                      return MaterialPage(
+                        child: EditCategoryScreen(categoryId: categoryId),
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),

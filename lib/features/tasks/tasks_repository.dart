@@ -40,4 +40,34 @@ class TasksRepository {
       whereArgs: [id],
     );
   }
+
+  Future<void> updateTaskCategory(int taskId, int? categoryId) async {
+    final db = await _dbService.database;
+    await db.update(
+      DatabaseService.tasksTable,
+      {'category_id': categoryId},
+      where: 'id = ?',
+      whereArgs: [taskId],
+    );
+  }
+
+  Future<List<Task>> getTasksByCategory(int categoryId) async {
+    final db = await _dbService.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      DatabaseService.tasksTable,
+      where: 'category_id = ?',
+      whereArgs: [categoryId],
+    );
+    return List.generate(maps.length, (i) => Task.fromMap(maps[i]));
+  }
+
+  Future<void> unassignCategoryFromTasks(int categoryId) async {
+    final db = await _dbService.database;
+    await db.update(
+      DatabaseService.tasksTable,
+      {'category_id': null},
+      where: 'category_id = ?',
+      whereArgs: [categoryId],
+    );
+  }
 }

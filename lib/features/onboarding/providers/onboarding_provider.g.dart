@@ -103,18 +103,21 @@ String _$onboardingRepositoryHash() =>
 
 /// Provider for checking onboarding completion status
 /// Returns true if onboarding has been completed, false otherwise
+/// Fails gracefully by returning false if SharedPreferences is unavailable
 
 @ProviderFor(onboardingCompleted)
 const onboardingCompletedProvider = OnboardingCompletedProvider._();
 
 /// Provider for checking onboarding completion status
 /// Returns true if onboarding has been completed, false otherwise
+/// Fails gracefully by returning false if SharedPreferences is unavailable
 
 final class OnboardingCompletedProvider
     extends $FunctionalProvider<AsyncValue<bool>, bool, FutureOr<bool>>
     with $FutureModifier<bool>, $FutureProvider<bool> {
   /// Provider for checking onboarding completion status
   /// Returns true if onboarding has been completed, false otherwise
+  /// Fails gracefully by returning false if SharedPreferences is unavailable
   const OnboardingCompletedProvider._()
     : super(
         from: null,
@@ -141,14 +144,16 @@ final class OnboardingCompletedProvider
 }
 
 String _$onboardingCompletedHash() =>
-    r'13de86dce1d6aec09d8af59985eb487f8073b900';
+    r'1d8b296e877a684599425ac4ac35f8227581b1ed';
 
 /// Provider for full onboarding state including completion date
+/// Fails gracefully by returning incomplete state if SharedPreferences is unavailable
 
 @ProviderFor(onboardingState)
 const onboardingStateProvider = OnboardingStateProvider._();
 
 /// Provider for full onboarding state including completion date
+/// Fails gracefully by returning incomplete state if SharedPreferences is unavailable
 
 final class OnboardingStateProvider
     extends
@@ -159,6 +164,7 @@ final class OnboardingStateProvider
         >
     with $FutureModifier<OnboardingState>, $FutureProvider<OnboardingState> {
   /// Provider for full onboarding state including completion date
+  /// Fails gracefully by returning incomplete state if SharedPreferences is unavailable
   const OnboardingStateProvider._()
     : super(
         from: null,
@@ -185,7 +191,7 @@ final class OnboardingStateProvider
   }
 }
 
-String _$onboardingStateHash() => r'797934575f1f110346891d3596b1ea07cd3d5abb';
+String _$onboardingStateHash() => r'aa26a210ab4b5755b0da8c6842cfb924ae946b55';
 
 /// Notifier for managing onboarding state changes
 
@@ -216,7 +222,7 @@ final class OnboardingNotifierProvider
 }
 
 String _$onboardingNotifierHash() =>
-    r'44b31bf0d2e3588616ddb2a1bb7b9a8d577a62cf';
+    r'6056ad79c5b0650ec75c5f4f2cd6461120e99417';
 
 /// Notifier for managing onboarding state changes
 

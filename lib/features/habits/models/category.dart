@@ -7,6 +7,7 @@ class Category {
   final bool isSystem;
   final int sortOrder;
   final DateTime createdAt;
+  final bool isPinnedToSidebar;
 
   const Category({
     this.id,
@@ -17,6 +18,7 @@ class Category {
     this.isSystem = false,
     this.sortOrder = 0,
     required this.createdAt,
+    this.isPinnedToSidebar = false,
   });
 
   factory Category.fromMap(Map<String, dynamic> map) {
@@ -29,6 +31,7 @@ class Category {
       isSystem: (map['is_system'] as int) == 1,
       sortOrder: map['sort_order'] as int? ?? 0,
       createdAt: DateTime.parse(map['created_at'] as String),
+      isPinnedToSidebar: (map['is_pinned_to_sidebar'] as int?) == 1,
     );
   }
 
@@ -42,6 +45,7 @@ class Category {
       'is_system': isSystem ? 1 : 0,
       'sort_order': sortOrder,
       'created_at': createdAt.toIso8601String(),
+      'is_pinned_to_sidebar': isPinnedToSidebar ? 1 : 0,
     };
   }
 
@@ -54,6 +58,7 @@ class Category {
     bool? isSystem,
     int? sortOrder,
     DateTime? createdAt,
+    bool? isPinnedToSidebar,
   }) {
     return Category(
       id: id ?? this.id,
@@ -64,6 +69,7 @@ class Category {
       isSystem: isSystem ?? this.isSystem,
       sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt ?? this.createdAt,
+      isPinnedToSidebar: isPinnedToSidebar ?? this.isPinnedToSidebar,
     );
   }
 }

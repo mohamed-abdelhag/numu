@@ -28,7 +28,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 6,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -51,6 +51,31 @@ class DatabaseService {
       // Add user_profile and tutorial_cards tables
       await _createProfileAndTutorialTables(db);
     }
+    if (oldVersion < 6) {
+      // Add category system enhancements
+      await _upgradeCategorySystem(db);
+    }
+  }
+
+  Future<void> _upgradeCategorySystem(Database db) async {
+    // Add is_pinned_to_sidebar column to categories table
+    await db.execute('''
+      ALTER TABLE $categoriesTable ADD COLUMN is_pinned_to_sidebar INTEGER NOT NULL DEFAULT 0
+    ''');
+
+    // Add category_id column to tasks table
+    await db.execute('''
+      ALTER TABLE $tasksTable ADD COLUMN category_id INTEGER
+    ''');
+
+    // Add indexes for category_id columns
+    await db.execute('''
+      CREATE INDEX idx_habits_category_id ON $habitsTable (category_id)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX idx_tasks_category_id ON $tasksTable (category_id)
+    ''');
   }
 
   // Create all tables here
@@ -59,7 +84,8 @@ class DatabaseService {
       CREATE TABLE $tasksTable (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         text TEXT NOT NULL,
-        isCompleted INTEGER NOT NULL DEFAULT 0
+        isCompleted INTEGER NOT NULL DEFAULT 0,
+        category_id INTEGER
       )
     ''');
 
@@ -68,7 +94,13 @@ class DatabaseService {
       CREATE TABLE $categoriesTable (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        color TEXT NOT NULL
+        color TEXT NOT NULL,
+        description TEXT,
+        icon TEXT,
+        is_system INTEGER NOT NULL DEFAULT 0,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        is_pinned_to_sidebar INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
@@ -90,6 +122,20 @@ class DatabaseService {
     
     // Create profile and tutorial tables
     await _createProfileAndTutorialTables(db);
+    
+    // Create indexes for category relationships
+    await _createCategoryIndexes(db);
+  }
+
+  Future<void> _createCategoryIndexes(Database db) async {
+    // Add indexes for category_id columns
+    await db.execute('''
+      CREATE INDEX idx_habits_category_id ON $habitsTable (category_id)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX idx_tasks_category_id ON $tasksTable (category_id)
+    ''');
   }
 
   Future<void> _createHabitTables(Database db) async {

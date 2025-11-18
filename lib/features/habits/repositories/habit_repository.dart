@@ -146,6 +146,46 @@ class HabitRepository {
   }
 
   // ============================================================================
+  // CATEGORY OPERATIONS
+  // ============================================================================
+
+  /// Get all habits assigned to a specific category
+  Future<List<Habit>> getHabitsByCategory(int categoryId) async {
+    try {
+      final db = await _dbService.database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        DatabaseService.habitsTable,
+        where: 'category_id = ? AND is_active = ?',
+        whereArgs: [categoryId, 1],
+        orderBy: 'sort_order ASC, created_at DESC',
+      );
+
+      return maps.map((map) => Habit.fromMap(map)).toList();
+    } catch (e) {
+      throw HabitDatabaseException('Failed to fetch habits by category', originalError: e);
+    }
+  }
+
+  /// Unassign category from all habits (set category_id to NULL)
+  /// Used when deleting a category
+  Future<void> unassignCategoryFromHabits(int categoryId) async {
+    try {
+      final db = await _dbService.database;
+      await db.update(
+        DatabaseService.habitsTable,
+        {
+          'category_id': null,
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+        where: 'category_id = ?',
+        whereArgs: [categoryId],
+      );
+    } catch (e) {
+      throw HabitDatabaseException('Failed to unassign category from habits', originalError: e);
+    }
+  }
+
+  // ============================================================================
   // EVENT OPERATIONS
   // ============================================================================
 
