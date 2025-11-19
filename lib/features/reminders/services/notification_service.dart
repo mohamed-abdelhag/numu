@@ -3,6 +3,8 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
 import '../models/reminder.dart';
 import '../models/reminder_link.dart';
+import 'notification_navigation_service.dart';
+import '../../../core/utils/core_logging_utility.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -256,43 +258,60 @@ class NotificationService {
     return 'reminder:${reminder.id ?? 0}';
   }
 
+  // Callback for when notification is delivered (not tapped)
+  Function(int reminderId)? _onNotificationDelivered;
+
+  /// Set callback for notification delivery
+  void setOnNotificationDelivered(Function(int reminderId)? callback) {
+    _onNotificationDelivered = callback;
+  }
+
   /// Handle notification tap actions
   void _onNotificationTapped(NotificationResponse response) {
     final payload = response.payload;
-    if (payload == null || payload.isEmpty) return;
+    
+    CoreLoggingUtility.info(
+      'NotificationService',
+      '_onNotificationTapped',
+      'Notification tapped with payload: $payload',
+    );
 
-    // Parse payload to determine navigation target
-    final parts = payload.split(':');
-    if (parts.length != 2) return;
+    // Extract reminder ID from payload to mark one-time reminders as inactive
+    _handleNotificationDelivery(payload);
 
-    final type = parts[0];
-    final entityId = int.tryParse(parts[1]);
-    if (entityId == null) return;
-
-    // Navigate to linked entity
-    // Note: Navigation will be handled by the app's router
-    // This is a placeholder for the navigation logic
-    _navigateToEntity(type, entityId);
+    // Delegate to navigation service
+    NotificationNavigationService().handleNotificationTap(payload);
   }
 
-  /// Navigate to the linked entity (habit or task)
-  void _navigateToEntity(String type, int entityId) {
-    // This method will be implemented when integrating with the app's navigation
-    // For now, it's a placeholder that can be called from the app's main navigation handler
-    // The actual navigation will be handled by go_router based on the payload
-    
-    // Example implementation:
-    // switch (type) {
-    //   case 'habit':
-    //     router.go('/habits/$entityId');
-    //     break;
-    //   case 'task':
-    //     router.go('/tasks/$entityId');
-    //     break;
-    //   case 'reminder':
-    //     router.go('/reminders');
-    //     break;
-    // }
+  /// Handle notification delivery to mark one-time reminders as inactive
+  void _handleNotificationDelivery(String? payload) {
+    if (payload == null || payload.isEmpty) return;
+
+    try {
+      final parts = payload.split(':');
+      
+      // Extract reminder ID from different payload formats
+      int? reminderId;
+      
+      if (parts[0] == 'reminder' && parts.length >= 2) {
+        // Format: "reminder:id"
+        reminderId = int.tryParse(parts[1]);
+      } else if (parts.length >= 2) {
+        // Format: "type:entityId" - we need to look up reminders by entity
+        // This will be handled by the scheduler service
+        return;
+      }
+
+      if (reminderId != null && _onNotificationDelivered != null) {
+        _onNotificationDelivered!(reminderId);
+      }
+    } catch (e) {
+      CoreLoggingUtility.error(
+        'NotificationService',
+        '_handleNotificationDelivery',
+        'Failed to handle notification delivery: $e',
+      );
+    }
   }
 
   /// Check if notifications are enabled

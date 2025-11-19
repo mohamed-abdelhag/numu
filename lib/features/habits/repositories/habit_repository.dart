@@ -6,11 +6,13 @@ import '../models/habit_streak.dart';
 import '../models/habit_period_progress.dart';
 import '../models/enums/streak_type.dart';
 import '../models/exceptions/habit_exception.dart';
+import '../../reminders/repositories/reminder_repository.dart';
 
 /// Repository layer for habit data access
 /// Handles all database operations related to habits and events
 class HabitRepository {
   final DatabaseService _dbService = DatabaseService.instance;
+  final ReminderRepository _reminderRepository = ReminderRepository();
 
   // ============================================================================
   // HABIT CRUD OPERATIONS
@@ -112,9 +114,14 @@ class HabitRepository {
   }
 
   /// Archive a habit by setting archived_at timestamp
+  /// Also deletes all reminders linked to this habit
   Future<void> archiveHabit(int id) async {
     try {
       final db = await _dbService.database;
+      
+      // Delete all reminders linked to this habit
+      await _reminderRepository.deleteRemindersByHabitId(id);
+      
       await db.update(
         DatabaseService.habitsTable,
         {

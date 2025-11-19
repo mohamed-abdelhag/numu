@@ -4,6 +4,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import '../models/reminder.dart';
 import '../models/reminder_link.dart';
+import 'notification_navigation_service.dart';
+import '../../../core/utils/core_logging_utility.dart';
 
 /// Service for managing full-screen alarms
 /// 
@@ -304,14 +306,25 @@ class AlarmService {
   /// Handle alarm tap actions
   void _onAlarmTapped(NotificationResponse response) {
     final payload = response.payload;
+    
+    CoreLoggingUtility.info(
+      'AlarmService',
+      '_onAlarmTapped',
+      'Alarm tapped with payload: $payload',
+    );
+
     if (payload == null || payload.isEmpty) return;
 
     // Parse payload to determine navigation target
     final parts = payload.split(':');
-    if (parts.length < 4) return;
+    if (parts.length < 4) {
+      // Delegate to navigation service for standard format
+      NotificationNavigationService().handleNotificationTap(payload);
+      return;
+    }
 
     final prefix = parts[0]; // 'alarm'
-    final type = parts[1]; // 'habit', 'task', or 'reminder'
+    // parts[1] is type: 'habit', 'task', or 'reminder'
     final entityId = int.tryParse(parts[2]);
     final reminderId = int.tryParse(parts[3]);
 
@@ -325,28 +338,8 @@ class AlarmService {
       _onAlarmTriggered!(reminder);
     }
 
-    // Navigate to linked entity
-    _navigateToEntity(type, entityId);
-  }
-
-  /// Navigate to the linked entity (habit or task)
-  void _navigateToEntity(String type, int entityId) {
-    // This method will be implemented when integrating with the app's navigation
-    // For now, it's a placeholder that can be called from the app's main navigation handler
-    // The actual navigation will be handled by go_router based on the payload
-    
-    // Example implementation:
-    // switch (type) {
-    //   case 'habit':
-    //     router.go('/habits/$entityId');
-    //     break;
-    //   case 'task':
-    //     router.go('/tasks/$entityId');
-    //     break;
-    //   case 'reminder':
-    //     router.go('/reminders');
-    //     break;
-    // }
+    // Delegate to navigation service
+    NotificationNavigationService().handleNotificationTap(payload);
   }
 
   /// Request permissions for critical alarms (iOS)

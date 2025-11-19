@@ -165,7 +165,7 @@
   - Ensure `android/app/build.gradle.kts` has compileSdk >= 33 for notification permissions
   - _Requirements: 14.2, 14.4_
 
-- [-] 17. Integrate reminders with navigation system
+- [x] 17. Integrate reminders with navigation system
   - Update `lib/core/providers/navigation_provider.dart` to add reminders navigation item to _defaultItems list
   - Set reminders item properties: id='reminders', label='Reminders', icon=Icons.notifications, route='/reminders', order=4 (before settings)
   - Update `lib/app/router/router.dart` to add reminders route in ShellRoute
@@ -173,14 +173,14 @@
   - Add nested routes for create and edit reminder screens
   - _Requirements: 17.1, 17.2, 17.3, 17.5_
 
-- [ ] 18. Integrate reminders with habits feature
+- [x] 18. Integrate reminders with habits feature
   - Update habit detail screen to add "Add Reminder" button
   - Implement navigation from habit detail to create reminder screen with habit pre-selected
   - Update habit repository delete method to call reminder repository deleteRemindersByHabitId on habit deletion
   - Add listener in reminder scheduler service to detect habit updates and call handleHabitUpdate
   - _Requirements: 2.3, 2.4, 3.3, 5.3, 6.3, 18.3, 19.3_
 
-- [ ] 19. Integrate reminders with tasks feature
+- [x] 19. Integrate reminders with tasks feature
   - Update task creation/edit screens to add reminder section with toggle, offset dropdown, and enable/disable option
   - Save reminder when task is saved if reminder is enabled
   - Update task repository delete method to call reminder repository deleteRemindersByTaskId on task deletion
@@ -188,7 +188,7 @@
   - Disable reminders when task is marked complete, re-enable when marked incomplete
   - _Requirements: 2.3, 2.4, 20.2, 20.3, 20.4, 20.5_
 
-- [ ] 20. Implement app initialization and background handling
+- [x] 20. Implement app initialization and background handling
   - Update app initialization in main.dart to initialize notification service and alarm service
   - Call rescheduleAllReminders() on app launch to refresh notification queue
   - Implement time zone change detection and trigger rescheduleAllReminders()
@@ -196,7 +196,7 @@
   - Implement logic to mark one-time reminders as inactive after they trigger
   - _Requirements: 11.5, 12.2, 12.3, 12.4, 12.5_
 
-- [ ] 21. Create documentation for real device testing
+- [x] 21. Create documentation for real device testing
   - Create `DOCs/reminders/` folder
   - Create `DOCs/reminders/reminder_implementation_guide.md` with architecture overview and implementation details
   - Create `DOCs/reminders/real_device_testing.md` with iOS and Android testing instructions
@@ -208,7 +208,7 @@
   - Add test scenarios: background delivery, app closed delivery, full-screen alarms, notification tap navigation, repeating reminders, time zone changes, device restart persistence
   - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5_
 
-- [ ] 22. Write unit tests for core functionality
+- [x] 22. Write unit tests for core functionality
   - Write tests for reminder model serialization and deserialization
   - Write tests for reminder repository CRUD operations with mock database
   - Write tests for reminder scheduler service trigger time calculations for all frequency types
@@ -216,7 +216,7 @@
   - Mock platform notification APIs for service tests
   - _Requirements: 2.3, 3.3, 5.4, 6.4, 10.2, 10.3, 10.4, 10.5_
 
-- [ ] 23. Write integration tests for end-to-end flows
+- [x] 23. Write integration tests for end-to-end flows
   - Write test for creating standalone reminder and verifying database entry and scheduling
   - Write test for creating habit-linked reminder and verifying it inherits habit configuration
   - Write test for updating habit time window and verifying reminders are rescheduled

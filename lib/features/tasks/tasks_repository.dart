@@ -1,9 +1,11 @@
 import 'package:numu/features/tasks/task.dart';
 import 'package:numu/core/services/database_service.dart';
+import 'package:numu/features/reminders/repositories/reminder_repository.dart';
 
 // Repository pattern - one repository per entity
 class TasksRepository {
   final DatabaseService _dbService = DatabaseService.instance;
+  final ReminderRepository _reminderRepository = ReminderRepository();
 
   Future<List<Task>> getTasks({
     bool? isCompleted,
@@ -120,6 +122,9 @@ class TasksRepository {
 
   Future<void> deleteTask(int id) async {
     try {
+      // Delete associated reminders first
+      await _reminderRepository.deleteRemindersByTaskId(id);
+      
       final db = await _dbService.database;
       final count = await db.delete(
         DatabaseService.tasksTable,

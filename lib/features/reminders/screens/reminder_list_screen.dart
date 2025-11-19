@@ -289,7 +289,7 @@ class _ReminderListScreenState extends ConsumerState<ReminderListScreen> {
       confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
           // Edit action
-          context.push('/reminders/edit/${reminder.id}');
+          context.push('/reminders/edit/${reminder.id}', extra: reminder);
           return false;
         } else {
           // Delete action - show confirmation
@@ -356,7 +356,7 @@ class _ReminderListScreenState extends ConsumerState<ReminderListScreen> {
               '_buildReminderListItem',
               'Reminder tapped: ${reminder.id}',
             );
-            context.push('/reminders/edit/${reminder.id}');
+            context.push('/reminders/edit/${reminder.id}', extra: reminder);
           },
         ),
       ),

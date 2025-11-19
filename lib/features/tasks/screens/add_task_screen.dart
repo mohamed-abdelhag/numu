@@ -28,6 +28,8 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
   DateTime? _selectedDueDate;
   int? _selectedCategoryId;
   bool _isSaving = false;
+  bool _reminderEnabled = false;
+  int _reminderMinutesBefore = 60;
 
   @override
   void dispose() {
@@ -82,11 +84,27 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
             onDueDateChanged: (date) {
               setState(() {
                 _selectedDueDate = date;
+                // Disable reminder if due date is removed
+                if (date == null) {
+                  _reminderEnabled = false;
+                }
               });
             },
             onCategoryChanged: (categoryId) {
               setState(() {
                 _selectedCategoryId = categoryId;
+              });
+            },
+            initialReminderEnabled: _reminderEnabled,
+            initialReminderMinutesBefore: _reminderMinutesBefore,
+            onReminderEnabledChanged: (enabled) {
+              setState(() {
+                _reminderEnabled = enabled;
+              });
+            },
+            onReminderMinutesBeforeChanged: (minutes) {
+              setState(() {
+                _reminderMinutesBefore = minutes;
               });
             },
           ),
@@ -205,6 +223,8 @@ class _AddTaskScreenState extends ConsumerState<AddTaskScreen> {
                 : _descriptionController.text.trim(),
             dueDate: _selectedDueDate,
             categoryId: _selectedCategoryId,
+            reminderEnabled: _reminderEnabled,
+            reminderMinutesBefore: _reminderMinutesBefore,
           );
 
       // Show success message with semantic announcement

@@ -5,6 +5,7 @@ import '../repositories/habit_repository.dart';
 import '../services/streak_calculation_service.dart';
 import '../services/period_progress_service.dart';
 import '../../../core/utils/core_logging_utility.dart';
+import '../../reminders/services/reminder_scheduler_service.dart';
 
 part 'habits_provider.g.dart';
 
@@ -15,12 +16,14 @@ class HabitsNotifier extends _$HabitsNotifier {
   late final HabitRepository _repository;
   late final StreakCalculationService _streakService;
   late final PeriodProgressService _periodService;
+  late final ReminderSchedulerService _reminderSchedulerService;
 
   @override
   Future<List<Habit>> build() async {
     _repository = HabitRepository();
     _streakService = StreakCalculationService(_repository);
     _periodService = PeriodProgressService(_repository);
+    _reminderSchedulerService = ReminderSchedulerService();
     
     try {
       return await _repository.getActiveHabits();
@@ -58,6 +61,7 @@ class HabitsNotifier extends _$HabitsNotifier {
   }
 
   /// Update an existing habit and refresh the list
+  /// Also notifies reminder scheduler to update linked reminders
   Future<void> updateHabit(Habit habit) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
@@ -68,6 +72,17 @@ class HabitsNotifier extends _$HabitsNotifier {
           'updateHabit',
           'Successfully updated habit: ${habit.name} (ID: ${habit.id})',
         );
+        
+        // Notify reminder scheduler to update linked reminders
+        if (habit.id != null) {
+          await _reminderSchedulerService.handleHabitUpdate(habit.id!);
+          CoreLoggingUtility.info(
+            'HabitsProvider',
+            'updateHabit',
+            'Successfully updated reminders for habit ID: ${habit.id}',
+          );
+        }
+        
         return await _repository.getActiveHabits();
       } catch (e, stackTrace) {
         CoreLoggingUtility.error(

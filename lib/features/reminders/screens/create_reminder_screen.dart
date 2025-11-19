@@ -13,7 +13,14 @@ import '../../tasks/tasks_provider.dart';
 enum LinkOption { standalone, habit, task }
 
 class CreateReminderScreen extends ConsumerStatefulWidget {
-  const CreateReminderScreen({super.key});
+  final int? preSelectedHabitId;
+  final String? preSelectedHabitName;
+
+  const CreateReminderScreen({
+    super.key,
+    this.preSelectedHabitId,
+    this.preSelectedHabitName,
+  });
 
   @override
   ConsumerState<CreateReminderScreen> createState() =>
@@ -40,6 +47,16 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
   bool _useHabitTimeWindow = false;
   bool _useHabitActiveDays = false;
   bool _useDefaultText = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-select habit if provided
+    if (widget.preSelectedHabitId != null) {
+      _linkOption = LinkOption.habit;
+      _selectedHabitId = widget.preSelectedHabitId;
+    }
+  }
 
   @override
   void dispose() {

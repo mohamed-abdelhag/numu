@@ -9,6 +9,7 @@ import '../widgets/log_habit_event_dialog.dart';
 import '../models/enums/streak_type.dart';
 import '../models/exceptions/habit_exception.dart';
 import 'package:numu/core/widgets/shell/numu_app_bar.dart';
+import '../../reminders/providers/reminder_provider.dart';
 
 /// Screen displaying detailed information about a single habit
 /// Shows habit info, streak statistics, and recent activity
@@ -110,6 +111,10 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
 
                         // Recent activity section
                         _buildRecentActivitySection(context, state),
+                        const SizedBox(height: 24),
+
+                        // Reminders section
+                        _buildRemindersSection(context, state),
                         const SizedBox(height: 80), // Space for FAB
                       ],
                     ),
@@ -456,6 +461,167 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
           ...recentEvents.map((event) => _buildEventItem(context, state.habit, event)),
       ],
     );
+  }
+
+  Widget _buildRemindersSection(BuildContext context, HabitDetailState state) {
+    final remindersAsync = ref.watch(habitRemindersProvider(widget.habitId));
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Reminders',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            TextButton.icon(
+              onPressed: () {
+                CoreLoggingUtility.info(
+                  'HabitDetailScreen',
+                  'addReminder',
+                  'User tapped to add reminder for habit ID: ${widget.habitId}',
+                );
+                context.push(
+                  '/reminders/create',
+                  extra: {'habitId': widget.habitId, 'habitName': state.habit.name},
+                );
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add Reminder'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        remindersAsync.when(
+          loading: () => const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          error: (error, stack) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Failed to load reminders',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+          ),
+          data: (reminders) {
+            if (reminders.isEmpty) {
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.notifications_none,
+                        size: 64,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No reminders set',
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Add a reminder to stay on track',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              children: reminders.map((reminder) {
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8.0),
+                  child: ListTile(
+                    leading: Icon(
+                      reminder.type.toString().contains('notification')
+                          ? Icons.notifications
+                          : Icons.alarm,
+                      color: reminder.isActive
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    title: Text(reminder.title),
+                    subtitle: reminder.nextTriggerTime != null
+                        ? Text(
+                            'Next: ${_formatReminderTime(reminder.nextTriggerTime!)}',
+                          )
+                        : const Text('Not scheduled'),
+                    trailing: Switch(
+                      value: reminder.isActive,
+                      onChanged: (value) async {
+                        CoreLoggingUtility.info(
+                          'HabitDetailScreen',
+                          'toggleReminder',
+                          'Toggling reminder ${reminder.id} to $value',
+                        );
+                        await ref
+                            .read(reminderProvider.notifier)
+                            .toggleReminderActive(reminder.id!);
+                        // Refresh the reminders list
+                        ref.invalidate(habitRemindersProvider(widget.habitId));
+                      },
+                    ),
+                    onTap: () {
+                      CoreLoggingUtility.info(
+                        'HabitDetailScreen',
+                        'editReminder',
+                        'User tapped to edit reminder ${reminder.id}',
+                      );
+                      context.push('/reminders/edit/${reminder.id}', extra: reminder);
+                    },
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  String _formatReminderTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final reminderDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    
+    final difference = reminderDate.difference(today).inDays;
+    
+    String dateStr;
+    if (difference == 0) {
+      dateStr = 'Today';
+    } else if (difference == 1) {
+      dateStr = 'Tomorrow';
+    } else if (difference < 7) {
+      final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      dateStr = weekdays[dateTime.weekday - 1];
+    } else {
+      dateStr = '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    }
+    
+    final hour = dateTime.hour;
+    final minute = dateTime.minute;
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    final timeStr = '$displayHour:${minute.toString().padLeft(2, '0')} $period';
+    
+    return '$dateStr at $timeStr';
   }
 
   Widget _buildEventItem(BuildContext context, dynamic habit, dynamic event) {

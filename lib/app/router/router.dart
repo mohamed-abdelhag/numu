@@ -19,6 +19,10 @@ import 'package:numu/features/habits/screens/categories_screen.dart';
 import 'package:numu/features/habits/screens/create_category_screen.dart';
 import 'package:numu/features/habits/screens/edit_category_screen.dart';
 import 'package:numu/features/habits/screens/category_detail_screen.dart';
+import 'package:numu/features/reminders/screens/reminder_list_screen.dart';
+import 'package:numu/features/reminders/screens/create_reminder_screen.dart';
+import 'package:numu/features/reminders/screens/edit_reminder_screen.dart';
+import 'package:numu/features/reminders/models/reminder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:numu/core/widgets/shell/numu_app_shell.dart';
 
@@ -144,6 +148,39 @@ final routerProvider = Provider<GoRouter>((ref) {
                     },
                   ),
                 ],
+              ),
+            ],
+          ),
+          
+          GoRoute(
+            path: '/reminders',
+            name: 'reminders',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: ReminderListScreen(),
+            ),
+            routes: [
+              GoRoute(
+                path: 'create',
+                name: 'create-reminder',
+                pageBuilder: (context, state) {
+                  final extra = state.extra as Map<String, dynamic>?;
+                  return MaterialPage(
+                    child: CreateReminderScreen(
+                      preSelectedHabitId: extra?['habitId'] as int?,
+                      preSelectedHabitName: extra?['habitName'] as String?,
+                    ),
+                  );
+                },
+              ),
+              GoRoute(
+                path: 'edit/:id',
+                name: 'edit-reminder',
+                pageBuilder: (context, state) {
+                  final reminder = state.extra as Reminder;
+                  return MaterialPage(
+                    child: EditReminderScreen(reminder: reminder),
+                  );
+                },
               ),
             ],
           ),

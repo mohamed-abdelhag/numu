@@ -5,6 +5,7 @@ import 'package:numu/features/tasks/task.dart';
 import 'package:numu/features/tasks/tasks_provider.dart';
 import 'package:numu/features/tasks/widgets/task_form.dart';
 import 'package:numu/features/habits/providers/categories_provider.dart';
+import 'package:numu/features/reminders/providers/reminder_provider.dart';
 
 /// Screen for editing an existing task
 /// 
@@ -37,6 +38,9 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
   bool _isDeleting = false;
   Task? _originalTask;
   bool _isInitialized = false;
+  bool _reminderEnabled = false;
+  int _reminderMinutesBefore = 60;
+  bool _originalReminderEnabled = false;
 
   @override
   void dispose() {
@@ -46,7 +50,7 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
   }
 
   /// Initialize form with task data
-  void _initializeForm(Task task) {
+  Future<void> _initializeForm(Task task) async {
     if (_isInitialized) return;
     
     _originalTask = task;
@@ -54,6 +58,18 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
     _descriptionController.text = task.description ?? '';
     _selectedDueDate = task.dueDate;
     _selectedCategoryId = task.categoryId;
+    
+    // Check if task has existing reminders
+    if (task.id != null) {
+      final reminders = await ref.read(taskRemindersProvider(task.id!).future);
+      if (reminders.isNotEmpty) {
+        final reminder = reminders.first;
+        _reminderEnabled = reminder.isActive;
+        _originalReminderEnabled = reminder.isActive;
+        _reminderMinutesBefore = reminder.schedule.minutesBefore ?? 60;
+      }
+    }
+    
     _isInitialized = true;
   }
 
@@ -138,11 +154,27 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
                 onDueDateChanged: (date) {
                   setState(() {
                     _selectedDueDate = date;
+                    // Disable reminder if due date is removed
+                    if (date == null) {
+                      _reminderEnabled = false;
+                    }
                   });
                 },
                 onCategoryChanged: (categoryId) {
                   setState(() {
                     _selectedCategoryId = categoryId;
+                  });
+                },
+                initialReminderEnabled: _reminderEnabled,
+                initialReminderMinutesBefore: _reminderMinutesBefore,
+                onReminderEnabledChanged: (enabled) {
+                  setState(() {
+                    _reminderEnabled = enabled;
+                  });
+                },
+                onReminderMinutesBeforeChanged: (minutes) {
+                  setState(() {
+                    _reminderMinutesBefore = minutes;
                   });
                 },
               ),
@@ -226,7 +258,8 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
             : _descriptionController.text.trim()) !=
             _originalTask!.description ||
         _selectedDueDate != _originalTask!.dueDate ||
-        _selectedCategoryId != _originalTask!.categoryId;
+        _selectedCategoryId != _originalTask!.categoryId ||
+        _reminderEnabled != _originalReminderEnabled;
   }
 
   /// Handle cancel action - discard changes and navigate back
@@ -310,8 +343,12 @@ class _EditTaskScreenState extends ConsumerState<EditTaskScreen> {
         updatedAt: DateTime.now(),
       );
 
-      // Update task using provider
-      await ref.read(tasksProvider.notifier).updateTask(updatedTask);
+      // Update task using provider (includes reminder handling)
+      await ref.read(tasksProvider.notifier).updateTask(
+        updatedTask,
+        reminderEnabled: _reminderEnabled,
+        reminderMinutesBefore: _reminderMinutesBefore,
+      );
 
       // Show success message with semantic announcement
       if (mounted) {

@@ -8,6 +8,7 @@ import 'package:numu/features/habits/models/category.dart';
 /// - Multi-line description field
 /// - Date picker for due date selection
 /// - Category dropdown selector
+/// - Reminder configuration section
 /// - Accessibility labels for all fields
 class TaskForm extends StatefulWidget {
   final TextEditingController titleController;
@@ -18,6 +19,10 @@ class TaskForm extends StatefulWidget {
   final ValueChanged<DateTime?> onDueDateChanged;
   final ValueChanged<int?> onCategoryChanged;
   final GlobalKey<FormState>? formKey;
+  final bool initialReminderEnabled;
+  final int initialReminderMinutesBefore;
+  final ValueChanged<bool> onReminderEnabledChanged;
+  final ValueChanged<int> onReminderMinutesBeforeChanged;
 
   const TaskForm({
     super.key,
@@ -29,6 +34,10 @@ class TaskForm extends StatefulWidget {
     required this.onDueDateChanged,
     required this.onCategoryChanged,
     this.formKey,
+    this.initialReminderEnabled = false,
+    this.initialReminderMinutesBefore = 60,
+    required this.onReminderEnabledChanged,
+    required this.onReminderMinutesBeforeChanged,
   });
 
   @override
@@ -38,12 +47,16 @@ class TaskForm extends StatefulWidget {
 class _TaskFormState extends State<TaskForm> {
   DateTime? _selectedDueDate;
   int? _selectedCategoryId;
+  bool _reminderEnabled = false;
+  int _reminderMinutesBefore = 60;
 
   @override
   void initState() {
     super.initState();
     _selectedDueDate = widget.initialDueDate;
     _selectedCategoryId = widget.initialCategoryId;
+    _reminderEnabled = widget.initialReminderEnabled;
+    _reminderMinutesBefore = widget.initialReminderMinutesBefore;
   }
 
   @override
@@ -224,6 +237,97 @@ class _TaskFormState extends State<TaskForm> {
               },
             ),
           ),
+          
+          const SizedBox(height: 24),
+          
+          // Reminder section
+          Text(
+            'Reminder',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          
+          const SizedBox(height: 8),
+          
+          // Reminder enable toggle
+          Semantics(
+            label: _reminderEnabled
+                ? 'Reminder enabled'
+                : 'Reminder disabled',
+            toggled: _reminderEnabled,
+            child: SwitchListTile(
+              title: const Text('Enable reminder'),
+              subtitle: _selectedDueDate == null
+                  ? const Text('Set a due date to enable reminders')
+                  : null,
+              value: _reminderEnabled,
+              onChanged: _selectedDueDate != null
+                  ? (value) {
+                      setState(() {
+                        _reminderEnabled = value;
+                      });
+                      widget.onReminderEnabledChanged(value);
+                    }
+                  : null,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          
+          // Reminder offset selector (only shown when reminder is enabled)
+          if (_reminderEnabled && _selectedDueDate != null) ...[
+            const SizedBox(height: 8),
+            Semantics(
+              label: 'Reminder time: ${_getReminderOffsetLabel(_reminderMinutesBefore)}',
+              button: true,
+              child: DropdownButtonFormField<int>(
+                decoration: const InputDecoration(
+                  labelText: 'Remind me',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.notifications_outlined),
+                ),
+                value: _reminderMinutesBefore,
+                items: const [
+                  DropdownMenuItem(
+                    value: 15,
+                    child: Text('15 minutes before'),
+                  ),
+                  DropdownMenuItem(
+                    value: 30,
+                    child: Text('30 minutes before'),
+                  ),
+                  DropdownMenuItem(
+                    value: 60,
+                    child: Text('1 hour before'),
+                  ),
+                  DropdownMenuItem(
+                    value: 120,
+                    child: Text('2 hours before'),
+                  ),
+                  DropdownMenuItem(
+                    value: 1440,
+                    child: Text('1 day before'),
+                  ),
+                  DropdownMenuItem(
+                    value: 2880,
+                    child: Text('2 days before'),
+                  ),
+                  DropdownMenuItem(
+                    value: 10080,
+                    child: Text('1 week before'),
+                  ),
+                ],
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _reminderMinutesBefore = value;
+                    });
+                    widget.onReminderMinutesBeforeChanged(value);
+                  }
+                },
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -304,6 +408,22 @@ class _TaskFormState extends State<TaskForm> {
     } catch (e) {
       // Fallback to grey if parsing fails
       return const Color(0xFF808080);
+    }
+  }
+
+  /// Get reminder offset label for accessibility
+  String _getReminderOffsetLabel(int minutes) {
+    if (minutes < 60) {
+      return '$minutes minutes before';
+    } else if (minutes < 1440) {
+      final hours = minutes ~/ 60;
+      return '$hours ${hours == 1 ? "hour" : "hours"} before';
+    } else if (minutes < 10080) {
+      final days = minutes ~/ 1440;
+      return '$days ${days == 1 ? "day" : "days"} before';
+    } else {
+      final weeks = minutes ~/ 10080;
+      return '$weeks ${weeks == 1 ? "week" : "weeks"} before';
     }
   }
 }

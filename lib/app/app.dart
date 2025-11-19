@@ -4,16 +4,48 @@ import 'package:numu/app/router/router.dart';
 import 'package:numu/app/theme/green_color_theme.dart' as green_theme;
 import 'package:numu/core/providers/theme_provider.dart';
 import 'package:numu/core/utils/core_logging_utility.dart';
+import 'package:numu/features/reminders/services/notification_navigation_service.dart';
+import 'package:numu/features/reminders/services/reminder_background_handler.dart';
 
 
-class MyApp extends ConsumerWidget {
+class MyApp extends ConsumerStatefulWidget {
   
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
+  
+  @override
+  void initState() {
+    super.initState();
+    // Register lifecycle observer
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    // Unregister lifecycle observer
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Handle app lifecycle changes for reminder background tasks
+    ReminderBackgroundHandler().handleAppLifecycleChange(state);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     final themeAsync = ref.watch(themeProvider);
+    
+    // Initialize navigation service with router
+    NotificationNavigationService().initialize(router);
     
     CoreLoggingUtility.info('app dart file','starting my app ','returning material app router');
 
