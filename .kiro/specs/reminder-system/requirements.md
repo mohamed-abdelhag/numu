@@ -2,11 +2,14 @@
 
 ## Introduction
 
-This feature implements a comprehensive reminder system that allows users to create notifications for tasks and habits. Reminders can be one-time or repeating, can be linked to specific habits or tasks, and support flexible scheduling options including custom repeat patterns, time windows, and specific days. The system integrates with the existing habit and task features to provide timely notifications.
+This feature implements a comprehensive reminder system as a standalone feature module that allows users to create notifications and full-screen alarms for tasks and habits. The system supports two reminder types: standard notifications and intrusive full-screen alarms. Reminders can be standalone or linked to specific habits and tasks, with intelligent scheduling based on habit time windows, active days, and task due dates. The system includes platform-specific configurations for iOS and Android, integrates with the navigation customizer for side panel access, and provides flexible scheduling options including custom repeat patterns, time-based triggers, and offset-based reminders. The reminder system is organized in its own feature folder following the project's architecture patterns.
 
 ## Glossary
 
-- **Reminder**: A scheduled notification that alerts the user about a task or habit
+- **Reminder System**: A standalone feature module that manages scheduled notifications and alarms for tasks and habits
+- **Reminder**: A scheduled notification or alarm that alerts the user about a task or habit
+- **Notification Reminder**: A standard system notification that appears in the notification tray
+- **Full-Screen Alarm**: An intrusive alarm that displays a full-screen interface requiring user interaction to dismiss
 - **One-Time Reminder**: A reminder that triggers once at a specific date and time
 - **Repeating Reminder**: A reminder that triggers multiple times based on a schedule
 - **Reminder List Screen**: The interface displaying all user-created reminders
@@ -17,6 +20,8 @@ This feature implements a comprehensive reminder system that allows users to cre
 - **Repeat Pattern**: The schedule defining when a repeating reminder triggers (daily, weekly, monthly)
 - **Due Date Reminder**: A reminder for a task that triggers before the task's due date
 - **Notification Service**: The system component that delivers reminder notifications to the user
+- **Platform Configuration**: Native iOS and Android setup required for notifications and alarms
+- **Navigation Customizer**: The interface that allows users to add or remove features from the side panel
 
 ## Requirements
 
@@ -163,3 +168,99 @@ This feature implements a comprehensive reminder system that allows users to cre
 3. THE Notification Service SHALL reschedule all active reminders on app launch
 4. THE Reminder System SHALL maintain reminder state even if the device is restarted
 5. THE Reminder System SHALL handle time zone changes correctly for scheduled reminders
+
+### Requirement 13
+
+**User Story:** As a user, I want to choose between notification and full-screen alarm types, so that I can select the appropriate alert level for different reminders
+
+#### Acceptance Criteria
+
+1. WHEN the user creates a reminder, THE Create Reminder Screen SHALL provide a reminder type selector with options: Notification and Full-Screen Alarm
+2. WHEN Notification is selected, THE Notification Service SHALL deliver a standard system notification
+3. WHEN Full-Screen Alarm is selected, THE Notification Service SHALL display a full-screen alarm interface
+4. THE Full-Screen Alarm SHALL require user interaction to dismiss
+5. THE Full-Screen Alarm SHALL play an alarm sound until dismissed
+
+### Requirement 14
+
+**User Story:** As a user, I want the reminder system to be properly configured for iOS and Android, so that notifications and alarms work correctly on both platforms
+
+#### Acceptance Criteria
+
+1. THE Reminder System SHALL include iOS-specific configuration in the ios folder
+2. THE Reminder System SHALL include Android-specific configuration in the android folder
+3. THE Reminder System SHALL configure notification permissions in iOS Info.plist
+4. THE Reminder System SHALL configure notification channels in Android AndroidManifest.xml
+5. THE Reminder System SHALL include Xcode project settings for background notification handling
+
+### Requirement 15
+
+**User Story:** As a developer, I want documentation for testing reminders on real devices, so that I can verify notification and alarm functionality
+
+#### Acceptance Criteria
+
+1. THE Reminder System SHALL include a markdown document with real device testing instructions
+2. THE testing document SHALL provide iOS device testing steps
+3. THE testing document SHALL provide Android device testing steps
+4. THE testing document SHALL include troubleshooting steps for common notification issues
+5. THE testing document SHALL explain how to test background notifications and full-screen alarms
+
+### Requirement 16
+
+**User Story:** As a user, I want the reminder system to be a separate feature module, so that it is organized and maintainable
+
+#### Acceptance Criteria
+
+1. THE Reminder System SHALL be implemented in a dedicated features/reminders folder
+2. THE Reminder System SHALL include separate files for models, services, repositories, and screens
+3. THE Reminder System SHALL follow the existing project architecture patterns
+4. THE Reminder System SHALL have its own database tables and schema
+5. THE Reminder System SHALL be independently testable from other features
+
+### Requirement 17
+
+**User Story:** As a user, I want to access the reminder system from the navigation panel, so that I can quickly view and manage my reminders
+
+#### Acceptance Criteria
+
+1. THE Navigation Customizer SHALL provide an option to add Reminders to the side panel
+2. WHEN Reminders is added to the side panel, THE Navigation Panel SHALL display a Reminders menu item
+3. WHEN the user taps the Reminders menu item, THE Navigation Panel SHALL navigate to the Reminder List Screen
+4. THE Reminders menu item SHALL display a badge count of active reminders
+5. THE Navigation Customizer SHALL allow the user to remove Reminders from the side panel
+
+### Requirement 18
+
+**User Story:** As a user, I want to set reminders for the day of a habit, so that I receive notifications on scheduled habit days
+
+#### Acceptance Criteria
+
+1. WHEN the user creates a reminder for a habit, THE Create Reminder Screen SHALL provide a "Day of habit" timing option
+2. WHEN "Day of habit" is selected, THE Create Reminder Screen SHALL allow the user to specify a time of day
+3. THE Notification Service SHALL trigger the reminder on days when the habit is active based on the habit's activeWeekdays
+4. WHEN a habit has a time window, THE Create Reminder Screen SHALL offer to use the time window start time
+5. THE Notification Service SHALL respect the habit's frequency and active days configuration
+
+### Requirement 19
+
+**User Story:** As a user, I want to set reminders for minutes before a habit's time window, so that I receive advance notice
+
+#### Acceptance Criteria
+
+1. WHEN the user creates a reminder for a habit with a time window, THE Create Reminder Screen SHALL provide a "Minutes before time window" option
+2. THE Create Reminder Screen SHALL allow the user to specify the number of minutes before the time window (e.g., 15, 30, 60 minutes)
+3. WHEN a habit has timeWindowStart configured, THE Notification Service SHALL calculate the reminder time by subtracting the specified minutes
+4. WHEN a habit does not have a time window, THE Create Reminder Screen SHALL disable the "Minutes before time window" option
+5. THE Notification Service SHALL trigger the reminder at the calculated time before the habit's time window
+
+### Requirement 20
+
+**User Story:** As a user, I want to set reminders for tasks before their due date, so that I have advance notice to complete them
+
+#### Acceptance Criteria
+
+1. WHEN the user creates or edits a task, THE Task Creation Screen SHALL provide an option to add a reminder
+2. THE Task Creation Screen SHALL allow the user to specify when to be reminded (e.g., 1 hour before, 1 day before, custom)
+3. WHEN a task has a dueDate configured, THE Reminder System SHALL calculate the reminder time based on the due date and offset
+4. WHEN a task's due date is updated, THE Reminder System SHALL automatically update the associated reminder time
+5. THE Task Creation Screen SHALL allow the user to enable or disable the reminder for the task

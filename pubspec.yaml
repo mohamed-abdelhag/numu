@@ -29,6 +29,11 @@ dependencies:
   # settings storage
   shared_preferences: ^2.3.3
 
+  # reminders and notifications
+  flutter_local_notifications: ^17.0.0
+  timezone: ^0.9.0
+  permission_handler: ^11.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

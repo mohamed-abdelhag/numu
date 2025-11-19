@@ -15,6 +15,7 @@ class DatabaseService {
   static const String notesTable = 'notes';
   static const String userProfileTable = 'user_profile';
   static const String tutorialCardsTable = 'tutorial_cards';
+  static const String remindersTable = 'reminders';
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -28,7 +29,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -62,6 +63,10 @@ class DatabaseService {
     if (oldVersion < 8) {
       // Convert timed habits to binary habits with time window enabled
       await _migrateTimedToBinaryHabits(db);
+    }
+    if (oldVersion < 9) {
+      // Add reminders table
+      await _createReminderTables(db);
     }
   }
 
@@ -186,6 +191,9 @@ class DatabaseService {
     
     // Create profile and tutorial tables
     await _createProfileAndTutorialTables(db);
+    
+    // Create reminder tables
+    await _createReminderTables(db);
     
     // Create indexes for category relationships
     await _createCategoryIndexes(db);
@@ -365,6 +373,47 @@ class DatabaseService {
     // Create index for tutorial cards sort order
     await db.execute('''
       CREATE INDEX idx_tutorial_cards_sort_order ON $tutorialCardsTable (sort_order)
+    ''');
+  }
+
+  Future<void> _createReminderTables(Database db) async {
+    // Create reminders table
+    await db.execute('''
+      CREATE TABLE $remindersTable (
+        reminder_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT,
+        reminder_type TEXT NOT NULL,
+        frequency TEXT NOT NULL,
+        specific_date_time TEXT,
+        time_of_day TEXT,
+        active_weekdays TEXT,
+        day_of_month INTEGER,
+        minutes_before INTEGER,
+        use_habit_time_window INTEGER NOT NULL DEFAULT 0,
+        use_habit_active_days INTEGER NOT NULL DEFAULT 0,
+        link_type TEXT,
+        link_entity_id INTEGER,
+        link_entity_name TEXT,
+        use_default_text INTEGER NOT NULL DEFAULT 1,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        next_trigger_time TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    // Create indexes for performance
+    await db.execute('''
+      CREATE INDEX idx_reminders_active ON $remindersTable (is_active)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX idx_reminders_next_trigger ON $remindersTable (next_trigger_time)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX idx_reminders_habit_link ON $remindersTable (link_type, link_entity_id)
     ''');
   }
 
