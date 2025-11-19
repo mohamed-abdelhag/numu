@@ -33,7 +33,7 @@ final class TasksNotifierProvider
   TasksNotifier create() => TasksNotifier();
 }
 
-String _$tasksNotifierHash() => r'0caa384075d1db8d723222301bd22dc3a1d3be9f';
+String _$tasksNotifierHash() => r'b1be5889c0e3d59bf1a65484d87349514b5f7a87';
 
 abstract class _$TasksNotifier extends $AsyncNotifier<List<Task>> {
   FutureOr<List<Task>> build();
@@ -52,4 +52,73 @@ abstract class _$TasksNotifier extends $AsyncNotifier<List<Task>> {
             >;
     element.handleValue(ref, created);
   }
+}
+
+@ProviderFor(taskDetail)
+const taskDetailProvider = TaskDetailFamily._();
+
+final class TaskDetailProvider
+    extends $FunctionalProvider<AsyncValue<Task?>, Task?, FutureOr<Task?>>
+    with $FutureModifier<Task?>, $FutureProvider<Task?> {
+  const TaskDetailProvider._({
+    required TaskDetailFamily super.from,
+    required int super.argument,
+  }) : super(
+         retry: null,
+         name: r'taskDetailProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
+
+  @override
+  String debugGetCreateSourceHash() => _$taskDetailHash();
+
+  @override
+  String toString() {
+    return r'taskDetailProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<Task?> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Task?> create(Ref ref) {
+    final argument = this.argument as int;
+    return taskDetail(ref, argument);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is TaskDetailProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$taskDetailHash() => r'92a294d1f0c58bd0cdca85e467612d0961dfa7ad';
+
+final class TaskDetailFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<Task?>, int> {
+  const TaskDetailFamily._()
+    : super(
+        retry: null,
+        name: r'taskDetailProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
+
+  TaskDetailProvider call(int taskId) =>
+      TaskDetailProvider._(argument: taskId, from: this);
+
+  @override
+  String toString() => r'taskDetailProvider';
 }

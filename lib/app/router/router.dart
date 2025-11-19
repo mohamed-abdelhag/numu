@@ -4,6 +4,9 @@ import 'package:numu/features/home/home_screen.dart';
 import 'package:numu/features/profile/profile_screen.dart';
 import 'package:numu/features/settings/settings_screen.dart';
 import 'package:numu/features/tasks/tasks_screen.dart';
+import 'package:numu/features/tasks/screens/add_task_screen.dart';
+import 'package:numu/features/tasks/screens/edit_task_screen.dart';
+import 'package:numu/features/tasks/screens/task_detail_screen.dart';
 import 'package:numu/features/habits/screens/habits_screen.dart';
 import 'package:numu/features/habits/screens/add_habit_screen.dart';
 import 'package:numu/features/habits/screens/habit_detail_screen.dart';
@@ -73,6 +76,37 @@ final routerProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => NoTransitionPage(
               child: TasksScreen(),
             ),
+            routes: [
+              GoRoute(
+                path: 'add',
+                name: 'add-task',
+                pageBuilder: (context, state) => const MaterialPage(
+                  child: AddTaskScreen(),
+                ),
+              ),
+              GoRoute(
+                path: ':id',
+                name: 'task-detail',
+                pageBuilder: (context, state) {
+                  final taskId = int.parse(state.pathParameters['id']!);
+                  return MaterialPage(
+                    child: TaskDetailScreen(taskId: taskId),
+                  );
+                },
+                routes: [
+                  GoRoute(
+                    path: 'edit',
+                    name: 'edit-task',
+                    pageBuilder: (context, state) {
+                      final taskId = int.parse(state.pathParameters['id']!);
+                      return MaterialPage(
+                        child: EditTaskScreen(taskId: taskId),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
           
           GoRoute(

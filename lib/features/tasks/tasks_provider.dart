@@ -15,13 +15,23 @@ class TasksNotifier extends _$TasksNotifier {
     return await _repository.getTasks();
   }
 
-  Future<void> addTask(String text, [int? categoryId]) async {
-    if (text.trim().isEmpty) return;
+  Future<void> addTask({
+    required String title,
+    String? description,
+    DateTime? dueDate,
+    int? categoryId,
+  }) async {
+    if (title.trim().isEmpty) return;
 
     state = const AsyncValue.loading();
 
     state = await AsyncValue.guard(() async {
-      final newTask = Task(text: text, categoryId: categoryId);
+      final newTask = Task(
+        title: title,
+        description: description,
+        dueDate: dueDate,
+        categoryId: categoryId,
+      );
       await _repository.createTask(newTask);
       return await _repository.getTasks();
     });
@@ -54,4 +64,11 @@ class TasksNotifier extends _$TasksNotifier {
       return await _repository.getTasks();
     });
   }
+}
+
+// Provider for fetching a single task by ID
+@riverpod
+Future<Task?> taskDetail(Ref ref, int taskId) async {
+  final repository = TasksRepository();
+  return await repository.getTaskById(taskId);
 }

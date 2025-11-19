@@ -28,7 +28,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -55,6 +55,10 @@ class DatabaseService {
       // Add category system enhancements
       await _upgradeCategorySystem(db);
     }
+    if (oldVersion < 7) {
+      // Enhance tasks table with title, description, due_date, and timestamps
+      await _upgradeTasksTable(db);
+    }
   }
 
   Future<void> _upgradeCategorySystem(Database db) async {
@@ -78,14 +82,58 @@ class DatabaseService {
     ''');
   }
 
+  Future<void> _upgradeTasksTable(Database db) async {
+    // Step 1: Create a new temporary table with the updated schema
+    await db.execute('''
+      CREATE TABLE tasks_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        description TEXT,
+        due_date TEXT,
+        isCompleted INTEGER NOT NULL DEFAULT 0,
+        category_id INTEGER,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    ''');
+
+    // Step 2: Copy existing data from old table to new table
+    // The 'text' column is renamed to 'title'
+    await db.execute('''
+      INSERT INTO tasks_new (id, title, isCompleted, category_id, created_at, updated_at)
+      SELECT id, text, isCompleted, category_id, datetime('now'), datetime('now')
+      FROM $tasksTable
+    ''');
+
+    // Step 3: Drop the old table
+    await db.execute('DROP TABLE $tasksTable');
+
+    // Step 4: Rename the new table to the original name
+    await db.execute('ALTER TABLE tasks_new RENAME TO $tasksTable');
+
+    // Step 5: Create index on due_date column for performance
+    await db.execute('''
+      CREATE INDEX idx_tasks_due_date ON $tasksTable (due_date)
+    ''');
+
+    // Step 6: Recreate the category_id index (it was dropped with the old table)
+    await db.execute('''
+      CREATE INDEX idx_tasks_category_id ON $tasksTable (category_id)
+    ''');
+  }
+
   // Create all tables here
   Future<void> _createDB(Database db, int version) async {
     await db.execute('''
       CREATE TABLE $tasksTable (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        text TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        due_date TEXT,
         isCompleted INTEGER NOT NULL DEFAULT 0,
-        category_id INTEGER
+        category_id INTEGER,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       )
     ''');
 
@@ -135,6 +183,11 @@ class DatabaseService {
 
     await db.execute('''
       CREATE INDEX idx_tasks_category_id ON $tasksTable (category_id)
+    ''');
+
+    // Add index for tasks due_date column
+    await db.execute('''
+      CREATE INDEX idx_tasks_due_date ON $tasksTable (due_date)
     ''');
   }
 
