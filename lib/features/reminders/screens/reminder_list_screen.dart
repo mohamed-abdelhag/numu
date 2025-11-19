@@ -306,7 +306,7 @@ class _ReminderListScreenState extends ConsumerState<ReminderListScreen> {
               decoration: reminder.isActive ? null : TextDecoration.lineThrough,
               color: reminder.isActive 
                 ? null 
-                : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                : Theme.of(context).colorScheme.onSurface.withValues(alpha:0.5),
             ),
           ),
           subtitle: Column(
@@ -395,7 +395,7 @@ class _ReminderListScreenState extends ConsumerState<ReminderListScreen> {
     }
 
     return CircleAvatar(
-      backgroundColor: color.withOpacity(0.1),
+      backgroundColor: color.withValues(alpha:0.1),
       child: Icon(
         icon,
         color: color,
@@ -520,7 +520,7 @@ class _ReminderListScreenState extends ConsumerState<ReminderListScreen> {
           Icon(
             Icons.notifications_none,
             size: 120,
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha:0.3),
           ),
           const SizedBox(height: 24),
           Text(
@@ -531,7 +531,7 @@ class _ReminderListScreenState extends ConsumerState<ReminderListScreen> {
           Text(
             'Create your first reminder to get started!',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.6),
             ),
           ),
           const SizedBox(height: 32),

@@ -186,7 +186,7 @@ class _FullScreenAlarmDialogState extends State<FullScreenAlarmDialog>
                     color: colorScheme.errorContainer,
                     boxShadow: [
                       BoxShadow(
-                        color: colorScheme.error.withOpacity(0.3),
+                        color: colorScheme.error.withValues(alpha: 0.3),
                         blurRadius: 30,
                         spreadRadius: 10,
                       ),
@@ -261,7 +261,7 @@ class _FullScreenAlarmDialogState extends State<FullScreenAlarmDialog>
                       backgroundColor: colorScheme.primary,
                       foregroundColor: colorScheme.onPrimary,
                       elevation: 8,
-                      shadowColor: colorScheme.primary.withOpacity(0.5),
+                      shadowColor: colorScheme.primary.withValues(alpha:0.5),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(32),
                       ),

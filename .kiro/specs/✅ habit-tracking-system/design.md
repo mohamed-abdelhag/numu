@@ -983,7 +983,7 @@ class EmptyHabitsState extends StatelessWidget {
           Icon(
             Icons.track_changes,
             size: 120,
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha:0.3),
           ),
           const SizedBox(height: 24),
           Text(

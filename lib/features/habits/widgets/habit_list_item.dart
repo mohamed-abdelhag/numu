@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/habit.dart';
-import '../models/enums/frequency.dart';
 import '../providers/categories_provider.dart';
-import 'habit_quick_log_button.dart';
-import 'habit_streak_display.dart';
-import 'habit_progress_indicator.dart';
+
+import 'habit_card.dart';
+import '../models/enums/tracking_type.dart';
 
 /// Widget displaying a single habit in the list
 /// Shows habit icon, name, and basic information
@@ -56,112 +55,65 @@ class _HabitListItemState extends ConsumerState<HabitListItem> {
           )
         : null;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => _handleTap(context),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              // Icon with color
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Color(int.parse(widget.habit.color.replaceFirst('0x', ''), radix: 16)),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    widget.habit.icon,
-                    style: const TextStyle(fontSize: 24),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
+    // Generate mock weekly progress
+    final weeklyProgress = _generateMockWeeklyProgress();
 
-              // Habit info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            widget.habit.name,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                        ),
-                        if (category != null) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Color(int.parse(category.color.replaceFirst('0x', ''), radix: 16))
-                                  .withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (category.icon != null) ...[
-                                  Text(
-                                    category.icon!,
-                                    style: const TextStyle(fontSize: 12),
-                                  ),
-                                  const SizedBox(width: 4),
-                                ],
-                                Text(
-                                  category.name,
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    if (widget.habit.description != null && widget.habit.description!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.habit.description!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                            ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    // Show progress indicator for weekly/monthly habits
-                    // Show streak display for daily habits
-                    if (widget.habit.id != null)
-                      widget.habit.frequency == Frequency.daily
-                          ? HabitStreakDisplay(
-                              habitId: widget.habit.id!,
-                              compact: true,
-                            )
-                          : HabitProgressIndicator(
-                              habitId: widget.habit.id!,
-                            ),
-                  ],
-                ),
-              ),
-
-              // Quick log button
-              HabitQuickLogButton(habit: widget.habit),
-            ],
-          ),
-        ),
+    return InkWell(
+      onTap: () => _handleTap(context),
+      borderRadius: BorderRadius.circular(16),
+      child: HabitCard(
+        habit: widget.habit,
+        weeklyProgress: weeklyProgress,
+        score: 12, // Mock score
+        overallProgress: 0.75, // Mock overall progress
       ),
     );
+  }
+
+  List<DailyHabitStatus> _generateMockWeeklyProgress() {
+    final now = DateTime.now();
+    // Generate for the last 7 days or current week (Mon-Sun)
+    // Let's do current week Mon-Sun
+    final currentWeekday = now.weekday; // 1 = Mon, 7 = Sun
+    final monday = now.subtract(Duration(days: currentWeekday - 1));
+
+    return List.generate(7, (index) {
+      final date = monday.add(Duration(days: index));
+      final isFuture = date.isAfter(now);
+      final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
+      
+      // Mock data logic
+      // If future, empty.
+      // If past, random progress.
+      
+      if (isFuture && !isToday) {
+        return DailyHabitStatus(
+          date: date,
+          isEmpty: true,
+        );
+      }
+
+      // For today, let's make it partially done or empty
+      if (isToday) {
+        return DailyHabitStatus(
+          date: date,
+          progress: widget.habit.trackingType == TrackingType.value ? (widget.habit.targetValue ?? 1) * 0.5 : 0,
+          target: widget.habit.targetValue ?? 1,
+          isCurrentDay: true,
+          isEmpty: false, // Today is never "empty" in terms of existence, but progress might be 0
+        );
+      }
+
+      // Past days
+      return DailyHabitStatus(
+        date: date,
+        progress: widget.habit.trackingType == TrackingType.value 
+            ? (index % 2 == 0 ? (widget.habit.targetValue ?? 1) : (widget.habit.targetValue ?? 1) * 0.2) 
+            : (index % 2 == 0 ? 1 : 0),
+        target: widget.habit.targetValue ?? 1,
+        quality: widget.habit.qualityLayerEnabled ? (index % 3 == 0 ? 5 : 0) : 0,
+        isEmpty: false,
+      );
+    });
   }
 }

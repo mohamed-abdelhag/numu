@@ -332,7 +332,7 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
             labelText: 'Select Habit',
             border: OutlineInputBorder(),
           ),
-          value: _selectedHabitId,
+          initialValue: _selectedHabitId,
           items: habits.map((habit) {
             return DropdownMenuItem<int>(
               value: habit.id,
