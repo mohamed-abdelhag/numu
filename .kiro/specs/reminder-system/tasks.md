@@ -42,7 +42,7 @@
   - Configure alarm to wake screen, play sound, and require explicit dismissal
   - _Requirements: 13.2, 13.3, 13.4, 13.5_
 
-- [-] 6. Implement reminder scheduler service
+- [x] 6. Implement reminder scheduler service
   - Create `lib/features/reminders/services/reminder_scheduler_service.dart` with scheduling logic
   - Implement calculateNextTriggerTime() method with logic for one-time, daily, weekly, and monthly reminders
   - Implement scheduleReminder() method to delegate to NotificationService or AlarmService based on reminder type
@@ -55,7 +55,7 @@
   - Add logic to handle task due date offsets (task.dueDate minus minutesBefore)
   - _Requirements: 2.3, 2.4, 3.2, 3.3, 3.5, 5.3, 5.4, 6.3, 6.4, 10.2, 10.3, 10.4, 10.5, 18.3, 19.3, 20.3_
 
-- [ ] 7. Create Riverpod providers
+- [x] 7. Create Riverpod providers
   - Create `lib/features/reminders/providers/reminder_provider.dart` using riverpod_annotation
   - Implement ReminderNotifier class extending AsyncNotifier with state management for reminder list
   - Implement createReminder() method to create reminder in repository and schedule via scheduler service
@@ -69,7 +69,7 @@
   - Run `dart run build_runner build` to generate provider code
   - _Requirements: 1.5, 8.4, 9.2, 9.3_
 
-- [ ] 8. Build reminder list screen
+- [x] 8. Build reminder list screen
   - Create `lib/features/reminders/screens/reminder_list_screen.dart` as main reminders interface
   - Display list of all reminders using ListView with reminder list items
   - Show visual distinction between notification and alarm types using icons
@@ -81,7 +81,7 @@
   - Add filter options to show all/active/inactive reminders
   - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
 
-- [ ] 9. Build create reminder screen
+- [x] 9. Build create reminder screen
   - Create `lib/features/reminders/screens/create_reminder_screen.dart` with form for new reminders
   - Add title text input field (required)
   - Add description text area (optional)
@@ -102,7 +102,7 @@
   - Add save button that creates reminder via provider and navigates back
   - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 3.1, 3.2, 3.4, 4.2, 4.3, 5.1, 5.2, 6.1, 6.2, 10.1, 18.1, 18.2, 19.1, 19.2, 20.1, 20.2_
 
-- [ ] 10. Build edit reminder screen
+- [x] 10. Build edit reminder screen
   - Create `lib/features/reminders/screens/edit_reminder_screen.dart` similar to create screen
   - Pre-fill all form fields with existing reminder data
   - Allow modification of all reminder properties
@@ -112,7 +112,7 @@
   - Implement same validation as create screen
   - _Requirements: 8.1, 8.2, 8.3, 8.4_
 
-- [ ] 11. Create reminder list item widget
+- [x] 11. Create reminder list item widget
   - Create `lib/features/reminders/widgets/reminder_list_item.dart` for displaying individual reminders
   - Show icon indicating type: bell icon for notification, alarm clock icon for full-screen alarm
   - Display title and description
@@ -122,14 +122,14 @@
   - Make item tappable to navigate to edit screen
   - _Requirements: 7.1, 7.2, 7.3, 7.4_
 
-- [ ] 12. Create reminder type selector widget
+- [x] 12. Create reminder type selector widget
   - Create `lib/features/reminders/widgets/reminder_type_selector.dart` for type selection
   - Display radio button group with notification and full-screen alarm options
   - Show icon and description for each type
   - Handle selection state changes
   - _Requirements: 13.1_
 
-- [ ] 13. Create reminder schedule picker widget
+- [x] 13. Create reminder schedule picker widget
   - Create `lib/features/reminders/widgets/reminder_schedule_picker.dart` for schedule configuration
   - Add frequency dropdown with options: None, Daily, Weekly, Monthly
   - Show conditional date/time pickers based on selected frequency
@@ -140,7 +140,7 @@
   - Handle state changes and validation
   - _Requirements: 5.1, 5.2, 6.1, 6.2, 10.1_
 
-- [ ] 14. Create full-screen alarm dialog widget
+- [x] 14. Create full-screen alarm dialog widget
   - Create `lib/features/reminders/widgets/full_screen_alarm_dialog.dart` for alarm display
   - Design full-screen overlay with large alarm icon
   - Display reminder title and description prominently
@@ -150,7 +150,7 @@
   - Integrate with alarm service for sound playback
   - _Requirements: 13.3, 13.4, 13.5_
 
-- [ ] 15. Configure iOS platform for notifications and alarms
+- [x] 15. Configure iOS platform for notifications and alarms
   - Update `ios/Runner/Info.plist` to add UIBackgroundModes with remote-notification
   - Add NSUserNotificationsUsageDescription with permission explanation text
   - Update `ios/Runner/AppDelegate.swift` to configure notification categories and handle notification responses
@@ -158,14 +158,14 @@
   - Enable "Remote notifications" background mode in Xcode
   - _Requirements: 14.1, 14.3, 14.5_
 
-- [ ] 16. Configure Android platform for notifications and alarms
+- [x] 16. Configure Android platform for notifications and alarms
   - Update `android/app/src/main/AndroidManifest.xml` to add permissions: POST_NOTIFICATIONS, VIBRATE, WAKE_LOCK, USE_FULL_SCREEN_INTENT, SCHEDULE_EXACT_ALARM
   - Add notification receivers in AndroidManifest.xml: ScheduledNotificationReceiver and ScheduledNotificationBootReceiver with BOOT_COMPLETED intent filter
   - Update `android/app/src/main/kotlin/MainActivity.kt` to configure notification channels and handle notification intents
   - Ensure `android/app/build.gradle.kts` has compileSdk >= 33 for notification permissions
   - _Requirements: 14.2, 14.4_
 
-- [ ] 17. Integrate reminders with navigation system
+- [-] 17. Integrate reminders with navigation system
   - Update `lib/core/providers/navigation_provider.dart` to add reminders navigation item to _defaultItems list
   - Set reminders item properties: id='reminders', label='Reminders', icon=Icons.notifications, route='/reminders', order=4 (before settings)
   - Update `lib/app/router/router.dart` to add reminders route in ShellRoute

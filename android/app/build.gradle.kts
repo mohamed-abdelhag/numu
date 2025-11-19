@@ -7,7 +7,8 @@ plugins {
 
 android {
     namespace = "com.baseet.numu"
-    compileSdk = flutter.compileSdkVersion
+    // Ensure compileSdk >= 33 for notification permissions (Android 13+)
+    compileSdk = 34
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
