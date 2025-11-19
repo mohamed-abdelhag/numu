@@ -11,6 +11,20 @@ import '../repositories/habit_repository.dart';
 /// Dialog for logging habit events
 /// Supports binary and value tracking types
 /// Can be used for both creating new entries (FAB) and editing existing entries (calendar)
+///
+/// QUALITY LAYER LOGIC:
+/// The quality layer is a binary attribute that applies to the primary habit metric,
+/// NOT a separate counter. When quality layer is enabled:
+/// 
+/// - For binary habits: qualityAchieved indicates if the completion met quality criteria
+///   Example: "Completed workout with proper form" = completed: true, qualityAchieved: true
+/// 
+/// - For value habits: qualityAchieved applies to the logged value
+///   Example: "20 reps with focused quality" = valueDelta: 20, qualityAchieved: true
+///   NOT: valueDelta: 20 (unfocused) + qualityDelta: 20 (focused)
+/// 
+/// This means one event can have both a value AND a quality status, where quality
+/// describes HOW the value was achieved, not a separate measurement.
 class LogHabitEventDialog extends ConsumerStatefulWidget {
   final Habit habit;
   final DateTime? prefilledDate; // null for FAB, specific date for calendar click
@@ -35,6 +49,7 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
   bool _isLoading = false;
   double? _todayTotal;
   bool _qualityAchieved = false;
+  HabitEvent? _loadedExistingEvent;
 
   @override
   void initState() {
@@ -45,29 +60,69 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
     _selectedDate = widget.prefilledDate ?? DateTime(now.year, now.month, now.day);
     _selectedTime = TimeOfDay.fromDateTime(now);
     
-    // Pre-fill values if editing existing event
+    // Load existing event data asynchronously
+    _initializeEventData();
+  }
+
+  /// Load existing event data for the selected date
+  /// This method handles both cases:
+  /// 1. When existingEvent is passed directly (already loaded)
+  /// 2. When only prefilledDate is provided (need to fetch from repository)
+  Future<void> _initializeEventData() async {
+    HabitEvent? eventToLoad;
+    
+    // Case 1: Event already provided
     if (widget.existingEvent != null) {
-      final event = widget.existingEvent!;
-      
-      // Pre-fill value for value habits
-      if (event.valueDelta != null) {
-        _valueController.text = event.valueDelta!.toString();
-      }
-      
-      // Pre-fill quality status
-      if (event.qualityAchieved != null) {
-        _qualityAchieved = event.qualityAchieved!;
-      }
-      
-      // Pre-fill notes
-      if (event.notes != null) {
-        _notesController.text = event.notes!;
-      }
+      eventToLoad = widget.existingEvent;
+    } 
+    // Case 2: Need to fetch event for the prefilled date
+    else if (widget.prefilledDate != null) {
+      eventToLoad = await _loadExistingEventForDate(widget.prefilledDate!);
+    }
+    
+    // Pre-fill form fields if we have an event
+    if (eventToLoad != null && mounted) {
+      setState(() {
+        _loadedExistingEvent = eventToLoad;
+        
+        // Pre-fill value for value habits
+        final valueDelta = eventToLoad?.valueDelta;
+        if (valueDelta != null) {
+          _valueController.text = valueDelta.toString();
+        }
+        
+        // Pre-fill quality status
+        final qualityAchieved = eventToLoad?.qualityAchieved;
+        if (qualityAchieved != null) {
+          _qualityAchieved = qualityAchieved;
+        }
+        
+        // Pre-fill notes
+        final notes = eventToLoad?.notes;
+        if (notes != null) {
+          _notesController.text = notes;
+        }
+      });
     }
     
     // Load today's total for value habits
     if (widget.habit.trackingType == TrackingType.value) {
       _loadTodayTotal();
+    }
+  }
+
+  /// Helper method to fetch existing event from repository for a specific date
+  /// Returns null if no event exists for the date
+  Future<HabitEvent?> _loadExistingEventForDate(DateTime date) async {
+    try {
+      final repository = HabitRepository();
+      final events = await repository.getEventsForDate(widget.habit.id!, date);
+      
+      // Return the first event if any exist for this date
+      return events.isNotEmpty ? events.first : null;
+    } catch (e) {
+      // Silently fail - not critical, user can still create new event
+      return null;
     }
   }
 
@@ -96,7 +151,8 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.existingEvent != null;
+    // Check if we're editing an existing event (either passed or loaded)
+    final isEditing = widget.existingEvent != null || _loadedExistingEvent != null;
     
     return AlertDialog(
       title: Row(
@@ -322,6 +378,12 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
     );
   }
 
+  /// Build quality layer checkbox
+  /// 
+  /// Quality is a binary attribute that describes HOW the habit was performed,
+  /// not a separate measurement. For value habits, this applies to the entered value.
+  /// Example: Entering "20" with quality checked means "20 reps done with quality",
+  /// not "20 regular reps + 20 quality reps".
   Widget _buildQualityCheckbox() {
     return CheckboxListTile(
       title: Text(widget.habit.qualityLayerLabel ?? 'Quality achieved'),
@@ -414,7 +476,7 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
       
       if (mounted) {
         Navigator.of(context).pop();
-        final isEditing = widget.existingEvent != null;
+        final isEditing = widget.existingEvent != null || _loadedExistingEvent != null;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(isEditing 
@@ -441,11 +503,17 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
 
   HabitEvent _createEvent(DateTime now) {
     final withinTimeWindow = widget.habit.timeWindowEnabled ? _isWithinTimeWindow() : null;
+    
+    // Quality layer is a binary attribute that applies to the primary value/completion
+    // For example: "20 reps with focused quality" = valueDelta: 20, qualityAchieved: true
+    // NOT: valueDelta: 20 (unfocused) + qualityDelta: 20 (focused)
     final qualityAchieved = widget.habit.qualityLayerEnabled ? _qualityAchieved : null;
     
     // Preserve existing event ID and creation time if editing
-    final eventId = widget.existingEvent?.id;
-    final createdAt = widget.existingEvent?.createdAt ?? now;
+    // Use _loadedExistingEvent which may have been fetched from repository
+    final existingEvent = widget.existingEvent ?? _loadedExistingEvent;
+    final eventId = existingEvent?.id;
+    final createdAt = existingEvent?.createdAt ?? now;
     
     switch (widget.habit.trackingType) {
       case TrackingType.binary:

@@ -67,6 +67,11 @@ void main() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   final settingsRepository = SettingsRepository(sharedPreferences);
   
+  // Ensure Flutter framework is fully initialized before starting app
+  // This prevents navigation issues during app startup
+  await Future.delayed(Duration.zero);
+  CoreLoggingUtility.info('main dart file', 'initialization', 'All services initialized, starting app');
+  
   runApp(
     ProviderScope(
       overrides: [

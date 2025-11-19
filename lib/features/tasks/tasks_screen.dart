@@ -89,12 +89,11 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
       final tasksAsync = ref.watch(tasksProvider);
       final categoriesAsync = ref.watch(categoriesProvider);
       
-      return Scaffold(
-        body: Column(
-          children: [
-            NumuAppBar(
-              title: 'Tasks',
-              actions: [
+      return Column(
+        children: [
+          NumuAppBar(
+            title: 'Tasks',
+            actions: [
                 // Sort menu
                 Semantics(
                   label: 'Sort tasks',
@@ -203,124 +202,131 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
 
             // Tasks list
             Expanded(
-              child: tasksAsync.when(
-                data: (tasks) {
-                  CoreLoggingUtility.info('tasks screen', 'Tasks data loaded', 'Loaded ${tasks.length} tasks');
-                  
-                  final filteredTasks = _filterTasks(tasks);
-                  final sortedTasks = _sortTasks(filteredTasks);
-                  
-                  if (tasks.isEmpty) {
-                    CoreLoggingUtility.info('tasks screen', 'No tasks to display', 'Empty state shown');
-                    return _buildEmptyState();
-                  }
+              child: Stack(
+                children: [
+                  tasksAsync.when(
+                    data: (tasks) {
+                      CoreLoggingUtility.info('tasks screen', 'Tasks data loaded', 'Loaded ${tasks.length} tasks');
+                      
+                      final filteredTasks = _filterTasks(tasks);
+                      final sortedTasks = _sortTasks(filteredTasks);
+                      
+                      if (tasks.isEmpty) {
+                        CoreLoggingUtility.info('tasks screen', 'No tasks to display', 'Empty state shown');
+                        return _buildEmptyState();
+                      }
 
-                  if (filteredTasks.isEmpty && _selectedCategoryId != null) {
-                    return _buildEmptyFilterState();
-                  }
+                      if (filteredTasks.isEmpty && _selectedCategoryId != null) {
+                        return _buildEmptyFilterState();
+                      }
 
-                  return Column(
-                    children: [
-                      if (_selectedCategoryId != null) _buildFilterIndicator(filteredTasks.length),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: sortedTasks.length,
-                          itemBuilder: (context, index) {
-                            try {
-                              final task = sortedTasks[index];
-                              final category = task.categoryId != null
-                                  ? categoriesAsync.value?.firstWhere(
-                                      (cat) => cat.id == task.categoryId,
-                                      orElse: () => Category(
-                                        name: 'Unknown',
-                                        color: '#808080',
-                                        createdAt: DateTime.now(),
-                                      ),
-                                    )
-                                  : null;
-                              
-                              return TaskListItem(
-                                task: task,
-                                category: category,
-                                onTap: () {
-                                  CoreLoggingUtility.info(
-                                    'TasksScreen',
-                                    'build',
-                                    'Task tapped: ${task.id}',
+                      return Column(
+                        children: [
+                          if (_selectedCategoryId != null) _buildFilterIndicator(filteredTasks.length),
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: sortedTasks.length,
+                              itemBuilder: (context, index) {
+                                try {
+                                  final task = sortedTasks[index];
+                                  final category = task.categoryId != null
+                                      ? categoriesAsync.value?.firstWhere(
+                                          (cat) => cat.id == task.categoryId,
+                                          orElse: () => Category(
+                                            name: 'Unknown',
+                                            color: '#808080',
+                                            createdAt: DateTime.now(),
+                                          ),
+                                        )
+                                      : null;
+                                  
+                                  return TaskListItem(
+                                    task: task,
+                                    category: category,
+                                    onTap: () {
+                                      CoreLoggingUtility.info(
+                                        'TasksScreen',
+                                        'build',
+                                        'Task tapped: ${task.id}',
+                                      );
+                                      context.push('/tasks/${task.id}');
+                                    },
+                                    onToggleComplete: (_) {
+                                      try {
+                                        CoreLoggingUtility.info(
+                                          'tasks screen',
+                                          'Task toggle initiated',
+                                          'Task ID: ${task.id}',
+                                        );
+                                        ref.read(tasksProvider.notifier).toggleTask(task);
+                                        CoreLoggingUtility.info(
+                                          'tasks screen',
+                                          'Task toggled successfully',
+                                          'Task ID: ${task.id}',
+                                        );
+                                      } catch (e, stackTrace) {
+                                        CoreLoggingUtility.error(
+                                          'tasks screen',
+                                          'Failed to toggle Task ID: ${task.id}, Error: $e',
+                                          stackTrace.toString(),
+                                        );
+                                      }
+                                    },
                                   );
-                                  context.push('/tasks/${task.id}');
-                                },
-                                onToggleComplete: (_) {
-                                  try {
-                                    CoreLoggingUtility.info(
-                                      'tasks screen',
-                                      'Task toggle initiated',
-                                      'Task ID: ${task.id}',
-                                    );
-                                    ref.read(tasksProvider.notifier).toggleTask(task);
-                                    CoreLoggingUtility.info(
-                                      'tasks screen',
-                                      'Task toggled successfully',
-                                      'Task ID: ${task.id}',
-                                    );
-                                  } catch (e, stackTrace) {
-                                    CoreLoggingUtility.error(
-                                      'tasks screen',
-                                      'Failed to toggle Task ID: ${task.id}, Error: $e',
-                                      stackTrace.toString(),
-                                    );
-                                  }
-                                },
-                              );
-                            } catch (e, stackTrace) {
-                              CoreLoggingUtility.error(
-                                'tasks screen',
-                                'Error building list item Index: $index, Error: $e',
-                                stackTrace.toString(),
-                              );
-                              return const ListTile(
-                                title: Text('Error loading task'),
-                              );
-                            }
-                          },
-                        ),
+                                } catch (e, stackTrace) {
+                                  CoreLoggingUtility.error(
+                                    'tasks screen',
+                                    'Error building list item Index: $index, Error: $e',
+                                    stackTrace.toString(),
+                                  );
+                                  return const ListTile(
+                                    title: Text('Error loading task'),
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                    loading: () {
+                      CoreLoggingUtility.info('tasks screen', 'Loading tasks', 'Showing loading indicator');
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    },
+                    error: (error, stack) {
+                      CoreLoggingUtility.error('tasks screen', 'Error loading tasks Error: $error', stack.toString());
+                      return Center(
+                        child: Text('Error: $error'),
+                      );
+                    },
+                  ),
+                  Positioned(
+                    right: 16,
+                    bottom: 16,
+                    child: Semantics(
+                      label: 'Add new task',
+                      button: true,
+                      child: FloatingActionButton(
+                        onPressed: () {
+                          CoreLoggingUtility.info(
+                            'TasksScreen',
+                            'build',
+                            'Add task button pressed',
+                          );
+                          context.push('/tasks/add');
+                        },
+                        tooltip: 'Add Task',
+                        child: const Icon(Icons.add),
                       ),
-                    ],
-                  );
-                },
-                loading: () {
-                  CoreLoggingUtility.info('tasks screen', 'Loading tasks', 'Showing loading indicator');
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                },
-                error: (error, stack) {
-                  CoreLoggingUtility.error('tasks screen', 'Error loading tasks Error: $error', stack.toString());
-                  return Center(
-                    child: Text('Error: $error'),
-                  );
-                },
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
-        ),
-        floatingActionButton: Semantics(
-          label: 'Add new task',
-          button: true,
-          child: FloatingActionButton(
-            onPressed: () {
-              CoreLoggingUtility.info(
-                'TasksScreen',
-                'build',
-                'Add task button pressed',
-              );
-              context.push('/tasks/add');
-            },
-            tooltip: 'Add Task',
-            child: const Icon(Icons.add),
-          ),
-        ),
-      );
+        );
     } catch (e, stackTrace) {
       CoreLoggingUtility.error('tasks screen', 'Critical error in build method Error: $e', stackTrace.toString());
       return const Center(

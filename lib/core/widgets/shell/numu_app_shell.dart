@@ -186,7 +186,83 @@ class NumuAppShell extends ConsumerWidget {
           ],
         ),
       ),
-      body: child,
+      body: _SafeChildWrapper(child: child),
     );
+  }
+}
+
+
+/// Error boundary wrapper for child widgets
+/// Catches and handles errors during child widget rendering
+class _SafeChildWrapper extends StatelessWidget {
+  final Widget child;
+
+  const _SafeChildWrapper({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    try {
+      return child;
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        '_SafeChildWrapper',
+        'build',
+        'Error rendering child widget: $e\n$stackTrace',
+      );
+      
+      // Navigate to home on next frame to recover from error
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) {
+          try {
+            context.go('/home');
+          } catch (navError) {
+            CoreLoggingUtility.error(
+              '_SafeChildWrapper',
+              'build',
+              'Failed to navigate to home: $navError',
+            );
+          }
+        }
+      });
+      
+      // Show error UI
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            const Text(
+              'Navigation Error',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Text(
+                e.toString(),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                try {
+                  context.go('/home');
+                } catch (navError) {
+                  CoreLoggingUtility.error(
+                    '_SafeChildWrapper',
+                    'onPressed',
+                    'Manual navigation failed: $navError',
+                  );
+                }
+              },
+              child: const Text('Go to Home'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }

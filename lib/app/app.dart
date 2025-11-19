@@ -35,8 +35,51 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
+    
+    CoreLoggingUtility.info(
+      'MyApp',
+      'didChangeAppLifecycleState',
+      'App lifecycle changed to: $state',
+    );
+    
     // Handle app lifecycle changes for reminder background tasks
     ReminderBackgroundHandler().handleAppLifecycleChange(state);
+    
+    // Ensure shell stability when app resumes
+    if (state == AppLifecycleState.resumed) {
+      CoreLoggingUtility.info(
+        'MyApp',
+        'didChangeAppLifecycleState',
+        'App resumed, verifying navigation state',
+      );
+      
+      // Verify router is still valid
+      try {
+        final router = ref.read(routerProvider);
+        final currentLocation = router.routerDelegate.currentConfiguration.uri.toString();
+        CoreLoggingUtility.info(
+          'MyApp',
+          'didChangeAppLifecycleState',
+          'Current location: $currentLocation',
+        );
+        
+        // If location is invalid or empty, navigate to home
+        if (currentLocation.isEmpty || currentLocation == '/') {
+          CoreLoggingUtility.info(
+            'MyApp',
+            'didChangeAppLifecycleState',
+            'Invalid location detected, navigating to home',
+          );
+          Future.microtask(() => router.go('/home'));
+        }
+      } catch (e, stackTrace) {
+        CoreLoggingUtility.error(
+          'MyApp',
+          'didChangeAppLifecycleState',
+          'Error verifying navigation state: $e\n$stackTrace',
+        );
+      }
+    }
   }
 
   @override

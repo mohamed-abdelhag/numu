@@ -30,6 +30,73 @@ import 'package:numu/core/widgets/shell/numu_app_shell.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
+    // Redirect logic to ensure shell stability
+    redirect: (context, state) {
+      final location = state.matchedLocation;
+      
+      // Log navigation attempts for debugging
+      debugPrint('Navigation to: $location');
+      
+      // Ensure all routes except splash and onboarding go through shell
+      // This prevents navigation outside shell context
+      if (location != '/splash' && location != '/onboarding') {
+        // Valid shell routes - allow navigation
+        final validShellRoutes = [
+          '/home', '/profile', '/settings', '/tasks', '/habits',
+          '/reminders', '/help', '/categories'
+        ];
+        
+        final isValidRoute = validShellRoutes.any((route) => location.startsWith(route));
+        
+        if (!isValidRoute && location != '/') {
+          // Invalid route - redirect to home
+          debugPrint('Invalid route detected: $location, redirecting to home');
+          return '/home';
+        }
+      }
+      
+      return null; // No redirect needed
+    },
+    // Error handling for navigation failures
+    errorBuilder: (context, state) {
+      // Log the error
+      debugPrint('Navigation error: ${state.error}');
+      
+      // Return error screen within shell context
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Navigation Error'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Navigation Error',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                state.error?.toString() ?? 'Unknown error',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => context.go('/home'),
+                child: const Text('Go to Home'),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
     routes: [
       // Splash screen route (outside ShellRoute - no drawer)
       GoRoute(

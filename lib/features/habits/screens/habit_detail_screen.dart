@@ -8,6 +8,7 @@ import '../widgets/habit_calendar_view.dart';
 import '../widgets/log_habit_event_dialog.dart';
 import '../models/enums/streak_type.dart';
 import '../models/exceptions/habit_exception.dart';
+import '../repositories/habit_repository.dart';
 import 'package:numu/core/widgets/shell/numu_app_bar.dart';
 import '../../reminders/providers/reminder_provider.dart';
 
@@ -86,16 +87,19 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                         _buildHabitHeader(context, state),
                         const SizedBox(height: 24),
 
-                        // Streak type selector (if advanced features enabled)
-                        if (state.habit.timeWindowEnabled || state.habit.qualityLayerEnabled)
+                        // Streak type selector (only if time window enabled without quality layer)
+                        if (state.habit.timeWindowEnabled && !state.habit.qualityLayerEnabled)
                           _buildStreakTypeSelector(context, state),
 
-                        // Streak display
-                        HabitStreakDisplay(
-                          habitId: widget.habitId,
-                          compact: false,
-                          streakType: _selectedStreakType,
-                        ),
+                        // Streak display section
+                        if (state.habit.qualityLayerEnabled)
+                          _buildQualityLayerStreakSection(context, state)
+                        else
+                          HabitStreakDisplay(
+                            habitId: widget.habitId,
+                            compact: false,
+                            streakType: _selectedStreakType,
+                          ),
                         const SizedBox(height: 24),
 
                         // Statistics section
@@ -146,6 +150,210 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
     );
   }
 
+  Widget _buildQualityLayerStreakSection(BuildContext context, HabitDetailState state) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Streak Statistics',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Completion Streak
+            FutureBuilder(
+              future: HabitRepository().getStreakForHabit(widget.habitId, StreakType.completion),
+              builder: (context, completionSnapshot) {
+                if (completionSnapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                
+                final completionStreak = completionSnapshot.data;
+                
+                return Column(
+                  children: [
+                    // Completion streak row
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.local_fire_department,
+                          size: 24,
+                          color: (completionStreak?.currentStreak ?? 0) > 0 ? Colors.orange : Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Completion Streak',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                              ),
+                              Text(
+                                'Days where you completed the habit goal',
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          '${completionStreak?.currentStreak ?? 0}',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          (completionStreak?.currentStreak ?? 0) == 1 ? 'day' : 'days',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Quality streak row
+                    FutureBuilder(
+                      future: HabitRepository().getStreakForHabit(widget.habitId, StreakType.quality),
+                      builder: (context, qualitySnapshot) {
+                        if (qualitySnapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+                        
+                        final qualityStreak = qualitySnapshot.data;
+                        
+                        return Row(
+                          children: [
+                            Icon(
+                              Icons.star,
+                              size: 24,
+                              color: (qualityStreak?.currentStreak ?? 0) > 0 ? Colors.amber : Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Quality Streak ⭐',
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                  ),
+                                  Text(
+                                    'Days where you achieved the quality criteria',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Text(
+                              '${qualityStreak?.currentStreak ?? 0}',
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              (qualityStreak?.currentStreak ?? 0) == 1 ? 'day' : 'days',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    
+                    // Additional stats row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildStreakStatColumn(
+                          context,
+                          icon: Icons.emoji_events,
+                          label: 'Longest',
+                          value: '${completionStreak?.longestStreak ?? 0}',
+                          unit: (completionStreak?.longestStreak ?? 0) == 1 ? 'day' : 'days',
+                          iconColor: (completionStreak?.longestStreak ?? 0) > 0 ? Colors.amber : null,
+                        ),
+                        _buildStreakStatColumn(
+                          context,
+                          icon: Icons.trending_up,
+                          label: 'Consistency',
+                          value: ((completionStreak?.consistencyRate ?? 0) * 100).toStringAsFixed(0),
+                          unit: '%',
+                          iconColor: (completionStreak?.consistencyRate ?? 0) > 0.7 ? Colors.green : null,
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStreakStatColumn(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String value,
+    required String unit,
+    Color? iconColor,
+  }) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          size: 28,
+          color: iconColor ?? Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        Text(
+          unit,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
   Widget _buildStreakTypeSelector(BuildContext context, HabitDetailState state) {
     final habit = state.habit;
     
@@ -154,14 +362,6 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
     
     if (habit.timeWindowEnabled) {
       availableTypes.add(StreakType.timeWindow);
-    }
-    
-    if (habit.qualityLayerEnabled) {
-      availableTypes.add(StreakType.quality);
-    }
-    
-    if (habit.timeWindowEnabled && habit.qualityLayerEnabled) {
-      availableTypes.add(StreakType.perfect);
     }
 
     return Column(

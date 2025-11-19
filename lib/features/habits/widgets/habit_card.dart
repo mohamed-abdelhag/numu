@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/habit.dart';
 import '../models/enums/tracking_type.dart';
-import '../models/enums/frequency.dart';
+import 'habit_quick_action_button.dart';
 
 /// Represents the status of a habit for a specific day
 class DailyHabitStatus {
@@ -24,11 +25,13 @@ class DailyHabitStatus {
   bool get isCompleted => progress >= target;
 }
 
-class HabitCard extends StatelessWidget {
+class HabitCard extends ConsumerWidget {
   final Habit habit;
   final List<DailyHabitStatus> weeklyProgress;
   final int score;
   final double overallProgress; // 0.0 to 1.0
+  final double? todayValue; // Today's logged value for value-based habits
+  final VoidCallback? onQuickActionComplete;
 
   const HabitCard({
     super.key,
@@ -36,10 +39,12 @@ class HabitCard extends StatelessWidget {
     required this.weeklyProgress,
     this.score = 0,
     this.overallProgress = 0,
+    this.todayValue,
+    this.onQuickActionComplete,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     
@@ -108,6 +113,27 @@ class HabitCard extends StatelessWidget {
                   ),
                 ),
 
+                // Today's Value Display (for value-based habits)
+                if (habit.trackingType == TrackingType.value) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: habitColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      todayValue != null && todayValue! > 0
+                          ? '${todayValue!.toInt()} ${habit.unit ?? ''}'.trim()
+                          : '0 ${habit.unit ?? ''}'.trim(),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: habitColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                
                 // Score Badge
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -129,6 +155,15 @@ class HabitCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+                
+                const SizedBox(width: 8),
+                
+                // Quick Action Button
+                HabitQuickActionButton(
+                  habit: habit,
+                  date: DateTime.now(),
+                  onActionComplete: onQuickActionComplete,
                 ),
               ],
             ),
