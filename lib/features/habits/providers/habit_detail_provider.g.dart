@@ -9,17 +9,17 @@ part of 'habit_detail_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 /// Provider for managing a single habit's detail view
-/// Loads habit data, events, and streak information
+/// Loads habit data, events, streak information, and statistics
 
 @ProviderFor(HabitDetailNotifier)
 const habitDetailProvider = HabitDetailNotifierFamily._();
 
 /// Provider for managing a single habit's detail view
-/// Loads habit data, events, and streak information
+/// Loads habit data, events, streak information, and statistics
 final class HabitDetailNotifierProvider
     extends $AsyncNotifierProvider<HabitDetailNotifier, HabitDetailState> {
   /// Provider for managing a single habit's detail view
-  /// Loads habit data, events, and streak information
+  /// Loads habit data, events, streak information, and statistics
   const HabitDetailNotifierProvider._({
     required HabitDetailNotifierFamily super.from,
     required int super.argument,
@@ -57,10 +57,10 @@ final class HabitDetailNotifierProvider
 }
 
 String _$habitDetailNotifierHash() =>
-    r'5103ece769227a9f59d9be436058bf13285659e8';
+    r'baff46bb3ce062b4f3aa6386470509b7dc210f4c';
 
 /// Provider for managing a single habit's detail view
-/// Loads habit data, events, and streak information
+/// Loads habit data, events, streak information, and statistics
 
 final class HabitDetailNotifierFamily extends $Family
     with
@@ -81,7 +81,7 @@ final class HabitDetailNotifierFamily extends $Family
       );
 
   /// Provider for managing a single habit's detail view
-  /// Loads habit data, events, and streak information
+  /// Loads habit data, events, streak information, and statistics
 
   HabitDetailNotifierProvider call(int habitId) =>
       HabitDetailNotifierProvider._(argument: habitId, from: this);
@@ -91,7 +91,7 @@ final class HabitDetailNotifierFamily extends $Family
 }
 
 /// Provider for managing a single habit's detail view
-/// Loads habit data, events, and streak information
+/// Loads habit data, events, streak information, and statistics
 
 abstract class _$HabitDetailNotifier extends $AsyncNotifier<HabitDetailState> {
   late final _$args = ref.$arg as int;

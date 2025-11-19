@@ -189,9 +189,26 @@ class HabitRepository {
   // EVENT OPERATIONS
   // ============================================================================
 
-  /// Log a habit event
+  /// Log a habit event with duplicate prevention
+  /// Checks for existing events on the same date and updates them instead of creating duplicates
   Future<HabitEvent> logEvent(HabitEvent event) async {
     try {
+      // Check for existing events on the same date
+      final existingEvents = await getEventsForDate(event.habitId, event.eventDate);
+      
+      if (existingEvents.isNotEmpty) {
+        // Update existing event instead of creating duplicate
+        final existingEvent = existingEvents.first;
+        final updatedEvent = event.copyWith(
+          id: existingEvent.id,
+          createdAt: existingEvent.createdAt, // Preserve original creation time
+          updatedAt: DateTime.now(), // Update modification time
+        );
+        await updateEvent(updatedEvent);
+        return updatedEvent;
+      }
+      
+      // No existing event, create new one
       final db = await _dbService.database;
       final id = await db.insert(
         'habit_events',
@@ -202,6 +219,33 @@ class HabitRepository {
       return event.copyWith(id: id);
     } catch (e) {
       throw HabitDatabaseException('Failed to log event', originalError: e);
+    }
+  }
+
+  /// Update an existing habit event
+  Future<HabitEvent> updateEvent(HabitEvent event) async {
+    if (event.id == null) {
+      throw HabitValidationException('Cannot update event without an ID');
+    }
+
+    try {
+      final db = await _dbService.database;
+      final updatedEvent = event.copyWith(
+        updatedAt: DateTime.now(),
+      );
+
+      await db.update(
+        'habit_events',
+        updatedEvent.toMap(),
+        where: 'event_id = ?',
+        whereArgs: [event.id],
+      );
+
+      return updatedEvent;
+    } on HabitValidationException {
+      rethrow;
+    } catch (e) {
+      throw HabitDatabaseException('Failed to update event', originalError: e);
     }
   }
 

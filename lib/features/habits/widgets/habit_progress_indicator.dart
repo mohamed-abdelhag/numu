@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/enums/frequency.dart';
+import '../models/enums/goal_type.dart';
 import '../repositories/habit_repository.dart';
 
 /// Widget that displays progress for weekly/monthly habits
@@ -46,9 +47,10 @@ class HabitProgressIndicator extends ConsumerWidget {
         final targetValue = data['targetValue'] as double;
         final unit = data['unit'] as String?;
         final frequency = data['frequency'] as Frequency;
+        final goalType = data['goalType'] as GoalType;
 
-        // Calculate progress percentage
-        final progress = targetValue > 0 ? (currentValue / targetValue).clamp(0.0, 1.0) : 0.0;
+        // Calculate progress percentage based on goal type
+        final progress = _calculateProgress(currentValue, targetValue, goalType);
 
         // Format display text
         String displayText;
@@ -105,6 +107,25 @@ class HabitProgressIndicator extends ConsumerWidget {
     );
   }
 
+  /// Calculate progress based on goal type
+  /// For minimum goals: progress = (current / target)
+  /// For maximum goals: progress = (target - current) / target
+  double _calculateProgress(double currentValue, double targetValue, GoalType goalType) {
+    if (targetValue <= 0) return 0.0;
+    
+    if (goalType == GoalType.minimum) {
+      // For minimum goals, progress increases as current approaches target
+      return (currentValue / targetValue).clamp(0.0, 1.0);
+    } else if (goalType == GoalType.maximum) {
+      // For maximum goals, progress is 1.0 when current is 0, and decreases as current approaches target
+      // If current exceeds target, progress becomes negative (clamped to 0)
+      return ((targetValue - currentValue) / targetValue).clamp(0.0, 1.0);
+    }
+    
+    // Default to minimum behavior for GoalType.none
+    return (currentValue / targetValue).clamp(0.0, 1.0);
+  }
+
   /// Load progress data for the habit
   Future<Map<String, dynamic>> _loadProgressData() async {
     final repository = HabitRepository();
@@ -123,6 +144,7 @@ class HabitProgressIndicator extends ConsumerWidget {
       'currentValue': periodProgress?.currentValue ?? 0.0,
       'targetValue': periodProgress?.targetValue ?? habit.targetValue ?? 0.0,
       'unit': habit.unit,
+      'goalType': habit.goalType,
     };
   }
 }

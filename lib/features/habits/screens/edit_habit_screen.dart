@@ -149,6 +149,23 @@ class _EditHabitScreenState extends ConsumerState<EditHabitScreen> {
     super.dispose();
   }
 
+  Widget _buildUnitChip(String unit) {
+    final isSelected = _unitController.text.trim() == unit;
+    return FilterChip(
+      label: Text(unit),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          if (selected) {
+            _unitController.text = unit;
+          } else {
+            _unitController.clear();
+          }
+        });
+      },
+    );
+  }
+
   Future<void> _saveHabit() async {
     if (!_formKey.currentState!.validate()) {
       return;
@@ -442,57 +459,82 @@ class _EditHabitScreenState extends ConsumerState<EditHabitScreen> {
                 });
               },
             ),
-            const SizedBox(height: 24),
-            Text(
-              'Goal',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            const SizedBox(height: 8),
-            GoalTypeSelector(
-              value: _goalType,
-              onChanged: (value) {
-                setState(() {
-                  _goalType = value;
-                });
-              },
-            ),
-            if (_goalType != GoalType.none) ...[
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _targetValueController,
-                decoration: InputDecoration(
-                  labelText: 'Target Value',
-                  hintText: 'e.g., 30',
-                  border: const OutlineInputBorder(),
-                  suffixText: _unitController.text.trim().isEmpty
-                      ? null
-                      : _unitController.text.trim(),
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (_goalType != GoalType.none &&
-                      (value == null || value.trim().isEmpty)) {
-                    return 'Please enter a target value';
-                  }
-                  if (value != null &&
-                      value.trim().isNotEmpty &&
-                      double.tryParse(value.trim()) == null) {
-                    return 'Please enter a valid number';
-                  }
-                  return null;
+            if (_trackingType == TrackingType.value) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Goal Type',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 8),
+              GoalTypeSelector(
+                value: _goalType,
+                onChanged: (value) {
+                  setState(() {
+                    _goalType = value;
+                  });
                 },
               ),
-            ],
-            if (_trackingType == TrackingType.value) ...[
+              if (_goalType != GoalType.none) ...[
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _targetValueController,
+                  decoration: InputDecoration(
+                    labelText: 'Target Value',
+                    hintText: 'e.g., 30',
+                    border: const OutlineInputBorder(),
+                    suffixText: _unitController.text.trim().isEmpty
+                        ? null
+                        : _unitController.text.trim(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (_trackingType == TrackingType.value &&
+                        _goalType != GoalType.none &&
+                        (value == null || value.trim().isEmpty)) {
+                      return 'Please enter a target value';
+                    }
+                    if (value != null && value.trim().isNotEmpty) {
+                      final parsedValue = double.tryParse(value.trim());
+                      if (parsedValue == null) {
+                        return 'Please enter a valid number';
+                      }
+                      if (parsedValue <= 0) {
+                        return 'Target value must be greater than 0';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+              ],
               const SizedBox(height: 16),
               TextFormField(
                 controller: _unitController,
                 decoration: const InputDecoration(
-                  labelText: 'Unit (optional)',
-                  hintText: 'e.g., minutes, glasses, km',
+                  labelText: 'Unit',
+                  hintText: 'e.g., pages, reps, km',
                   border: OutlineInputBorder(),
+                  helperText: 'Tap suggestions below or enter custom unit',
                 ),
                 textCapitalization: TextCapitalization.sentences,
+                validator: (value) {
+                  if (_trackingType == TrackingType.value &&
+                      (value == null || value.trim().isEmpty)) {
+                    return 'Please enter a unit for countable habits';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildUnitChip('pages'),
+                  _buildUnitChip('reps'),
+                  _buildUnitChip('km'),
+                  _buildUnitChip('glasses'),
+                  _buildUnitChip('minutes'),
+                ],
               ),
             ],
             const SizedBox(height: 24),

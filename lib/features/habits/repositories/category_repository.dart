@@ -149,6 +149,40 @@ class CategoryRepository {
     }
   }
 
+  /// Unassign a category from all habits
+  /// Sets categoryId to null for all habits that have the specified category
+  Future<int> unassignCategoryFromHabits(int categoryId) async {
+    try {
+      final db = await _dbService.database;
+      
+      // Update all habits with this category to have null category_id
+      final rowsAffected = await db.update(
+        'habits',
+        {'category_id': null},
+        where: 'category_id = ?',
+        whereArgs: [categoryId],
+      );
+      
+      CoreLoggingUtility.info(
+        'CategoryRepository',
+        'unassignCategoryFromHabits',
+        'Successfully unassigned category $categoryId from $rowsAffected habits',
+      );
+      
+      return rowsAffected;
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'CategoryRepository',
+        'unassignCategoryFromHabits',
+        'Failed to unassign category $categoryId from habits: $e\n$stackTrace',
+      );
+      throw CategoryDatabaseException(
+        'Failed to unassign category from habits',
+        originalError: e,
+      );
+    }
+  }
+
   /// Delete a category and unassign it from all habits and tasks
   Future<void> deleteCategory(int id) async {
     try {

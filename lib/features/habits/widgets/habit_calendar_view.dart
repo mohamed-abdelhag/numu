@@ -5,9 +5,11 @@ import '../models/habit_event.dart';
 import '../models/enums/tracking_type.dart';
 import '../models/enums/goal_type.dart';
 import '../repositories/habit_repository.dart';
+import 'log_habit_event_dialog.dart';
 
 /// Widget that displays a calendar grid showing habit completion history
 /// Marks completed days with checkmark, incomplete days with X or empty
+/// Supports tapping dates to edit existing entries or create new ones
 class HabitCalendarView extends ConsumerWidget {
   final int habitId;
   final int weeksToShow;
@@ -50,6 +52,7 @@ class HabitCalendarView extends ConsumerWidget {
         final habit = data['habit'] as Habit;
         final completionMap = data['completionMap'] as Map<String, bool>;
         final dates = data['dates'] as List<DateTime>;
+        final eventsByDate = data['eventsByDate'] as Map<String, List<HabitEvent>>;
 
         return Card(
           child: Padding(
@@ -66,7 +69,7 @@ class HabitCalendarView extends ConsumerWidget {
                 const SizedBox(height: 16),
                 _buildWeekdayHeaders(context),
                 const SizedBox(height: 8),
-                _buildCalendarGrid(context, habit, dates, completionMap),
+                _buildCalendarGrid(context, habit, dates, completionMap, eventsByDate),
               ],
             ),
           ),
@@ -103,6 +106,7 @@ class HabitCalendarView extends ConsumerWidget {
     Habit habit,
     List<DateTime> dates,
     Map<String, bool> completionMap,
+    Map<String, List<HabitEvent>> eventsByDate,
   ) {
     // Group dates by week
     final weeks = <List<DateTime>>[];
@@ -129,7 +133,7 @@ class HabitCalendarView extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: week.map((date) {
               return Expanded(
-                child: _buildDayCell(context, habit, date, completionMap),
+                child: _buildDayCell(context, habit, date, completionMap, eventsByDate),
               );
             }).toList(),
           ),
@@ -144,6 +148,7 @@ class HabitCalendarView extends ConsumerWidget {
     Habit habit,
     DateTime date,
     Map<String, bool> completionMap,
+    Map<String, List<HabitEvent>> eventsByDate,
   ) {
     final dateKey = _formatDateKey(date);
     final isCompleted = completionMap[dateKey] ?? false;
@@ -175,32 +180,60 @@ class HabitCalendarView extends ConsumerWidget {
       borderColor = Theme.of(context).colorScheme.primary;
     }
 
-    return Container(
-      margin: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        border: borderColor != null
-            ? Border.all(color: borderColor, width: 2)
-            : null,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: AspectRatio(
-        aspectRatio: 1,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              date.day.toString(),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                    color: isFuture
-                        ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3)
-                        : Theme.of(context).colorScheme.onSurface,
-                  ),
-            ),
-            if (icon != null && !isFuture) icon,
-          ],
+    return InkWell(
+      onTap: isFuture ? null : () => _handleDateTap(context, habit, date, eventsByDate),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        margin: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          border: borderColor != null
+              ? Border.all(color: borderColor, width: 2)
+              : null,
+          borderRadius: BorderRadius.circular(8),
         ),
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                date.day.toString(),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                      color: isFuture
+                          ? Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3)
+                          : Theme.of(context).colorScheme.onSurface,
+                    ),
+              ),
+              if (icon != null && !isFuture) icon,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Handle tapping on a calendar date
+  void _handleDateTap(
+    BuildContext context,
+    Habit habit,
+    DateTime date,
+    Map<String, List<HabitEvent>> eventsByDate,
+  ) {
+    final dateKey = _formatDateKey(date);
+    final events = eventsByDate[dateKey] ?? [];
+    
+    // Get the first event for this date if it exists
+    // For most habits, there should only be one event per day
+    final existingEvent = events.isNotEmpty ? events.first : null;
+    
+    showDialog(
+      context: context,
+      builder: (context) => LogHabitEventDialog(
+        habit: habit,
+        prefilledDate: date,
+        existingEvent: existingEvent,
       ),
     );
   }
@@ -291,6 +324,7 @@ class HabitCalendarView extends ConsumerWidget {
       'habit': habit,
       'completionMap': completionMap,
       'dates': dates,
+      'eventsByDate': eventsByDate,
     };
   }
 

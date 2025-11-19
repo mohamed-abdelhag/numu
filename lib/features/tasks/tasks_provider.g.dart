@@ -103,7 +103,7 @@ final class TaskDetailProvider
   }
 }
 
-String _$taskDetailHash() => r'92a294d1f0c58bd0cdca85e467612d0961dfa7ad';
+String _$taskDetailHash() => r'977d3ddeb77ba11acfc94f4098c713573b245038';
 
 final class TaskDetailFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<Task?>, int> {

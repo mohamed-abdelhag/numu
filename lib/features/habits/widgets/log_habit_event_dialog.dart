@@ -10,12 +10,17 @@ import '../repositories/habit_repository.dart';
 
 /// Dialog for logging habit events
 /// Supports binary, value, and timed tracking types
+/// Can be used for both creating new entries (FAB) and editing existing entries (calendar)
 class LogHabitEventDialog extends ConsumerStatefulWidget {
   final Habit habit;
+  final DateTime? prefilledDate; // null for FAB, specific date for calendar click
+  final HabitEvent? existingEvent; // null for new, populated for edit
 
   const LogHabitEventDialog({
     super.key,
     required this.habit,
+    this.prefilledDate,
+    this.existingEvent,
   });
 
   @override
@@ -35,8 +40,35 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    _selectedDate = DateTime(now.year, now.month, now.day);
+    
+    // Initialize date: use prefilledDate if provided, otherwise today
+    _selectedDate = widget.prefilledDate ?? DateTime(now.year, now.month, now.day);
     _selectedTime = TimeOfDay.fromDateTime(now);
+    
+    // Pre-fill values if editing existing event
+    if (widget.existingEvent != null) {
+      final event = widget.existingEvent!;
+      
+      // Pre-fill value for value habits
+      if (event.valueDelta != null) {
+        _valueController.text = event.valueDelta!.toString();
+      }
+      
+      // Pre-fill time for timed habits
+      if (event.timeRecorded != null) {
+        _selectedTime = event.timeRecorded!;
+      }
+      
+      // Pre-fill quality status
+      if (event.qualityAchieved != null) {
+        _qualityAchieved = event.qualityAchieved!;
+      }
+      
+      // Pre-fill notes
+      if (event.notes != null) {
+        _notesController.text = event.notes!;
+      }
+    }
     
     // Load today's total for value habits
     if (widget.habit.trackingType == TrackingType.value) {
@@ -69,6 +101,8 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.existingEvent != null;
+    
     return AlertDialog(
       title: Row(
         children: [
@@ -89,7 +123,7 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Log ${widget.habit.name}',
+              isEditing ? 'Edit ${widget.habit.name}' : 'Log ${widget.habit.name}',
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ),
@@ -142,40 +176,52 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : Text(widget.habit.trackingType == TrackingType.binary
-                  ? 'Mark Complete'
-                  : 'Save'),
+              : Text(isEditing 
+                  ? 'Update'
+                  : (widget.habit.trackingType == TrackingType.binary
+                      ? 'Mark Complete'
+                      : 'Save')),
         ),
       ],
     );
   }
 
   Widget _buildDatePicker() {
+    // Make date field read-only if prefilledDate is provided (calendar-initiated)
+    final isReadOnly = widget.prefilledDate != null;
+    
     return InkWell(
-      onTap: _pickDate,
+      onTap: isReadOnly ? null : _pickDate,
       child: InputDecorator(
-        decoration: const InputDecoration(
+        decoration: InputDecoration(
           labelText: 'Date',
-          border: OutlineInputBorder(),
-          suffixIcon: Icon(Icons.calendar_today),
+          border: const OutlineInputBorder(),
+          suffixIcon: isReadOnly ? null : const Icon(Icons.calendar_today),
+          enabled: !isReadOnly,
         ),
         child: Text(
           _formatDate(_selectedDate),
-          style: Theme.of(context).textTheme.bodyLarge,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: isReadOnly ? Theme.of(context).disabledColor : null,
+          ),
         ),
       ),
     );
   }
 
   List<Widget> _buildValueInputs() {
+    // Build label with unit if available
+    final label = widget.habit.unit != null 
+        ? 'Amount (${widget.habit.unit})' 
+        : 'Amount';
+    
     return [
       TextField(
         controller: _valueController,
         decoration: InputDecoration(
-          labelText: 'Amount',
+          labelText: label,
           border: const OutlineInputBorder(),
-          suffixText: widget.habit.unit ?? '',
-          helperText: widget.habit.unit != null ? null : 'Enter value',
+          helperText: 'Enter value',
         ),
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
         inputFormatters: [
@@ -408,9 +454,12 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
       
       if (mounted) {
         Navigator.of(context).pop();
+        final isEditing = widget.existingEvent != null;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${widget.habit.name} logged successfully!'),
+            content: Text(isEditing 
+                ? '${widget.habit.name} updated successfully!'
+                : '${widget.habit.name} logged successfully!'),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -422,7 +471,7 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to log event: $e'),
+            content: Text('Failed to save event: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -434,9 +483,14 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
     final withinTimeWindow = widget.habit.timeWindowEnabled ? _isWithinTimeWindow() : null;
     final qualityAchieved = widget.habit.qualityLayerEnabled ? _qualityAchieved : null;
     
+    // Preserve existing event ID and creation time if editing
+    final eventId = widget.existingEvent?.id;
+    final createdAt = widget.existingEvent?.createdAt ?? now;
+    
     switch (widget.habit.trackingType) {
       case TrackingType.binary:
         return HabitEvent(
+          id: eventId,
           habitId: widget.habit.id!,
           eventDate: _selectedDate,
           eventTimestamp: DateTime(
@@ -450,13 +504,14 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
           withinTimeWindow: withinTimeWindow,
           qualityAchieved: qualityAchieved,
           notes: _notesController.text.isNotEmpty ? _notesController.text : null,
-          createdAt: now,
+          createdAt: createdAt,
           updatedAt: now,
         );
       
       case TrackingType.value:
         final value = double.parse(_valueController.text);
         return HabitEvent(
+          id: eventId,
           habitId: widget.habit.id!,
           eventDate: _selectedDate,
           eventTimestamp: DateTime(
@@ -471,12 +526,13 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
           withinTimeWindow: withinTimeWindow,
           qualityAchieved: qualityAchieved,
           notes: _notesController.text.isNotEmpty ? _notesController.text : null,
-          createdAt: now,
+          createdAt: createdAt,
           updatedAt: now,
         );
       
       case TrackingType.timed:
         return HabitEvent(
+          id: eventId,
           habitId: widget.habit.id!,
           eventDate: _selectedDate,
           eventTimestamp: DateTime(
@@ -491,7 +547,7 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
           withinTimeWindow: withinTimeWindow,
           qualityAchieved: qualityAchieved,
           notes: _notesController.text.isNotEmpty ? _notesController.text : null,
-          createdAt: now,
+          createdAt: createdAt,
           updatedAt: now,
         );
     }

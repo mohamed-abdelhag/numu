@@ -97,6 +97,10 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                         ),
                         const SizedBox(height: 24),
 
+                        // Statistics section
+                        _buildStatisticsSection(context, state),
+                        const SizedBox(height: 24),
+
                         // Calendar view showing last 4 weeks
                         HabitCalendarView(
                           habitId: widget.habitId,
@@ -270,6 +274,135 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatisticsSection(BuildContext context, HabitDetailState state) {
+    final habit = state.habit;
+    final stats = state.statistics;
+    final unit = habit.unit ?? '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Statistics',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Main statistics grid
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 1.5,
+          children: [
+            _buildStatisticCard(
+              context,
+              'Total',
+              '${stats.totalValue.toStringAsFixed(stats.totalValue % 1 == 0 ? 0 : 1)} $unit',
+              Icons.analytics_outlined,
+            ),
+            _buildStatisticCard(
+              context,
+              'This Week',
+              '${stats.weeklyValue.toStringAsFixed(stats.weeklyValue % 1 == 0 ? 0 : 1)} $unit',
+              Icons.calendar_view_week_outlined,
+            ),
+            _buildStatisticCard(
+              context,
+              'This Month',
+              '${stats.monthlyValue.toStringAsFixed(stats.monthlyValue % 1 == 0 ? 0 : 1)} $unit',
+              Icons.calendar_month_outlined,
+            ),
+            _buildStatisticCard(
+              context,
+              'Average/Day',
+              '${stats.averagePerDay.toStringAsFixed(1)} $unit',
+              Icons.trending_up_outlined,
+            ),
+          ],
+        ),
+        
+        // Quality statistics (only if quality tracking is enabled)
+        if (habit.qualityLayerEnabled) ...[
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatisticCard(
+                  context,
+                  'Quality Days',
+                  '${stats.qualityDays}',
+                  Icons.star_outline,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatisticCard(
+                  context,
+                  'Quality Rate',
+                  '${stats.qualityPercentage.toStringAsFixed(1)}%',
+                  Icons.emoji_events_outlined,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildStatisticCard(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
+    return Card(
+      elevation: 0,
+      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }

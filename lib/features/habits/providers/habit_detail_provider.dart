@@ -2,9 +2,11 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/habit.dart';
 import '../models/habit_event.dart';
 import '../models/habit_streak.dart';
+import '../models/habit_statistics.dart';
 import '../models/enums/streak_type.dart';
 import '../models/exceptions/habit_exception.dart';
 import '../repositories/habit_repository.dart';
+import '../services/habit_statistics_service.dart';
 import '../../../core/utils/core_logging_utility.dart';
 
 part 'habit_detail_provider.g.dart';
@@ -14,35 +16,41 @@ class HabitDetailState {
   final Habit habit;
   final List<HabitEvent> events;
   final Map<StreakType, HabitStreak> streaks;
+  final HabitStatistics statistics;
 
   const HabitDetailState({
     required this.habit,
     required this.events,
     required this.streaks,
+    required this.statistics,
   });
 
   HabitDetailState copyWith({
     Habit? habit,
     List<HabitEvent>? events,
     Map<StreakType, HabitStreak>? streaks,
+    HabitStatistics? statistics,
   }) {
     return HabitDetailState(
       habit: habit ?? this.habit,
       events: events ?? this.events,
       streaks: streaks ?? this.streaks,
+      statistics: statistics ?? this.statistics,
     );
   }
 }
 
 /// Provider for managing a single habit's detail view
-/// Loads habit data, events, and streak information
+/// Loads habit data, events, streak information, and statistics
 @riverpod
 class HabitDetailNotifier extends _$HabitDetailNotifier {
   late final HabitRepository _repository;
+  late final HabitStatisticsService _statisticsService;
 
   @override
   Future<HabitDetailState> build(int habitId) async {
     _repository = HabitRepository();
+    _statisticsService = HabitStatisticsService(_repository);
 
     try {
       final habit = await _repository.getHabitById(habitId);
@@ -57,6 +65,7 @@ class HabitDetailNotifier extends _$HabitDetailNotifier {
 
       final events = await _repository.getEventsForHabit(habitId);
       final streaks = await _loadStreaks(habitId);
+      final statistics = await _statisticsService.calculateStatistics(habitId, habit);
 
       CoreLoggingUtility.info(
         'HabitDetailProvider',
@@ -68,6 +77,7 @@ class HabitDetailNotifier extends _$HabitDetailNotifier {
         habit: habit,
         events: events,
         streaks: streaks,
+        statistics: statistics,
       );
     } catch (e, stackTrace) {
       if (e is HabitNotFoundException) {
@@ -121,6 +131,7 @@ class HabitDetailNotifier extends _$HabitDetailNotifier {
 
         final events = await _repository.getEventsForHabit(habitId);
         final streaks = await _loadStreaks(habitId);
+        final statistics = await _statisticsService.calculateStatistics(habitId, habit);
 
         CoreLoggingUtility.info(
           'HabitDetailProvider',
@@ -132,6 +143,7 @@ class HabitDetailNotifier extends _$HabitDetailNotifier {
           habit: habit,
           events: events,
           streaks: streaks,
+          statistics: statistics,
         );
       } catch (e, stackTrace) {
         if (e is HabitNotFoundException) {

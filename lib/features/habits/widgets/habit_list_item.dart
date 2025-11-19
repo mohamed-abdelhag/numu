@@ -11,7 +11,7 @@ import 'habit_progress_indicator.dart';
 /// Widget displaying a single habit in the list
 /// Shows habit icon, name, and basic information
 /// Tapping navigates to the habit detail screen
-class HabitListItem extends ConsumerWidget {
+class HabitListItem extends ConsumerStatefulWidget {
   final Habit habit;
 
   const HabitListItem({
@@ -20,13 +20,37 @@ class HabitListItem extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HabitListItem> createState() => _HabitListItemState();
+}
+
+class _HabitListItemState extends ConsumerState<HabitListItem> {
+  DateTime? _lastClickTime;
+
+  void _handleTap(BuildContext context) {
+    final now = DateTime.now();
+    
+    // Implement 500ms debounce logic
+    if (_lastClickTime != null && 
+        now.difference(_lastClickTime!).inMilliseconds < 500) {
+      // Ignore rapid successive clicks
+      return;
+    }
+    
+    // Update last click time
+    _lastClickTime = now;
+    
+    // Navigate to habit detail screen
+    context.push('/habits/${widget.habit.id}');
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // Get category if habit has one
     final categoriesAsync = ref.watch(categoriesProvider);
-    final category = habit.categoryId != null
+    final category = widget.habit.categoryId != null
         ? categoriesAsync.whenOrNull(
             data: (categories) => categories.firstWhere(
-              (c) => c.id == habit.categoryId,
+              (c) => c.id == widget.habit.categoryId,
               orElse: () => categories.first,
             ),
           )
@@ -35,7 +59,7 @@ class HabitListItem extends ConsumerWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () => context.push('/habits/${habit.id}'),
+        onTap: () => _handleTap(context),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -46,12 +70,12 @@ class HabitListItem extends ConsumerWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Color(int.parse(habit.color.replaceFirst('0x', ''), radix: 16)),
+                  color: Color(int.parse(widget.habit.color.replaceFirst('0x', ''), radix: 16)),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
                   child: Text(
-                    habit.icon,
+                    widget.habit.icon,
                     style: const TextStyle(fontSize: 24),
                   ),
                 ),
@@ -67,7 +91,7 @@ class HabitListItem extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            habit.name,
+                            widget.habit.name,
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -105,10 +129,10 @@ class HabitListItem extends ConsumerWidget {
                         ],
                       ],
                     ),
-                    if (habit.description != null && habit.description!.isNotEmpty) ...[
+                    if (widget.habit.description != null && widget.habit.description!.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
-                        habit.description!,
+                        widget.habit.description!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
@@ -119,21 +143,21 @@ class HabitListItem extends ConsumerWidget {
                     const SizedBox(height: 8),
                     // Show progress indicator for weekly/monthly habits
                     // Show streak display for daily habits
-                    if (habit.id != null)
-                      habit.frequency == Frequency.daily
+                    if (widget.habit.id != null)
+                      widget.habit.frequency == Frequency.daily
                           ? HabitStreakDisplay(
-                              habitId: habit.id!,
+                              habitId: widget.habit.id!,
                               compact: true,
                             )
                           : HabitProgressIndicator(
-                              habitId: habit.id!,
+                              habitId: widget.habit.id!,
                             ),
                   ],
                 ),
               ),
 
               // Quick log button
-              HabitQuickLogButton(habit: habit),
+              HabitQuickLogButton(habit: widget.habit),
             ],
           ),
         ),
