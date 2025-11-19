@@ -25,11 +25,6 @@ class TrackingTypeSelector extends StatelessWidget {
           label: Text('Value'),
           icon: Icon(Icons.numbers),
         ),
-        ButtonSegment(
-          value: TrackingType.timed,
-          label: Text('Timed'),
-          icon: Icon(Icons.schedule),
-        ),
       ],
       selected: value != null ? {value!} : {},
       onSelectionChanged: (Set<TrackingType> selected) {

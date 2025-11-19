@@ -5,7 +5,6 @@ import '../models/habit_event.dart';
 import '../models/habit_streak.dart';
 import '../models/habit_period_progress.dart';
 import '../models/enums/streak_type.dart';
-import '../models/enums/goal_type.dart';
 import '../models/exceptions/habit_exception.dart';
 
 /// Repository layer for habit data access
@@ -57,18 +56,11 @@ class HabitRepository {
 
   /// Create a new habit with validation
   Future<Habit> createHabit(Habit habit) async {
-    // Validate habit name
-    if (habit.name.trim().isEmpty) {
-      throw HabitValidationException('Habit name cannot be empty');
-    }
-
-    // Validate target value when goal type requires it
-    if (habit.goalType == GoalType.minimum || habit.goalType == GoalType.maximum) {
-      if (habit.targetValue == null || habit.targetValue! <= 0) {
-        throw HabitValidationException(
-          'Target value is required and must be greater than 0 for ${habit.goalType.name} goal type',
-        );
-      }
+    // Validate habit using model validation
+    try {
+      habit.validate();
+    } on ArgumentError catch (e) {
+      throw HabitValidationException(e.message);
     }
 
     try {
@@ -93,18 +85,11 @@ class HabitRepository {
       throw HabitValidationException('Cannot update habit without an ID');
     }
 
-    // Validate habit name
-    if (habit.name.trim().isEmpty) {
-      throw HabitValidationException('Habit name cannot be empty');
-    }
-
-    // Validate target value when goal type requires it
-    if (habit.goalType == GoalType.minimum || habit.goalType == GoalType.maximum) {
-      if (habit.targetValue == null || habit.targetValue! <= 0) {
-        throw HabitValidationException(
-          'Target value is required and must be greater than 0 for ${habit.goalType.name} goal type',
-        );
-      }
+    // Validate habit using model validation
+    try {
+      habit.validate();
+    } on ArgumentError catch (e) {
+      throw HabitValidationException(e.message);
     }
 
     try {

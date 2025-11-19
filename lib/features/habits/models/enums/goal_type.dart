@@ -1,5 +1,4 @@
 enum GoalType {
-  none,
   minimum,
   maximum;
 

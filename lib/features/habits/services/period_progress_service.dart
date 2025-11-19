@@ -214,8 +214,7 @@ class PeriodProgressService {
         return dayTotal >= (habit.targetValue ?? 0);
       case GoalType.maximum:
         return dayTotal <= (habit.targetValue ?? double.infinity);
-      case GoalType.none:
-        return dayEvents.isNotEmpty;
+     
     }
   }
 
@@ -243,8 +242,7 @@ class PeriodProgressService {
             return currentValue >= target;
           case GoalType.maximum:
             return currentValue <= target;
-          case GoalType.none:
-            return events.isNotEmpty;
+      
         }
     }
   }

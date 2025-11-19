@@ -140,7 +140,7 @@ class StreakCalculationService {
       return events.any((e) => e.completed == true);
     }
 
-    // For value/timed habits, sum up the values
+    // For value habits, sum up the values
     final total = events.fold<double>(0, (sum, e) => sum + (e.valueDelta ?? 0));
 
     switch (habit.goalType) {
@@ -148,8 +148,6 @@ class StreakCalculationService {
         return total >= (habit.targetValue ?? 0);
       case GoalType.maximum:
         return total <= (habit.targetValue ?? double.infinity);
-      case GoalType.none:
-        return events.isNotEmpty;
     }
   }
 

@@ -344,8 +344,7 @@ class HabitCalendarView extends ConsumerWidget {
         return total >= (habit.targetValue ?? 0);
       case GoalType.maximum:
         return total <= (habit.targetValue ?? double.infinity);
-      case GoalType.none:
-        return events.isNotEmpty;
+     
     }
   }
 }

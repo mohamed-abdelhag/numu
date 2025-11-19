@@ -9,7 +9,7 @@ import '../providers/habits_provider.dart';
 import '../repositories/habit_repository.dart';
 
 /// Dialog for logging habit events
-/// Supports binary, value, and timed tracking types
+/// Supports binary and value tracking types
 /// Can be used for both creating new entries (FAB) and editing existing entries (calendar)
 class LogHabitEventDialog extends ConsumerStatefulWidget {
   final Habit habit;
@@ -52,11 +52,6 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
       // Pre-fill value for value habits
       if (event.valueDelta != null) {
         _valueController.text = event.valueDelta!.toString();
-      }
-      
-      // Pre-fill time for timed habits
-      if (event.timeRecorded != null) {
-        _selectedTime = event.timeRecorded!;
       }
       
       // Pre-fill quality status
@@ -141,9 +136,6 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
             // Tracking type specific inputs
             if (widget.habit.trackingType == TrackingType.value)
               ..._buildValueInputs(),
-            
-            if (widget.habit.trackingType == TrackingType.timed)
-              ..._buildTimedInputs(),
             
             // Time window indicator
             if (widget.habit.timeWindowEnabled) ...[
@@ -261,7 +253,7 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
           "Today's Total: ${newTotal.toStringAsFixed(1)}${widget.habit.unit != null ? ' ${widget.habit.unit}' : ''}",
           style: Theme.of(context).textTheme.bodyMedium,
         ),
-        if (widget.habit.goalType != GoalType.none && target > 0) ...[
+        if (target > 0) ...[
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: progress,
@@ -276,25 +268,6 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
         ],
       ],
     );
-  }
-
-  List<Widget> _buildTimedInputs() {
-    return [
-      InkWell(
-        onTap: _pickTime,
-        child: InputDecorator(
-          decoration: const InputDecoration(
-            labelText: 'Time',
-            border: OutlineInputBorder(),
-            suffixIcon: Icon(Icons.access_time),
-          ),
-          child: Text(
-            _selectedTime.format(context),
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
-        ),
-      ),
-    ];
   }
 
   Widget _buildNotesField() {
@@ -414,19 +387,6 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
     }
   }
 
-  Future<void> _pickTime() async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime,
-    );
-
-    if (picked != null && mounted) {
-      setState(() {
-        _selectedTime = picked;
-      });
-    }
-  }
-
   Future<void> _saveEvent() async {
     // Validate value input for value habits
     if (widget.habit.trackingType == TrackingType.value) {
@@ -523,27 +483,6 @@ class _LogHabitEventDialogState extends ConsumerState<LogHabitEventDialog> {
           ),
           valueDelta: value,
           value: (_todayTotal ?? 0) + value,
-          withinTimeWindow: withinTimeWindow,
-          qualityAchieved: qualityAchieved,
-          notes: _notesController.text.isNotEmpty ? _notesController.text : null,
-          createdAt: createdAt,
-          updatedAt: now,
-        );
-      
-      case TrackingType.timed:
-        return HabitEvent(
-          id: eventId,
-          habitId: widget.habit.id!,
-          eventDate: _selectedDate,
-          eventTimestamp: DateTime(
-            _selectedDate.year,
-            _selectedDate.month,
-            _selectedDate.day,
-            _selectedTime.hour,
-            _selectedTime.minute,
-          ),
-          timeRecorded: _selectedTime,
-          completed: true,
           withinTimeWindow: withinTimeWindow,
           qualityAchieved: qualityAchieved,
           notes: _notesController.text.isNotEmpty ? _notesController.text : null,

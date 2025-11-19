@@ -16,11 +16,6 @@ class GoalTypeSelector extends StatelessWidget {
     return SegmentedButton<GoalType>(
       segments: const [
         ButtonSegment(
-          value: GoalType.none,
-          label: Text('None'),
-          icon: Icon(Icons.remove_circle_outline),
-        ),
-        ButtonSegment(
           value: GoalType.minimum,
           label: Text('Minimum'),
           icon: Icon(Icons.arrow_upward),

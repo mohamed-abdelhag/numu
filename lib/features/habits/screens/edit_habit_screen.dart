@@ -43,7 +43,7 @@ class _EditHabitScreenState extends ConsumerState<EditHabitScreen> {
   // Form state
   int? _selectedCategoryId;
   TrackingType _trackingType = TrackingType.binary;
-  GoalType _goalType = GoalType.none;
+  GoalType? _goalType;
   Frequency _frequency = Frequency.daily;
   String _selectedIcon = '🎯';
   String _selectedColor = '0xFF64B5F6';
@@ -149,22 +149,7 @@ class _EditHabitScreenState extends ConsumerState<EditHabitScreen> {
     super.dispose();
   }
 
-  Widget _buildUnitChip(String unit) {
-    final isSelected = _unitController.text.trim() == unit;
-    return FilterChip(
-      label: Text(unit),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() {
-          if (selected) {
-            _unitController.text = unit;
-          } else {
-            _unitController.clear();
-          }
-        });
-      },
-    );
-  }
+
 
   Future<void> _saveHabit() async {
     if (!_formKey.currentState!.validate()) {
@@ -196,7 +181,9 @@ class _EditHabitScreenState extends ConsumerState<EditHabitScreen> {
         icon: _selectedIcon,
         color: _selectedColor,
         trackingType: _trackingType,
-        goalType: _goalType,
+        goalType: _trackingType == TrackingType.value 
+            ? (_goalType ?? GoalType.minimum)
+            : GoalType.minimum,
         targetValue: targetValue,
         unit: _unitController.text.trim().isEmpty
             ? null
@@ -456,6 +443,12 @@ class _EditHabitScreenState extends ConsumerState<EditHabitScreen> {
               onChanged: (value) {
                 setState(() {
                   _trackingType = value;
+                  // Clear value-specific fields when switching to binary
+                  if (value == TrackingType.binary) {
+                    _goalType = null;
+                    _targetValueController.clear();
+                    _unitController.clear();
+                  }
                 });
               },
             ),
@@ -467,45 +460,41 @@ class _EditHabitScreenState extends ConsumerState<EditHabitScreen> {
               ),
               const SizedBox(height: 8),
               GoalTypeSelector(
-                value: _goalType,
+                value: _goalType ?? GoalType.minimum,
                 onChanged: (value) {
                   setState(() {
                     _goalType = value;
                   });
                 },
               ),
-              if (_goalType != GoalType.none) ...[
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _targetValueController,
-                  decoration: InputDecoration(
-                    labelText: 'Target Value',
-                    hintText: 'e.g., 30',
-                    border: const OutlineInputBorder(),
-                    suffixText: _unitController.text.trim().isEmpty
-                        ? null
-                        : _unitController.text.trim(),
-                  ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    if (_trackingType == TrackingType.value &&
-                        _goalType != GoalType.none &&
-                        (value == null || value.trim().isEmpty)) {
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _targetValueController,
+                decoration: InputDecoration(
+                  labelText: 'Target Value',
+                  hintText: 'e.g., 30',
+                  border: const OutlineInputBorder(),
+                  suffixText: _unitController.text.trim().isEmpty
+                      ? null
+                      : _unitController.text.trim(),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (_trackingType == TrackingType.value) {
+                    if (value == null || value.trim().isEmpty) {
                       return 'Please enter a target value';
                     }
-                    if (value != null && value.trim().isNotEmpty) {
-                      final parsedValue = double.tryParse(value.trim());
-                      if (parsedValue == null) {
-                        return 'Please enter a valid number';
-                      }
-                      if (parsedValue <= 0) {
-                        return 'Target value must be greater than 0';
-                      }
+                    final parsedValue = double.tryParse(value.trim());
+                    if (parsedValue == null) {
+                      return 'Please enter a valid number';
                     }
-                    return null;
-                  },
-                ),
-              ],
+                    if (parsedValue <= 0) {
+                      return 'Target value must be greater than 0';
+                    }
+                  }
+                  return null;
+                },
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _unitController,
@@ -513,28 +502,17 @@ class _EditHabitScreenState extends ConsumerState<EditHabitScreen> {
                   labelText: 'Unit',
                   hintText: 'e.g., pages, reps, km',
                   border: OutlineInputBorder(),
-                  helperText: 'Tap suggestions below or enter custom unit',
+                  helperText: 'Enter the unit for this value (required)',
                 ),
                 textCapitalization: TextCapitalization.sentences,
                 validator: (value) {
-                  if (_trackingType == TrackingType.value &&
-                      (value == null || value.trim().isEmpty)) {
-                    return 'Please enter a unit for countable habits';
+                  if (_trackingType == TrackingType.value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a unit';
+                    }
                   }
                   return null;
                 },
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _buildUnitChip('pages'),
-                  _buildUnitChip('reps'),
-                  _buildUnitChip('km'),
-                  _buildUnitChip('glasses'),
-                  _buildUnitChip('minutes'),
-                ],
               ),
             ],
             const SizedBox(height: 24),

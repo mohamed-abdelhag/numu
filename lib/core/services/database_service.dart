@@ -28,7 +28,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 7,
+      version: 8,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -58,6 +58,10 @@ class DatabaseService {
     if (oldVersion < 7) {
       // Enhance tasks table with title, description, due_date, and timestamps
       await _upgradeTasksTable(db);
+    }
+    if (oldVersion < 8) {
+      // Convert timed habits to binary habits with time window enabled
+      await _migrateTimedToBinaryHabits(db);
     }
   }
 
@@ -119,6 +123,18 @@ class DatabaseService {
     // Step 6: Recreate the category_id index (it was dropped with the old table)
     await db.execute('''
       CREATE INDEX idx_tasks_category_id ON $tasksTable (category_id)
+    ''');
+  }
+
+  Future<void> _migrateTimedToBinaryHabits(Database db) async {
+    // Convert all timed habits to binary habits with time window enabled
+    // This migration removes the 'timed' tracking type and converts it to 'binary'
+    // with time_window_enabled set to true, preserving all time window configuration
+    await db.execute('''
+      UPDATE $habitsTable 
+      SET tracking_type = 'binary',
+          time_window_enabled = 1
+      WHERE tracking_type = 'timed'
     ''');
   }
 

@@ -1,7 +1,6 @@
 enum TrackingType {
   binary,
-  value,
-  timed;
+  value;
 
   String toJson() => name;
 

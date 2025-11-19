@@ -223,6 +223,35 @@ class Habit {
     );
   }
 
+  /// Validates the habit configuration
+  /// Throws ArgumentError if validation fails
+  void validate() {
+    // Validate name
+    if (name.trim().isEmpty) {
+      throw ArgumentError('Habit name cannot be empty');
+    }
+
+    // Validate value tracking type requirements
+    if (trackingType == TrackingType.value) {
+      // Goal type is required for value habits (minimum or maximum)
+      // Since GoalType enum only has minimum and maximum, this is implicitly satisfied
+      
+      // Target value is required and must be positive
+      if (targetValue == null) {
+        throw ArgumentError('Target value is required for value-based habits');
+      }
+      
+      if (targetValue! <= 0) {
+        throw ArgumentError('Target value must be greater than 0 for value-based habits');
+      }
+      
+      // Unit is required for value habits
+      if (unit == null || unit!.trim().isEmpty) {
+        throw ArgumentError('Unit is required for value-based habits');
+      }
+    }
+  }
+
   // Helper methods for TimeOfDay conversion
   static TimeOfDay _parseTimeOfDay(String timeString) {
     final parts = timeString.split(':');
