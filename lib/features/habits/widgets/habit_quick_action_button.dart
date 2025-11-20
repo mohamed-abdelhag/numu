@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:async';
 import '../models/habit.dart';
 import '../models/habit_event.dart';
 import '../models/enums/tracking_type.dart';
@@ -36,6 +37,15 @@ class HabitQuickActionButton extends ConsumerStatefulWidget {
 
 class _HabitQuickActionButtonState extends ConsumerState<HabitQuickActionButton> {
   bool _isLoading = false;
+  Timer? _debounceTimer;
+  int _pendingIncrements = 0;
+  double _startingTotal = 0;
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -103,6 +113,8 @@ class _HabitQuickActionButtonState extends ConsumerState<HabitQuickActionButton>
     final todayTotal = _getTotalForDate(events, widget.date);
     final target = widget.habit.targetValue ?? 0;
     final goalReached = todayTotal >= target;
+    
+    debugPrint('flutter_logs: {HabitQuickActionButton} {_buildValueAction} {Habit: ${widget.habit.name}, Today Total: $todayTotal, Target: $target, Goal Reached: $goalReached} {INFO}');
 
     return IconButton(
       icon: const Icon(Icons.add_circle_outline),
@@ -146,7 +158,14 @@ class _HabitQuickActionButtonState extends ConsumerState<HabitQuickActionButton>
       return eventDate.isAtSameMomentAs(dateOnly);
     }).toList();
     
-    return dayEvents.fold<double>(0, (sum, event) => sum + (event.valueDelta ?? 0));
+    final total = dayEvents.fold<double>(0, (sum, event) => sum + (event.valueDelta ?? 0));
+    
+    debugPrint('flutter_logs: {HabitQuickActionButton} {_getTotalForDate} {Date: $dateOnly, Events Count: ${dayEvents.length}, Total: $total} {INFO}');
+    for (var i = 0; i < dayEvents.length; i++) {
+      debugPrint('flutter_logs: {HabitQuickActionButton} {_getTotalForDate} {Event $i: valueDelta=${dayEvents[i].valueDelta}, value=${dayEvents[i].value}} {INFO}');
+    }
+    
+    return total;
   }
 
   /// Mark binary habit as complete
@@ -194,6 +213,8 @@ class _HabitQuickActionButtonState extends ConsumerState<HabitQuickActionButton>
   Future<void> _incrementValue(double currentTotal) async {
     if (!context.mounted) return;
     
+    debugPrint('flutter_logs: {HabitQuickActionButton} {_incrementValue} {Starting - Current Total: $currentTotal} {INFO}');
+    
     setState(() => _isLoading = true);
 
     try {
@@ -217,15 +238,41 @@ class _HabitQuickActionButtonState extends ConsumerState<HabitQuickActionButton>
         createdAt: now,
         updatedAt: now,
       );
+      
+      debugPrint('flutter_logs: {HabitQuickActionButton} {_incrementValue} {Created Event - habitId: ${event.habitId}, valueDelta: ${event.valueDelta}, value: ${event.value}, date: ${event.eventDate}} {INFO}');
 
       await ref.read(habitsProvider.notifier).logEvent(event);
+      
+      debugPrint('flutter_logs: {HabitQuickActionButton} {_incrementValue} {Event logged successfully} {INFO}');
 
       if (mounted) {
         widget.onActionComplete?.call();
-        final newTotal = currentTotal + 1.0;
-        _showSuccessSnackbar(
-          '+1 ${widget.habit.unit ?? ''} (Total: ${newTotal.toInt()} ${widget.habit.unit ?? ''})',
-        );
+        
+        // Debounce the success message to avoid spam
+        _pendingIncrements++;
+        if (_pendingIncrements == 1) {
+          _startingTotal = currentTotal;
+        }
+        
+        _debounceTimer?.cancel();
+        _debounceTimer = Timer(const Duration(milliseconds: 800), () {
+          if (mounted) {
+            final incrementsCount = _pendingIncrements;
+            final finalTotal = _startingTotal + incrementsCount;
+            
+            if (incrementsCount == 1) {
+              _showSuccessSnackbar(
+                '+1 ${widget.habit.unit ?? ''} (Total: ${finalTotal.toInt()} ${widget.habit.unit ?? ''})',
+              );
+            } else {
+              _showSuccessSnackbar(
+                '+${widget.habit.unit ?? ''} added $incrementsCount times (Total: ${finalTotal.toInt()} ${widget.habit.unit ?? ''})',
+              );
+            }
+            
+            _pendingIncrements = 0;
+          }
+        });
       }
     } catch (e) {
       if (mounted) {

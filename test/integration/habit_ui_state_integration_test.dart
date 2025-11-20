@@ -1,6 +1,4 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:numu/features/habits/models/habit.dart';
 import 'package:numu/features/habits/models/habit_event.dart';
@@ -9,16 +7,10 @@ import 'package:numu/features/habits/models/enums/goal_type.dart';
 import 'package:numu/features/habits/models/enums/frequency.dart';
 import 'package:numu/features/habits/models/enums/active_days_mode.dart';
 import 'package:numu/features/habits/models/enums/require_mode.dart';
-import 'package:numu/features/habits/models/enums/streak_type.dart';
 import 'package:numu/features/habits/repositories/habit_repository.dart';
-import 'package:numu/features/habits/providers/habits_provider.dart';
-import 'package:numu/features/habits/providers/habit_detail_provider.dart';
-import 'package:numu/features/habits/widgets/habit_card.dart';
-import 'package:numu/features/home/widgets/daily_item_card.dart';
-import 'package:numu/features/home/models/daily_item.dart';
+
 import 'package:numu/features/profile/models/user_profile.dart';
 import 'package:numu/features/profile/repositories/user_profile_repository.dart';
-import 'package:numu/features/profile/providers/user_profile_provider.dart';
 import 'package:numu/core/services/database_service.dart';
 
 void main() {

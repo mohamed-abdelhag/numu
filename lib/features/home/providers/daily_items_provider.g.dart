@@ -34,7 +34,7 @@ final class DailyItemsNotifierProvider
 }
 
 String _$dailyItemsNotifierHash() =>
-    r'4fd47f0319f4ff12ba3306ea72d80aef4bcd1d56';
+    r'a63093925ea4aa0de9264b033b62f6fbd4fdf79b';
 
 abstract class _$DailyItemsNotifier extends $AsyncNotifier<DailyItemsState> {
   FutureOr<DailyItemsState> build();

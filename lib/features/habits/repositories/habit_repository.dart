@@ -7,6 +7,7 @@ import '../models/habit_period_progress.dart';
 import '../models/enums/streak_type.dart';
 import '../models/exceptions/habit_exception.dart';
 import '../../reminders/repositories/reminder_repository.dart';
+import '../../../core/utils/core_logging_utility.dart';
 
 /// Repository layer for habit data access
 /// Handles all database operations related to habits and events
@@ -185,22 +186,86 @@ class HabitRepository {
   /// Checks for existing events on the same date and updates them instead of creating duplicates
   Future<HabitEvent> logEvent(HabitEvent event) async {
     try {
+      CoreLoggingUtility.info(
+        'HabitRepository',
+        'logEvent',
+        'Logging event for habit ${event.habitId} on ${event.eventDate} - valueDelta: ${event.valueDelta}, value: ${event.value}',
+      );
+      
       // Check for existing events on the same date
       final existingEvents = await getEventsForDate(event.habitId, event.eventDate);
+      
+      CoreLoggingUtility.info(
+        'HabitRepository',
+        'logEvent',
+        'Found ${existingEvents.length} existing events for this date',
+      );
       
       if (existingEvents.isNotEmpty) {
         // Update existing event instead of creating duplicate
         final existingEvent = existingEvents.first;
+        
+        CoreLoggingUtility.info(
+          'HabitRepository',
+          'logEvent',
+          'Updating existing event ID ${existingEvent.id} - Old valueDelta: ${existingEvent.valueDelta}, Old value: ${existingEvent.value}, New valueDelta: ${event.valueDelta}, New value: ${event.value}',
+        );
+        
+        // For value-based habits, accumulate the valueDelta and value
+        // For binary habits, replace the values
+        final double? newValueDelta;
+        final double? newValue;
+        
+        if (event.valueDelta != null && existingEvent.valueDelta != null) {
+          // Accumulate value delta for value-based habits
+          newValueDelta = existingEvent.valueDelta! + event.valueDelta!;
+          newValue = existingEvent.value != null && event.value != null
+              ? existingEvent.value! + event.valueDelta! // Add the new delta to existing total
+              : event.value;
+              
+          CoreLoggingUtility.info(
+            'HabitRepository',
+            'logEvent',
+            'Accumulating values - New valueDelta: $newValueDelta, New value: $newValue',
+          );
+        } else {
+          // For binary habits or first value entry, use the new values directly
+          newValueDelta = event.valueDelta;
+          newValue = event.value;
+          
+          CoreLoggingUtility.info(
+            'HabitRepository',
+            'logEvent',
+            'Replacing values (binary habit) - valueDelta: $newValueDelta, value: $newValue',
+          );
+        }
+        
         final updatedEvent = event.copyWith(
           id: existingEvent.id,
+          valueDelta: newValueDelta,
+          value: newValue,
           createdAt: existingEvent.createdAt, // Preserve original creation time
           updatedAt: DateTime.now(), // Update modification time
         );
+        
         await updateEvent(updatedEvent);
+        
+        CoreLoggingUtility.info(
+          'HabitRepository',
+          'logEvent',
+          'Event updated - Final valueDelta: ${updatedEvent.valueDelta}, Final value: ${updatedEvent.value}',
+        );
+        
         return updatedEvent;
       }
       
       // No existing event, create new one
+      CoreLoggingUtility.info(
+        'HabitRepository',
+        'logEvent',
+        'Creating new event - valueDelta: ${event.valueDelta}, value: ${event.value}',
+      );
+      
       final db = await _dbService.database;
       final id = await db.insert(
         'habit_events',
@@ -208,7 +273,15 @@ class HabitRepository {
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
-      return event.copyWith(id: id);
+      final createdEvent = event.copyWith(id: id);
+      
+      CoreLoggingUtility.info(
+        'HabitRepository',
+        'logEvent',
+        'Event created with ID $id',
+      );
+
+      return createdEvent;
     } catch (e) {
       throw HabitDatabaseException('Failed to log event', originalError: e);
     }

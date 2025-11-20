@@ -3,6 +3,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/daily_item.dart';
 import '../../habits/models/habit.dart';
 import '../../habits/models/enums/active_days_mode.dart';
+import '../../habits/models/enums/goal_type.dart';
 import '../../habits/repositories/habit_repository.dart';
 import '../../tasks/tasks_repository.dart';
 import '../../tasks/task.dart';
@@ -122,14 +123,27 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
     bool isCompleted = false;
     
     if (todayEvents.isNotEmpty) {
-      currentValue = todayEvents.fold(0.0, (sum, event) => sum + (event.valueDelta ?? 0));
+      // Calculate total value from events
+      for (final event in todayEvents) {
+        if (event.valueDelta != null) {
+          currentValue += event.valueDelta!;
+        } else if (event.value != null) {
+          currentValue = event.value!;
+        }
+      }
       
-      // Check if habit is completed based on target
+      // Check if habit is completed based on target and goal type
       if (habit.targetValue != null) {
-        isCompleted = currentValue >= habit.targetValue!;
+        // For value-based habits, check against target
+        if (habit.goalType == GoalType.minimum) {
+          isCompleted = currentValue >= habit.targetValue!;
+        } else {
+          // For maximum goals, completed if value is at or below target
+          isCompleted = currentValue <= habit.targetValue!;
+        }
       } else {
         // For binary habits, any event means completed
-        isCompleted = true;
+        isCompleted = todayEvents.any((e) => e.completed == true);
       }
     }
     

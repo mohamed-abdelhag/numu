@@ -160,23 +160,23 @@ void main() {
       final container = ProviderContainer();
       addTearDown(container.dispose);
 
-      // Create a test habit
-      final habit = Habit(
-        name: 'Test Habit',
-        icon: '✅',
-        color: '0xFF4CAF50',
-        trackingType: TrackingType.binary,
-        goalType: GoalType.minimum,
-        frequency: Frequency.daily,
-        activeDaysMode: ActiveDaysMode.all,
-        requireMode: RequireMode.each,
-        timeWindowEnabled: false,
-        qualityLayerEnabled: false,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+      // // Create a test habit
+      // final habit = Habit(
+      //   name: 'Test Habit',
+      //   icon: '✅',
+      //   color: '0xFF4CAF50',
+      //   trackingType: TrackingType.binary,
+      //   goalType: GoalType.minimum,
+      //   frequency: Frequency.daily,
+      //   activeDaysMode: ActiveDaysMode.all,
+      //   requireMode: RequireMode.each,
+      //   timeWindowEnabled: false,
+      //   qualityLayerEnabled: false,
+      //   createdAt: DateTime.now(),
+      //   updatedAt: DateTime.now(),
+      // );
 
-      final savedHabit = await repository.createHabit(habit);
+      //final savedHabit = await repository.createHabit(habit);
 
       // Load the provider to initialize it
       final initialState = await container.read(habitsProvider.future);
