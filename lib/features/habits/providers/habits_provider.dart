@@ -6,7 +6,7 @@ import '../services/streak_calculation_service.dart';
 import '../services/period_progress_service.dart';
 import '../../../core/utils/core_logging_utility.dart';
 import '../../reminders/services/reminder_scheduler_service.dart';
-import '../../profile/providers/user_profile_provider.dart';
+import '../../settings/providers/user_profile_provider.dart';
 import 'habit_detail_provider.dart';
 import '../../home/providers/daily_items_provider.dart';
 

@@ -6,7 +6,7 @@ import '../models/enums/tracking_type.dart';
 import '../models/enums/streak_type.dart';
 import '../models/enums/goal_type.dart';
 import '../providers/habit_detail_provider.dart';
-import '../../../features/profile/providers/user_profile_provider.dart';
+import '../../../features/settings/providers/user_profile_provider.dart';
 import 'habit_quick_action_button.dart';
 
 /// Represents the status of a habit for a specific day

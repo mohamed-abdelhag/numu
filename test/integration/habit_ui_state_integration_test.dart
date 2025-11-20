@@ -9,8 +9,8 @@ import 'package:numu/features/habits/models/enums/active_days_mode.dart';
 import 'package:numu/features/habits/models/enums/require_mode.dart';
 import 'package:numu/features/habits/repositories/habit_repository.dart';
 
-import 'package:numu/features/profile/models/user_profile.dart';
-import 'package:numu/features/profile/repositories/user_profile_repository.dart';
+import 'package:numu/features/settings/models/user_profile.dart';
+import 'package:numu/features/settings/repositories/user_profile_repository.dart';
 import 'package:numu/core/services/database_service.dart';
 
 void main() {

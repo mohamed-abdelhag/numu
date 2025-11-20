@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/core_logging_utility.dart';
+import '../../app/theme/theme_registry.dart';
 
 /// Exception thrown when settings operations fail
 class SettingsException implements Exception {
@@ -18,6 +19,7 @@ class SettingsRepository {
 
   // Storage keys
   static const String _themeKey = 'theme_mode';
+  static const String _colorSchemeKey = 'color_scheme';
   static const String _navItemsKey = 'navigation_items';
   static const String _navOrderKey = 'navigation_order';
 
@@ -44,7 +46,19 @@ class SettingsRepository {
         return ThemeMode.light;
       }
 
-      return _parseThemeMode(value);
+      final parsedMode = _parseThemeMode(value);
+      
+      // If we got an unknown value and defaulted, clear the corrupted data
+      if (parsedMode == ThemeMode.light && value != 'light' && value != 'system') {
+        CoreLoggingUtility.warning(
+          'SettingsRepository',
+          'getThemeMode',
+          'Detected invalid theme mode value: $value, clearing corrupted data',
+        );
+        await _clearCorruptedData(_themeKey);
+      }
+      
+      return parsedMode;
     } catch (e, stackTrace) {
       CoreLoggingUtility.error(
         'SettingsRepository',
@@ -81,6 +95,80 @@ class SettingsRepository {
     }
   }
 
+  // Color scheme operations
+
+  /// Gets the saved color scheme, defaults to 'blue' if not found or on error
+  Future<String> getColorScheme() async {
+    try {
+      final value = _prefs.getString(_colorSchemeKey);
+      CoreLoggingUtility.info(
+        'SettingsRepository',
+        'getColorScheme',
+        'Retrieved color scheme: $value',
+      );
+
+      if (value == null) {
+        CoreLoggingUtility.info(
+          'SettingsRepository',
+          'getColorScheme',
+          'No saved color scheme found, using default (blue)',
+        );
+        return ThemeRegistry.defaultThemeId;
+      }
+      
+      // Validate the theme ID
+      if (!ThemeRegistry.isValidThemeId(value)) {
+        CoreLoggingUtility.warning(
+          'SettingsRepository',
+          'getColorScheme',
+          'Invalid color scheme detected: $value, clearing corrupted data and using default',
+        );
+        await _clearCorruptedData(_colorSchemeKey);
+        return ThemeRegistry.defaultThemeId;
+      }
+
+      return value;
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'SettingsRepository',
+        'getColorScheme',
+        'Failed to load color scheme: $e\nStack trace: $stackTrace',
+      );
+      // Graceful fallback to default
+      return ThemeRegistry.defaultThemeId;
+    }
+  }
+
+  /// Saves the color scheme preference
+  /// Validates the color scheme ID before saving
+  Future<void> saveColorScheme(String colorSchemeId) async {
+    try {
+      // Validate the color scheme ID
+      if (!ThemeRegistry.isValidThemeId(colorSchemeId)) {
+        throw SettingsException('Invalid color scheme ID: $colorSchemeId');
+      }
+
+      final success = await _prefs.setString(_colorSchemeKey, colorSchemeId);
+      
+      if (!success) {
+        throw SettingsException('SharedPreferences returned false when saving color scheme');
+      }
+      
+      CoreLoggingUtility.info(
+        'SettingsRepository',
+        'saveColorScheme',
+        'Saved color scheme: $colorSchemeId',
+      );
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'SettingsRepository',
+        'saveColorScheme',
+        'Failed to save color scheme: $e\nStack trace: $stackTrace',
+      );
+      throw SettingsException('Failed to save color scheme preference: ${e.toString()}');
+    }
+  }
+
   // Navigation operations
 
   /// Gets the navigation items visibility map
@@ -108,6 +196,15 @@ class SettingsRepository {
       );
       
       return result;
+    } on FormatException catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'SettingsRepository',
+        'getNavigationItemsVisibility',
+        'Corrupted navigation visibility data detected: $e\nStack trace: $stackTrace',
+      );
+      // Clear corrupted data
+      await _clearCorruptedData(_navItemsKey);
+      return {};
     } catch (e, stackTrace) {
       CoreLoggingUtility.error(
         'SettingsRepository',
@@ -169,6 +266,15 @@ class SettingsRepository {
       );
       
       return result;
+    } on FormatException catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'SettingsRepository',
+        'getNavigationOrder',
+        'Corrupted navigation order data detected: $e\nStack trace: $stackTrace',
+      );
+      // Clear corrupted data
+      await _clearCorruptedData(_navOrderKey);
+      return [];
     } catch (e, stackTrace) {
       CoreLoggingUtility.error(
         'SettingsRepository',
@@ -221,6 +327,160 @@ class SettingsRepository {
           'Unknown theme mode: $value, defaulting to light',
         );
         return ThemeMode.light;
+    }
+  }
+  
+  /// Clears corrupted data from storage
+  /// This is called when data cannot be parsed correctly
+  Future<void> _clearCorruptedData(String key) async {
+    try {
+      CoreLoggingUtility.warning(
+        'SettingsRepository',
+        '_clearCorruptedData',
+        'Clearing corrupted data for key: $key',
+      );
+      
+      await _prefs.remove(key);
+      
+      CoreLoggingUtility.info(
+        'SettingsRepository',
+        '_clearCorruptedData',
+        'Successfully cleared corrupted data for key: $key',
+      );
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'SettingsRepository',
+        '_clearCorruptedData',
+        'Failed to clear corrupted data for key $key: $e\nStack trace: $stackTrace',
+      );
+      // Don't rethrow - this is a cleanup operation
+    }
+  }
+  
+  /// Validates storage health and returns diagnostic information
+  /// Returns a map with validation results for each setting
+  Future<Map<String, bool>> validateStorageHealth() async {
+    final results = <String, bool>{};
+    
+    try {
+      // Check theme mode
+      try {
+        final themeMode = await getThemeMode();
+        results['theme_mode'] = true;
+        CoreLoggingUtility.info(
+          'SettingsRepository',
+          'validateStorageHealth',
+          'Theme mode validation passed: ${themeMode.name}',
+        );
+      } catch (e) {
+        results['theme_mode'] = false;
+        CoreLoggingUtility.error(
+          'SettingsRepository',
+          'validateStorageHealth',
+          'Theme mode validation failed: $e',
+        );
+      }
+      
+      // Check color scheme
+      try {
+        final colorScheme = await getColorScheme();
+        results['color_scheme'] = ThemeRegistry.isValidThemeId(colorScheme);
+        CoreLoggingUtility.info(
+          'SettingsRepository',
+          'validateStorageHealth',
+          'Color scheme validation: ${results['color_scheme']} (value: $colorScheme)',
+        );
+      } catch (e) {
+        results['color_scheme'] = false;
+        CoreLoggingUtility.error(
+          'SettingsRepository',
+          'validateStorageHealth',
+          'Color scheme validation failed: $e',
+        );
+      }
+      
+      // Check navigation items
+      try {
+        final navItems = await getNavigationItemsVisibility();
+        results['navigation_items'] = true;
+        CoreLoggingUtility.info(
+          'SettingsRepository',
+          'validateStorageHealth',
+          'Navigation items validation passed: ${navItems.length} items',
+        );
+      } catch (e) {
+        results['navigation_items'] = false;
+        CoreLoggingUtility.error(
+          'SettingsRepository',
+          'validateStorageHealth',
+          'Navigation items validation failed: $e',
+        );
+      }
+      
+      // Check navigation order
+      try {
+        final navOrder = await getNavigationOrder();
+        results['navigation_order'] = true;
+        CoreLoggingUtility.info(
+          'SettingsRepository',
+          'validateStorageHealth',
+          'Navigation order validation passed: ${navOrder.length} items',
+        );
+      } catch (e) {
+        results['navigation_order'] = false;
+        CoreLoggingUtility.error(
+          'SettingsRepository',
+          'validateStorageHealth',
+          'Navigation order validation failed: $e',
+        );
+      }
+      
+      final allHealthy = results.values.every((v) => v);
+      CoreLoggingUtility.info(
+        'SettingsRepository',
+        'validateStorageHealth',
+        'Storage health check complete. All healthy: $allHealthy',
+      );
+      
+      return results;
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'SettingsRepository',
+        'validateStorageHealth',
+        'Storage health validation failed: $e\nStack trace: $stackTrace',
+      );
+      return results;
+    }
+  }
+  
+  /// Clears all settings data (useful for recovery from corrupted state)
+  Future<void> clearAllSettings() async {
+    try {
+      CoreLoggingUtility.warning(
+        'SettingsRepository',
+        'clearAllSettings',
+        'Clearing all settings data',
+      );
+      
+      await Future.wait([
+        _prefs.remove(_themeKey),
+        _prefs.remove(_colorSchemeKey),
+        _prefs.remove(_navItemsKey),
+        _prefs.remove(_navOrderKey),
+      ]);
+      
+      CoreLoggingUtility.info(
+        'SettingsRepository',
+        'clearAllSettings',
+        'Successfully cleared all settings data',
+      );
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'SettingsRepository',
+        'clearAllSettings',
+        'Failed to clear all settings: $e\nStack trace: $stackTrace',
+      );
+      throw SettingsException('Failed to clear settings: ${e.toString()}');
     }
   }
 }

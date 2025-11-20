@@ -37,7 +37,7 @@ final class NavigationNotifierProvider
 }
 
 String _$navigationNotifierHash() =>
-    r'0f43ac58d4936b114625b17f0db1c5377bc43aaf';
+    r'31cd78c13031ffa4a57c8714705dadaddc02dc5d';
 
 /// Notifier for managing navigation items state
 

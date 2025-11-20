@@ -45,22 +45,13 @@ class NavigationNotifier extends _$NavigationNotifier {
       order: 2,
     ),
     const NavigationItem(
-      id: 'profile',
-      label: 'Profile',
-      icon: Icons.person,
-      route: '/profile',
-      isHome: false,
-      isEnabled: true,
-      order: 3,
-    ),
-    const NavigationItem(
       id: 'reminders',
       label: 'Reminders',
       icon: Icons.notifications,
       route: '/reminders',
       isHome: false,
       isEnabled: true,
-      order: 4,
+      order: 3,
     ),
     const NavigationItem(
       id: 'help',
@@ -69,7 +60,7 @@ class NavigationNotifier extends _$NavigationNotifier {
       route: '/help',
       isHome: false,
       isEnabled: true,
-      order: 5,
+      order: 4,
     ),
     const NavigationItem(
       id: 'settings',
@@ -78,7 +69,7 @@ class NavigationNotifier extends _$NavigationNotifier {
       route: '/settings',
       isHome: false,
       isEnabled: true,
-      order: 6,
+      order: 5,
     ),
   ];
 

@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:numu/core/providers/navigation_provider.dart';
 import 'package:numu/core/utils/core_logging_utility.dart';
-import 'package:numu/features/profile/providers/user_profile_provider.dart';
+import 'package:numu/features/settings/providers/user_profile_provider.dart';
 
 class NumuAppShell extends ConsumerWidget {
   final Widget child;

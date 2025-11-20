@@ -62,14 +62,17 @@ String _$settingsRepositoryHash() =>
     r'5bf0fddc028c126230ab02a992642926b8044d37';
 
 /// Notifier for managing theme mode state
+/// This provider now reads from ThemeConfigProvider for backward compatibility
 
 @ProviderFor(ThemeNotifier)
 const themeProvider = ThemeNotifierProvider._();
 
 /// Notifier for managing theme mode state
+/// This provider now reads from ThemeConfigProvider for backward compatibility
 final class ThemeNotifierProvider
     extends $AsyncNotifierProvider<ThemeNotifier, ThemeMode> {
   /// Notifier for managing theme mode state
+  /// This provider now reads from ThemeConfigProvider for backward compatibility
   const ThemeNotifierProvider._()
     : super(
         from: null,
@@ -89,9 +92,10 @@ final class ThemeNotifierProvider
   ThemeNotifier create() => ThemeNotifier();
 }
 
-String _$themeNotifierHash() => r'2043d247365a4397dae0d7e2ae4790ad0f2f2102';
+String _$themeNotifierHash() => r'089dab70f2fd810bd63f8086a821656d38b867d4';
 
 /// Notifier for managing theme mode state
+/// This provider now reads from ThemeConfigProvider for backward compatibility
 
 abstract class _$ThemeNotifier extends $AsyncNotifier<ThemeMode> {
   FutureOr<ThemeMode> build();
@@ -111,3 +115,89 @@ abstract class _$ThemeNotifier extends $AsyncNotifier<ThemeMode> {
     element.handleValue(ref, created);
   }
 }
+
+/// Provider for light theme data based on current color scheme
+
+@ProviderFor(lightTheme)
+const lightThemeProvider = LightThemeProvider._();
+
+/// Provider for light theme data based on current color scheme
+
+final class LightThemeProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ThemeData>,
+          ThemeData,
+          FutureOr<ThemeData>
+        >
+    with $FutureModifier<ThemeData>, $FutureProvider<ThemeData> {
+  /// Provider for light theme data based on current color scheme
+  const LightThemeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'lightThemeProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$lightThemeHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ThemeData> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ThemeData> create(Ref ref) {
+    return lightTheme(ref);
+  }
+}
+
+String _$lightThemeHash() => r'ad0e5c7531b24bdc488c447f29d6d46906eca190';
+
+/// Provider for dark theme data based on current color scheme
+
+@ProviderFor(darkTheme)
+const darkThemeProvider = DarkThemeProvider._();
+
+/// Provider for dark theme data based on current color scheme
+
+final class DarkThemeProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ThemeData>,
+          ThemeData,
+          FutureOr<ThemeData>
+        >
+    with $FutureModifier<ThemeData>, $FutureProvider<ThemeData> {
+  /// Provider for dark theme data based on current color scheme
+  const DarkThemeProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'darkThemeProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$darkThemeHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ThemeData> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ThemeData> create(Ref ref) {
+    return darkTheme(ref);
+  }
+}
+
+String _$darkThemeHash() => r'9017e2aa44ad9ba69c4e3fb35314e20342fb6e8e';

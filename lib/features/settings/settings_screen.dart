@@ -5,8 +5,12 @@ import 'package:numu/core/providers/navigation_provider.dart';
 import 'package:numu/core/models/navigation_item.dart';
 import 'package:numu/core/utils/core_logging_utility.dart';
 import 'package:numu/core/widgets/shell/numu_app_bar.dart';
-import 'package:numu/features/profile/providers/user_profile_provider.dart';
+import 'package:numu/features/settings/providers/user_profile_provider.dart';
 import 'package:numu/features/habits/providers/habits_provider.dart';
+import 'package:numu/features/settings/widgets/profile_section.dart';
+import 'package:numu/features/settings/providers/theme_config_provider.dart';
+import 'package:numu/features/settings/screens/theme_selector_screen.dart';
+import 'package:numu/app/theme/theme_registry.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -65,6 +69,9 @@ class SettingsScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Profile section at the top
+          const ProfileSection(),
+          const SizedBox(height: 24),
           _buildAppearanceSection(context, ref, currentThemeMode),
           const SizedBox(height: 24),
           userProfileAsync.when(
@@ -133,6 +140,7 @@ class SettingsScreen extends ConsumerWidget {
 
   Widget _buildAppearanceSection(BuildContext context, WidgetRef ref, ThemeMode currentThemeMode) {
     final theme = Theme.of(context);
+    final configAsync = ref.watch(themeConfigProvider);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -251,6 +259,75 @@ class SettingsScreen extends ConsumerWidget {
                         );
                       }
                     }
+                  },
+                ),
+                const SizedBox(height: 24),
+                // Color Theme subsection
+                Text(
+                  'Color Theme',
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                configAsync.when(
+                  data: (config) {
+                    final themeInfo = ThemeRegistry.getTheme(config.colorSchemeId);
+                    return ListTile(
+                      leading: Icon(
+                        Icons.palette,
+                        color: theme.colorScheme.primary,
+                      ),
+                      title: Text(themeInfo.displayName),
+                      subtitle: const Text('Tap to change color theme'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        CoreLoggingUtility.info(
+                          'SettingsScreen',
+                          '_buildAppearanceSection',
+                          'Navigating to theme selector',
+                        );
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ThemeSelectorScreen(),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                  loading: () => const ListTile(
+                    leading: Icon(Icons.palette),
+                    title: Text('Loading...'),
+                    trailing: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                  error: (error, stackTrace) {
+                    CoreLoggingUtility.error(
+                      'SettingsScreen',
+                      '_buildAppearanceSection',
+                      'Error loading color theme: $error',
+                    );
+                    return ListTile(
+                      leading: Icon(
+                        Icons.error,
+                        color: theme.colorScheme.error,
+                      ),
+                      title: const Text('Error loading color theme'),
+                      subtitle: Text(error.toString()),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () {
+                          CoreLoggingUtility.info(
+                            'SettingsScreen',
+                            '_buildAppearanceSection',
+                            'Retrying color theme load',
+                          );
+                          ref.invalidate(themeConfigProvider);
+                        },
+                      ),
+                    );
                   },
                 ),
               ],

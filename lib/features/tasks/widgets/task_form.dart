@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:numu/features/habits/models/category.dart';
 
 /// A reusable form widget for creating and editing tasks
-/// 
+///
 /// Features:
 /// - Title input field with validation
 /// - Multi-line description field
@@ -91,9 +91,9 @@ class _TaskFormState extends State<TaskForm> {
               autofocus: true,
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Description field (optional)
           Semantics(
             label: 'Task description, optional field',
@@ -113,9 +113,9 @@ class _TaskFormState extends State<TaskForm> {
               minLines: 3,
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Due date picker
           Semantics(
             label: _selectedDueDate != null
@@ -142,7 +142,9 @@ class _TaskFormState extends State<TaskForm> {
                         style: theme.textTheme.bodyLarge?.copyWith(
                           color: _selectedDueDate != null
                               ? theme.colorScheme.onSurface
-                              : theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                              : theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.6,
+                                ),
                         ),
                       ),
                     ),
@@ -176,9 +178,9 @@ class _TaskFormState extends State<TaskForm> {
               ),
             ),
           ),
-          
+
           const SizedBox(height: 16),
-          
+
           // Category dropdown
           Semantics(
             label: _selectedCategoryId != null
@@ -192,11 +194,9 @@ class _TaskFormState extends State<TaskForm> {
                 helperText: 'Optional',
               ),
               initialValue: _selectedCategoryId,
+              isExpanded: true,
               items: [
-                const DropdownMenuItem<int?>(
-                  value: null,
-                  child: Text('None'),
-                ),
+                const DropdownMenuItem<int?>(value: null, child: Text('None')),
                 ...widget.categories.map((category) {
                   return DropdownMenuItem<int?>(
                     value: category.id,
@@ -218,7 +218,7 @@ class _TaskFormState extends State<TaskForm> {
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Expanded(
+                        Flexible(
                           child: Text(
                             category.name,
                             overflow: TextOverflow.ellipsis,
@@ -237,9 +237,9 @@ class _TaskFormState extends State<TaskForm> {
               },
             ),
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           // Reminder section
           Text(
             'Reminder',
@@ -247,14 +247,12 @@ class _TaskFormState extends State<TaskForm> {
               fontWeight: FontWeight.bold,
             ),
           ),
-          
+
           const SizedBox(height: 8),
-          
+
           // Reminder enable toggle
           Semantics(
-            label: _reminderEnabled
-                ? 'Reminder enabled'
-                : 'Reminder disabled',
+            label: _reminderEnabled ? 'Reminder enabled' : 'Reminder disabled',
             toggled: _reminderEnabled,
             child: SwitchListTile(
               title: const Text('Enable reminder'),
@@ -273,12 +271,13 @@ class _TaskFormState extends State<TaskForm> {
               contentPadding: EdgeInsets.zero,
             ),
           ),
-          
+
           // Reminder offset selector (only shown when reminder is enabled)
           if (_reminderEnabled && _selectedDueDate != null) ...[
             const SizedBox(height: 8),
             Semantics(
-              label: 'Reminder time: ${_getReminderOffsetLabel(_reminderMinutesBefore)}',
+              label:
+                  'Reminder time: ${_getReminderOffsetLabel(_reminderMinutesBefore)}',
               button: true,
               child: DropdownButtonFormField<int>(
                 decoration: const InputDecoration(
@@ -288,34 +287,13 @@ class _TaskFormState extends State<TaskForm> {
                 ),
                 initialValue: _reminderMinutesBefore,
                 items: const [
-                  DropdownMenuItem(
-                    value: 15,
-                    child: Text('15 minutes before'),
-                  ),
-                  DropdownMenuItem(
-                    value: 30,
-                    child: Text('30 minutes before'),
-                  ),
-                  DropdownMenuItem(
-                    value: 60,
-                    child: Text('1 hour before'),
-                  ),
-                  DropdownMenuItem(
-                    value: 120,
-                    child: Text('2 hours before'),
-                  ),
-                  DropdownMenuItem(
-                    value: 1440,
-                    child: Text('1 day before'),
-                  ),
-                  DropdownMenuItem(
-                    value: 2880,
-                    child: Text('2 days before'),
-                  ),
-                  DropdownMenuItem(
-                    value: 10080,
-                    child: Text('1 week before'),
-                  ),
+                  DropdownMenuItem(value: 15, child: Text('15 minutes before')),
+                  DropdownMenuItem(value: 30, child: Text('30 minutes before')),
+                  DropdownMenuItem(value: 60, child: Text('1 hour before')),
+                  DropdownMenuItem(value: 120, child: Text('2 hours before')),
+                  DropdownMenuItem(value: 1440, child: Text('1 day before')),
+                  DropdownMenuItem(value: 2880, child: Text('2 days before')),
+                  DropdownMenuItem(value: 10080, child: Text('1 week before')),
                 ],
                 onChanged: (value) {
                   if (value != null) {
@@ -337,7 +315,7 @@ class _TaskFormState extends State<TaskForm> {
   Future<void> _selectDueDate(BuildContext context) async {
     final now = DateTime.now();
     final initialDate = _selectedDueDate ?? now;
-    
+
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: initialDate.isBefore(now) ? now : initialDate,
@@ -368,8 +346,18 @@ class _TaskFormState extends State<TaskForm> {
 
     final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
 
     final weekday = weekdays[date.weekday - 1];

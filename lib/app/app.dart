@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:numu/app/router/router.dart';
-import 'package:numu/app/theme/green_color_theme.dart' as green_theme;
 import 'package:numu/core/providers/theme_provider.dart';
 import 'package:numu/core/utils/core_logging_utility.dart';
 import 'package:numu/features/reminders/services/notification_navigation_service.dart';
@@ -85,95 +84,112 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
-    final themeAsync = ref.watch(themeProvider);
+    final themeModeAsync = ref.watch(themeProvider);
+    final lightThemeAsync = ref.watch(lightThemeProvider);
+    final darkThemeAsync = ref.watch(darkThemeProvider);
     
     // Initialize navigation service with router
     NotificationNavigationService().initialize(router);
     
     CoreLoggingUtility.info('app dart file','starting my app ','returning material app router');
 
-    return themeAsync.when(
+    // Wait for all theme data to load
+    return themeModeAsync.when(
       data: (themeMode) {
-        return MaterialApp.router(
-          title: 'Numu App',
-          theme: _buildLightTheme(context),
-          darkTheme: _buildDarkTheme(context),
-          themeMode: themeMode,
-          routerConfig: router,
+        return lightThemeAsync.when(
+          data: (lightTheme) {
+            return darkThemeAsync.when(
+              data: (darkTheme) {
+                return MaterialApp.router(
+                  title: 'Numu App',
+                  theme: lightTheme,
+                  darkTheme: darkTheme,
+                  themeMode: themeMode,
+                  routerConfig: router,
+                );
+              },
+              loading: () => _buildLoadingApp(),
+              error: (error, stackTrace) {
+                CoreLoggingUtility.error(
+                  'MyApp',
+                  'build',
+                  'Error loading dark theme: $error',
+                );
+                // Use light theme for both if dark theme fails
+                return MaterialApp.router(
+                  title: 'Numu App',
+                  theme: lightTheme,
+                  darkTheme: lightTheme,
+                  themeMode: themeMode,
+                  routerConfig: router,
+                );
+              },
+            );
+          },
+          loading: () => _buildLoadingApp(),
+          error: (error, stackTrace) {
+            CoreLoggingUtility.error(
+              'MyApp',
+              'build',
+              'Error loading light theme: $error',
+            );
+            // Fallback to default theme on error
+            return MaterialApp.router(
+              title: 'Numu App',
+              themeMode: themeMode,
+              routerConfig: router,
+            );
+          },
         );
       },
-      loading: () {
-        // Show a loading indicator while theme is being loaded
-        return MaterialApp(
-          home: Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          ),
-        );
-      },
+      loading: () => _buildLoadingApp(),
       error: (error, stackTrace) {
-        // On error, fallback to light theme
         CoreLoggingUtility.error(
           'MyApp',
           'build',
-          'Error loading theme: $error',
+          'Error loading theme mode: $error',
         );
-        return MaterialApp.router(
-          title: 'Numu App',
-          theme: _buildLightTheme(context),
-          darkTheme: _buildDarkTheme(context),
-          themeMode: ThemeMode.light,
-          routerConfig: router,
+        // Fallback to light mode on error
+        return lightThemeAsync.when(
+          data: (lightTheme) {
+            return darkThemeAsync.when(
+              data: (darkTheme) {
+                return MaterialApp.router(
+                  title: 'Numu App',
+                  theme: lightTheme,
+                  darkTheme: darkTheme,
+                  themeMode: ThemeMode.light,
+                  routerConfig: router,
+                );
+              },
+              loading: () => _buildLoadingApp(),
+              error: (e, s) => MaterialApp.router(
+                title: 'Numu App',
+                theme: lightTheme,
+                darkTheme: lightTheme,
+                themeMode: ThemeMode.light,
+                routerConfig: router,
+              ),
+            );
+          },
+          loading: () => _buildLoadingApp(),
+          error: (e, s) => MaterialApp.router(
+            title: 'Numu App',
+            themeMode: ThemeMode.light,
+            routerConfig: router,
+          ),
         );
       },
     );
   }
 
-  /// Builds the light theme with appropriate colors and Material 3 styling
-  ThemeData _buildLightTheme(BuildContext context) {
-    const textTheme = TextTheme();
-    final materialTheme = green_theme.MaterialTheme(textTheme);
-    return materialTheme.light().copyWith(
-      appBarTheme: const AppBarTheme(
-        centerTitle: false,
-        elevation: 0,
-      ),
-      cardTheme: CardThemeData(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+  /// Builds a loading screen while theme data is being loaded
+  Widget _buildLoadingApp() {
+    return const MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
         ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        filled: true,
-      ),
-    );
-  }
-
-  /// Builds the dark theme with appropriate colors and Material 3 styling
-  ThemeData _buildDarkTheme(BuildContext context) {
-    const textTheme = TextTheme();
-    final materialTheme = green_theme.MaterialTheme(textTheme);
-    return materialTheme.dark().copyWith(
-      appBarTheme: const AppBarTheme(
-        centerTitle: false,
-        elevation: 0,
-      ),
-      cardTheme: CardThemeData(
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        filled: true,
       ),
     );
   }

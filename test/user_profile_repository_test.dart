@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:numu/core/services/database_service.dart';
-import 'package:numu/features/profile/models/user_profile.dart';
-import 'package:numu/features/profile/repositories/user_profile_repository.dart';
+import 'package:numu/features/settings/models/user_profile.dart';
+import 'package:numu/features/settings/repositories/user_profile_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {

@@ -6,7 +6,7 @@ import 'package:numu/core/widgets/shell/numu_app_bar.dart';
 import 'providers/daily_items_provider.dart';
 import 'widgets/daily_progress_header.dart';
 import 'widgets/daily_item_card.dart';
-import '../profile/providers/user_profile_provider.dart';
+import '../settings/providers/user_profile_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});

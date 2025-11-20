@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:numu/features/home/home_screen.dart';
-import 'package:numu/features/profile/profile_screen.dart';
 import 'package:numu/features/settings/settings_screen.dart';
 import 'package:numu/features/tasks/tasks_screen.dart';
 import 'package:numu/features/tasks/screens/add_task_screen.dart';
@@ -42,7 +41,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (location != '/splash' && location != '/onboarding') {
         // Valid shell routes - allow navigation
         final validShellRoutes = [
-          '/home', '/profile', '/settings', '/tasks', '/habits',
+          '/home', '/settings', '/tasks', '/habits',
           '/reminders', '/help', '/categories'
         ];
         
@@ -124,13 +123,6 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: 'home',
             pageBuilder: (context, state) => NoTransitionPage(
               child: HomeScreen(),
-            ),
-          ),
-          GoRoute(
-            path: '/profile',
-            name: 'profile',
-            pageBuilder: (context, state) => NoTransitionPage(
-              child: ProfileScreen(),
             ),
           ),
           GoRoute(
