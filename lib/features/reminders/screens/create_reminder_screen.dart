@@ -375,7 +375,7 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
             labelText: 'Select Task',
             border: OutlineInputBorder(),
           ),
-          value: _selectedTaskId,
+          initialValue: _selectedTaskId,
           items: tasks.map((task) {
             return DropdownMenuItem<int>(
               value: task.id,
@@ -411,7 +411,7 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
           decoration: const InputDecoration(
             border: OutlineInputBorder(),
           ),
-          value: _frequency,
+          initialValue: _frequency,
           items: const [
             DropdownMenuItem(
               value: ScheduleFrequency.none,
@@ -593,7 +593,7 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
           decoration: const InputDecoration(
             border: OutlineInputBorder(),
           ),
-          value: _dayOfMonth,
+          initialValue: _dayOfMonth,
           items: List.generate(31, (index) {
             final day = index + 1;
             return DropdownMenuItem(

@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:numu/features/habits/models/habit.dart';
-import 'package:numu/features/habits/models/habit_event.dart';
 import 'package:numu/features/habits/models/enums/tracking_type.dart';
 import 'package:numu/features/habits/models/enums/goal_type.dart';
 import 'package:numu/features/habits/models/enums/frequency.dart';
@@ -9,7 +8,6 @@ import 'package:numu/features/habits/models/enums/active_days_mode.dart';
 import 'package:numu/features/habits/models/enums/require_mode.dart';
 import 'package:numu/features/habits/repositories/habit_repository.dart';
 import 'package:numu/features/habits/services/streak_calculation_service.dart';
-import 'package:numu/core/services/database_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

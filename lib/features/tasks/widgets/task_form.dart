@@ -286,7 +286,7 @@ class _TaskFormState extends State<TaskForm> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.notifications_outlined),
                 ),
-                value: _reminderMinutesBefore,
+                initialValue: _reminderMinutesBefore,
                 items: const [
                   DropdownMenuItem(
                     value: 15,

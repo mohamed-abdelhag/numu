@@ -15,14 +15,10 @@ enum LinkOption { standalone, habit, task }
 class EditReminderScreen extends ConsumerStatefulWidget {
   final Reminder reminder;
 
-  const EditReminderScreen({
-    super.key,
-    required this.reminder,
-  });
+  const EditReminderScreen({super.key, required this.reminder});
 
   @override
-  ConsumerState<EditReminderScreen> createState() =>
-      _EditReminderScreenState();
+  ConsumerState<EditReminderScreen> createState() => _EditReminderScreenState();
 }
 
 class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
@@ -55,16 +51,17 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     _descriptionController = TextEditingController(
       text: widget.reminder.description ?? '',
     );
-    
+
     _reminderType = widget.reminder.type;
     _frequency = widget.reminder.schedule.frequency;
     _specificDateTime = widget.reminder.schedule.specificDateTime;
     _timeOfDay = widget.reminder.schedule.timeOfDay;
-    _activeWeekdays = widget.reminder.schedule.activeWeekdays ?? [1, 2, 3, 4, 5];
+    _activeWeekdays =
+        widget.reminder.schedule.activeWeekdays ?? [1, 2, 3, 4, 5];
     _dayOfMonth = widget.reminder.schedule.dayOfMonth ?? 1;
     _useHabitTimeWindow = widget.reminder.schedule.useHabitTimeWindow;
     _useHabitActiveDays = widget.reminder.schedule.useHabitActiveDays;
-    
+
     // Initialize link option and related fields
     if (widget.reminder.link == null) {
       _linkOption = LinkOption.standalone;
@@ -72,10 +69,12 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       _linkOption = LinkOption.habit;
       _selectedHabitId = widget.reminder.link!.entityId;
       _useDefaultText = widget.reminder.link!.useDefaultText;
-      
+
       // If custom text, extract it from title
       if (!_useDefaultText) {
-        _customTextController = TextEditingController(text: widget.reminder.title);
+        _customTextController = TextEditingController(
+          text: widget.reminder.title,
+        );
       } else {
         _customTextController = TextEditingController();
       }
@@ -85,7 +84,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       _customTextController = TextEditingController();
       _useDefaultText = true;
     }
-    
+
     // Initialize minutes before controller
     _minutesBeforeController = TextEditingController(
       text: widget.reminder.schedule.minutesBefore?.toString() ?? '15',
@@ -133,7 +132,8 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text(
-                  'Selected habit must have a time window configured'),
+                'Selected habit must have a time window configured',
+              ),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -147,9 +147,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
     try {
@@ -162,18 +160,23 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             ? _specificDateTime
             : null,
         timeOfDay: _frequency != ScheduleFrequency.none ? _timeOfDay : null,
-        activeWeekdays:
-            _frequency == ScheduleFrequency.weekly ? _activeWeekdays : null,
-        dayOfMonth:
-            _frequency == ScheduleFrequency.monthly ? _dayOfMonth : null,
-        minutesBefore: (_linkOption == LinkOption.task ||
+        activeWeekdays: _frequency == ScheduleFrequency.weekly
+            ? _activeWeekdays
+            : null,
+        dayOfMonth: _frequency == ScheduleFrequency.monthly
+            ? _dayOfMonth
+            : null,
+        minutesBefore:
+            (_linkOption == LinkOption.task ||
                 (_linkOption == LinkOption.habit && _useHabitTimeWindow))
             ? int.tryParse(_minutesBeforeController.text.trim())
             : null,
-        useHabitTimeWindow: _linkOption == LinkOption.habit &&
+        useHabitTimeWindow:
+            _linkOption == LinkOption.habit &&
             _selectedHabitId != null &&
             _useHabitTimeWindow,
-        useHabitActiveDays: _linkOption == LinkOption.habit &&
+        useHabitActiveDays:
+            _linkOption == LinkOption.habit &&
             _selectedHabitId != null &&
             _useHabitActiveDays,
       );
@@ -191,7 +194,9 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
           useDefaultText: _useDefaultText,
         );
       } else if (_linkOption == LinkOption.task && _selectedTaskId != null) {
-        final task = await ref.read(taskDetailProvider(_selectedTaskId!).future);
+        final task = await ref.read(
+          taskDetailProvider(_selectedTaskId!).future,
+        );
         link = ReminderLink(
           type: LinkType.task,
           entityId: _selectedTaskId!,
@@ -210,7 +215,9 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
         final habit = habits.firstWhere((h) => h.id == _selectedHabitId);
         title = 'Do ${habit.name}';
       } else if (_linkOption == LinkOption.task && _selectedTaskId != null) {
-        final task = await ref.read(taskDetailProvider(_selectedTaskId!).future);
+        final task = await ref.read(
+          taskDetailProvider(_selectedTaskId!).future,
+        );
         title = task!.title;
       } else if (_linkOption == LinkOption.habit && !_useDefaultText) {
         title = _customTextController.text.trim();
@@ -291,13 +298,13 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
     try {
-      await ref.read(reminderProvider.notifier).deleteReminder(widget.reminder.id!);
+      await ref
+          .read(reminderProvider.notifier)
+          .deleteReminder(widget.reminder.id!);
 
       if (mounted) {
         // Close loading dialog
@@ -328,15 +335,11 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     }
   }
 
-
   Widget _buildReminderTypeSelector() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Reminder Type',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Reminder Type', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         SegmentedButton<ReminderType>(
           segments: const [
@@ -366,8 +369,8 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
               ? 'Standard notification in notification tray'
               : 'Full-screen alarm requiring dismissal',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -377,10 +380,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Link To',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Link To', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         SegmentedButton<LinkOption>(
           segments: const [
@@ -388,14 +388,8 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
               value: LinkOption.standalone,
               label: Text('Standalone'),
             ),
-            ButtonSegment(
-              value: LinkOption.habit,
-              label: Text('Habit'),
-            ),
-            ButtonSegment(
-              value: LinkOption.task,
-              label: Text('Task'),
-            ),
+            ButtonSegment(value: LinkOption.habit, label: Text('Habit')),
+            ButtonSegment(value: LinkOption.task, label: Text('Task')),
           ],
           selected: {_linkOption},
           onSelectionChanged: (Set<LinkOption> selected) {
@@ -435,7 +429,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             labelText: 'Select Habit',
             border: OutlineInputBorder(),
           ),
-          value: _selectedHabitId,
+          initialValue: _selectedHabitId,
           items: habits.map((habit) {
             return DropdownMenuItem<int>(
               value: habit.id,
@@ -478,7 +472,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
             labelText: 'Select Task',
             border: OutlineInputBorder(),
           ),
-          value: _selectedTaskId,
+          initialValue: _selectedTaskId,
           items: tasks.map((task) {
             return DropdownMenuItem<int>(
               value: task.id,
@@ -505,16 +499,11 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Frequency',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Frequency', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         DropdownButtonFormField<ScheduleFrequency>(
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-          ),
-          value: _frequency,
+          decoration: const InputDecoration(border: OutlineInputBorder()),
+          initialValue: _frequency,
           items: const [
             DropdownMenuItem(
               value: ScheduleFrequency.none,
@@ -550,7 +539,6 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     );
   }
 
-
   Widget _buildDateTimePickers() {
     if (_frequency == ScheduleFrequency.none) {
       // One-time reminder: show date and time picker
@@ -578,7 +566,8 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
                 final time = await showTimePicker(
                   context: context,
                   initialTime: TimeOfDay.fromDateTime(
-                      _specificDateTime ?? DateTime.now()),
+                    _specificDateTime ?? DateTime.now(),
+                  ),
                 );
                 if (time != null) {
                   setState(() {
@@ -650,10 +639,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        Text(
-          'Active Days',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Active Days', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -688,22 +674,14 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        Text(
-          'Day of Month',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Day of Month', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         DropdownButtonFormField<int>(
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-          ),
-          value: _dayOfMonth,
+          decoration: const InputDecoration(border: OutlineInputBorder()),
+          initialValue: _dayOfMonth,
           items: List.generate(31, (index) {
             final day = index + 1;
-            return DropdownMenuItem(
-              value: day,
-              child: Text('Day $day'),
-            );
+            return DropdownMenuItem(value: day, child: Text('Day $day'));
           }),
           onChanged: (value) {
             setState(() {
@@ -728,10 +706,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 24),
-        Text(
-          'Habit Options',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Habit Options', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         if (habit.timeWindowEnabled && habit.timeWindowStart != null)
           CheckboxListTile(
@@ -796,10 +771,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 24),
-        Text(
-          'Task Options',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Task Options', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         TextFormField(
           controller: _minutesBeforeController,
@@ -828,7 +800,6 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
     );
   }
 
-
   Widget _buildTextConfiguration() {
     if (_linkOption != LinkOption.habit || _selectedHabitId == null) {
       return const SizedBox.shrink();
@@ -842,10 +813,7 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 24),
-        Text(
-          'Reminder Text',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Reminder Text', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         RadioListTile<bool>(
           contentPadding: EdgeInsets.zero,

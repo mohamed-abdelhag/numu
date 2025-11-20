@@ -16,7 +16,6 @@ import 'package:numu/features/habits/models/enums/require_mode.dart';
 import 'package:numu/features/habits/repositories/habit_repository.dart';
 import 'package:numu/features/tasks/task.dart';
 import 'package:numu/features/tasks/tasks_repository.dart';
-import 'package:numu/core/services/database_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -187,14 +186,14 @@ void main() {
       databaseFactory = databaseFactoryFfi;
     });
 
-    tearDown() async {
-      try {
-        await testDb.close();
-        await databaseFactory.deleteDatabase(':memory:${dbCounter}');
-      } catch (e) {
-        // Ignore errors during cleanup
-      }
-    }
+    // tearDown() async {
+    //   try {
+    //     await testDb.close();
+    //     await databaseFactory.deleteDatabase(':memory:${dbCounter}');
+    //   } catch (e) {
+    //     // Ignore errors during cleanup
+    //   }
+    // }
 
     Future<void> setupDatabase() async {
       dbCounter++;
