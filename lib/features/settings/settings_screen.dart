@@ -223,36 +223,42 @@ class SettingsScreen extends ConsumerWidget {
                             action: SnackBarAction(
                               label: 'Retry',
                               textColor: Colors.white,
-                              onPressed: () async {
-                                try {
-                                  await ref.read(themeProvider.notifier).setThemeMode(selectedMode);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Theme saved successfully'),
-                                        duration: const Duration(seconds: 2),
-                                        behavior: SnackBarBehavior.floating,
-                                        backgroundColor: Colors.green,
-                                      ),
+                              onPressed: () {
+                                // Capture the notifier reference before async gap
+                                final notifier = ref.read(themeProvider.notifier);
+                                
+                                // Use addPostFrameCallback to avoid using ref after potential unmount
+                                WidgetsBinding.instance.addPostFrameCallback((_) async {
+                                  try {
+                                    await notifier.setThemeMode(selectedMode);
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Theme saved successfully'),
+                                          duration: const Duration(seconds: 2),
+                                          behavior: SnackBarBehavior.floating,
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    }
+                                  } catch (retryError) {
+                                    CoreLoggingUtility.error(
+                                      'SettingsScreen',
+                                      '_buildAppearanceSection',
+                                      'Retry failed: $retryError',
                                     );
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Retry failed: ${retryError.toString()}'),
+                                          duration: const Duration(seconds: 3),
+                                          behavior: SnackBarBehavior.floating,
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    }
                                   }
-                                } catch (retryError) {
-                                  CoreLoggingUtility.error(
-                                    'SettingsScreen',
-                                    '_buildAppearanceSection',
-                                    'Retry failed: $retryError',
-                                  );
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Retry failed: ${retryError.toString()}'),
-                                        duration: const Duration(seconds: 3),
-                                        behavior: SnackBarBehavior.floating,
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  }
-                                }
+                                });
                               },
                             ),
                           ),

@@ -86,8 +86,7 @@ class ThemeConfig extends _$ThemeConfig {
         'Color scheme successfully saved to storage',
       );
 
-      // Invalidate theme provider to trigger rebuild with new theme
-      ref.invalidate(themeProvider);
+      // No need to invalidate - dependent providers will rebuild automatically
     } catch (e, stackTrace) {
       CoreLoggingUtility.error(
         'ThemeConfig',
@@ -131,8 +130,7 @@ class ThemeConfig extends _$ThemeConfig {
         'Theme mode successfully saved to storage',
       );
 
-      // Invalidate theme provider to trigger rebuild with new mode
-      ref.invalidate(themeProvider);
+      // No need to invalidate - dependent providers will rebuild automatically
     } catch (e, stackTrace) {
       CoreLoggingUtility.error(
         'ThemeConfig',
