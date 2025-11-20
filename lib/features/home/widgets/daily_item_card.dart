@@ -374,13 +374,16 @@ class DailyItemCard extends ConsumerWidget {
       return eventDate.isAtSameMomentAs(today);
     }).toList();
     
-    // Sum up the values
-    double total = 0.0;
-    for (final event in todayEvents) {
-      total += event.value ?? 0.0;
+    if (todayEvents.isEmpty) {
+      return 0.0;
     }
     
-    return total;
+    // Sort events by timestamp descending (most recent first)
+    todayEvents.sort((a, b) => b.eventTimestamp.compareTo(a.eventTimestamp));
+    
+    // Return the latest value (most recent event's value field)
+    // This represents the current total for today
+    return todayEvents.first.value ?? 0.0;
   }
 
   /// Check if habit is completed today
