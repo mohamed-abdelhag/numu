@@ -29,7 +29,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 9,
+      version: 10,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -67,6 +67,10 @@ class DatabaseService {
     if (oldVersion < 9) {
       // Add reminders table
       await _createReminderTables(db);
+    }
+    if (oldVersion < 10) {
+      // Add start_of_week column to user_profile table
+      await _addStartOfWeekToUserProfile(db);
     }
   }
 
@@ -140,6 +144,13 @@ class DatabaseService {
       SET tracking_type = 'binary',
           time_window_enabled = 1
       WHERE tracking_type = 'timed'
+    ''');
+  }
+
+  Future<void> _addStartOfWeekToUserProfile(Database db) async {
+    // Add start_of_week column to user_profile table with default value of 1 (Monday)
+    await db.execute('''
+      ALTER TABLE $userProfileTable ADD COLUMN start_of_week INTEGER NOT NULL DEFAULT 1
     ''');
   }
 
@@ -351,6 +362,7 @@ class DatabaseService {
         name TEXT NOT NULL,
         email TEXT,
         profile_picture_path TEXT,
+        start_of_week INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       )

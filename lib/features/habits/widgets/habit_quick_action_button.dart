@@ -4,7 +4,7 @@ import '../models/habit.dart';
 import '../models/habit_event.dart';
 import '../models/enums/tracking_type.dart';
 import '../providers/habits_provider.dart';
-import '../repositories/habit_repository.dart';
+import '../providers/habit_detail_provider.dart';
 import 'log_habit_event_dialog.dart';
 
 /// Quick action button for habit cards
@@ -14,7 +14,6 @@ import 'log_habit_event_dialog.dart';
 /// - Binary without quality: Simple checkbox that marks complete
 /// - Binary with quality: Checkbox that opens quality dialog on second click
 /// - Value: Plus button to increment by 1, opens full dialog when goal reached
-/// - Timed: Add button that opens log dialog
 /// 
 /// Special case: Minimum goal habits with quality layer
 /// Quick actions only increment value. Quality layer must be set via calendar
@@ -48,106 +47,112 @@ class _HabitQuickActionButtonState extends ConsumerState<HabitQuickActionButton>
       );
     }
 
-    switch (widget.habit.trackingType) {
-      case TrackingType.binary:
-        return _buildBinaryAction();
-      case TrackingType.value:
-        return _buildValueAction();
-    }
+    // Watch habit detail provider for current status
+    final habitDetailAsync = ref.watch(habitDetailProvider(widget.habit.id!));
+
+    return habitDetailAsync.when(
+      data: (detailState) {
+        switch (widget.habit.trackingType) {
+          case TrackingType.binary:
+            return _buildBinaryAction(detailState.events);
+          case TrackingType.value:
+            return _buildValueAction(detailState.events);
+        }
+      },
+      loading: () => const SizedBox(
+        width: 24,
+        height: 24,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+      error: (_, __) => const Icon(Icons.error_outline),
+    );
   }
 
   /// Build action button for binary habits
   /// - Without quality: Simple checkbox
   /// - With quality: Checkbox that opens quality dialog on second click
-  Widget _buildBinaryAction() {
-    return FutureBuilder<bool>(
-      future: _isCompletedToday(),
-      builder: (context, snapshot) {
-        final isCompleted = snapshot.data ?? false;
+  Widget _buildBinaryAction(List<HabitEvent> events) {
+    final isCompleted = _isCompletedForDate(events, widget.date);
 
-        return Checkbox(
-          value: isCompleted,
-          onChanged: (value) async {
-            if (value == true) {
-              // First click: mark complete
-              if (!widget.habit.qualityLayerEnabled) {
-                // No quality layer: just mark complete
-                await _markBinaryComplete(qualityAchieved: false);
-              } else {
-                // Has quality layer: check if already completed
-                if (isCompleted) {
-                  // Second click: open quality dialog
-                  await _showQualityDialog();
-                } else {
-                  // First click: mark complete without quality
-                  await _markBinaryComplete(qualityAchieved: false);
-                }
-              }
+    return Checkbox(
+      value: isCompleted,
+      onChanged: (value) async {
+        if (value == true) {
+          // First click: mark complete
+          if (!widget.habit.qualityLayerEnabled) {
+            // No quality layer: just mark complete
+            await _markBinaryComplete(qualityAchieved: false);
+          } else {
+            // Has quality layer: check if already completed
+            if (isCompleted) {
+              // Second click: open quality dialog
+              await _showQualityDialog();
+            } else {
+              // First click: mark complete without quality
+              await _markBinaryComplete(qualityAchieved: false);
             }
-          },
-        );
+          }
+        }
       },
     );
   }
 
   /// Build action button for value habits
   /// Plus button to increment by 1, opens full dialog when goal reached
-  Widget _buildValueAction() {
-    return FutureBuilder<double>(
-      future: _getTodayTotal(),
-      builder: (context, snapshot) {
-        final todayTotal = snapshot.data ?? 0;
-        final target = widget.habit.targetValue ?? 0;
-        final goalReached = todayTotal >= target;
+  Widget _buildValueAction(List<HabitEvent> events) {
+    final todayTotal = _getTotalForDate(events, widget.date);
+    final target = widget.habit.targetValue ?? 0;
+    final goalReached = todayTotal >= target;
 
-        return IconButton(
-          icon: const Icon(Icons.add_circle_outline),
-          onPressed: () async {
-            if (goalReached && widget.habit.qualityLayerEnabled) {
-              // Goal reached and has quality layer: open full dialog
-              await _showFullLogDialog();
-            } else {
-              // Increment value by 1
-              // NOTE: For minimum goal habits with quality layer,
-              // quick actions only increment value. Quality layer
-              // must be set via calendar in habit detail screen.
-              // This is by design to prevent accidental quality logging.
-              await _incrementValue();
-            }
-          },
-        );
+    return IconButton(
+      icon: const Icon(Icons.add_circle_outline),
+      onPressed: () async {
+        if (goalReached && widget.habit.qualityLayerEnabled) {
+          // Goal reached and has quality layer: open full dialog
+          await _showFullLogDialog();
+        } else {
+          // Increment value by 1
+          // NOTE: For minimum goal habits with quality layer,
+          // quick actions only increment value. Quality layer
+          // must be set via calendar in habit detail screen.
+          // This is by design to prevent accidental quality logging.
+          await _incrementValue(todayTotal);
+        }
       },
     );
   }
 
-  /// Check if habit is completed today
-  Future<bool> _isCompletedToday() async {
-    try {
-      final repository = HabitRepository();
-      final events = await repository.getEventsForDate(widget.habit.id!, widget.date);
-      
-      if (events.isEmpty) return false;
-      
-      // For binary habits, check if completed
-      return events.any((e) => e.completed == true);
-    } catch (e) {
-      return false;
-    }
+  /// Check if habit is completed for a specific date from provider events
+  bool _isCompletedForDate(List<HabitEvent> events, DateTime date) {
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    
+    final dayEvents = events.where((e) {
+      final eventDate = DateTime(e.eventDate.year, e.eventDate.month, e.eventDate.day);
+      return eventDate.isAtSameMomentAs(dateOnly);
+    }).toList();
+    
+    if (dayEvents.isEmpty) return false;
+    
+    // For binary habits, check if completed
+    return dayEvents.any((e) => e.completed == true);
   }
 
-  /// Get today's total value for value habits
-  Future<double> _getTodayTotal() async {
-    try {
-      final repository = HabitRepository();
-      final events = await repository.getEventsForDate(widget.habit.id!, widget.date);
-      return events.fold<double>(0, (sum, event) => sum + (event.valueDelta ?? 0));
-    } catch (e) {
-      return 0;
-    }
+  /// Get total value for a specific date from provider events
+  double _getTotalForDate(List<HabitEvent> events, DateTime date) {
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    
+    final dayEvents = events.where((e) {
+      final eventDate = DateTime(e.eventDate.year, e.eventDate.month, e.eventDate.day);
+      return eventDate.isAtSameMomentAs(dateOnly);
+    }).toList();
+    
+    return dayEvents.fold<double>(0, (sum, event) => sum + (event.valueDelta ?? 0));
   }
 
   /// Mark binary habit as complete
   Future<void> _markBinaryComplete({required bool qualityAchieved}) async {
+    if (!context.mounted) return;
+    
     setState(() => _isLoading = true);
 
     try {
@@ -186,12 +191,13 @@ class _HabitQuickActionButtonState extends ConsumerState<HabitQuickActionButton>
   }
 
   /// Increment value by 1 for value habits
-  Future<void> _incrementValue() async {
+  Future<void> _incrementValue(double currentTotal) async {
+    if (!context.mounted) return;
+    
     setState(() => _isLoading = true);
 
     try {
       final now = DateTime.now();
-      final todayTotal = await _getTodayTotal();
       
       final event = HabitEvent(
         habitId: widget.habit.id!,
@@ -204,7 +210,7 @@ class _HabitQuickActionButtonState extends ConsumerState<HabitQuickActionButton>
           now.minute,
         ),
         valueDelta: 1.0,
-        value: todayTotal + 1.0,
+        value: currentTotal + 1.0,
         // NOTE: Quality layer is NOT set here for minimum goal habits.
         // Quality must be set via calendar in habit detail screen.
         qualityAchieved: null,
@@ -216,7 +222,7 @@ class _HabitQuickActionButtonState extends ConsumerState<HabitQuickActionButton>
 
       if (mounted) {
         widget.onActionComplete?.call();
-        final newTotal = todayTotal + 1.0;
+        final newTotal = currentTotal + 1.0;
         _showSuccessSnackbar(
           '+1 ${widget.habit.unit ?? ''} (Total: ${newTotal.toInt()} ${widget.habit.unit ?? ''})',
         );
@@ -234,6 +240,8 @@ class _HabitQuickActionButtonState extends ConsumerState<HabitQuickActionButton>
 
   /// Show quality dialog for binary habits with quality layer
   Future<void> _showQualityDialog() async {
+    if (!context.mounted) return;
+    
     final result = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -254,13 +262,15 @@ class _HabitQuickActionButtonState extends ConsumerState<HabitQuickActionButton>
       ),
     );
 
-    if (result != null) {
+    if (result != null && mounted) {
       await _markBinaryComplete(qualityAchieved: result);
     }
   }
 
   /// Show full log dialog for value habits when goal reached
   Future<void> _showFullLogDialog() async {
+    if (!context.mounted) return;
+    
     await showDialog(
       context: context,
       builder: (context) => LogHabitEventDialog(

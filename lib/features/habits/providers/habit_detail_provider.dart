@@ -44,16 +44,16 @@ class HabitDetailState {
 /// Loads habit data, events, streak information, and statistics
 @riverpod
 class HabitDetailNotifier extends _$HabitDetailNotifier {
-  late final HabitRepository _repository;
-  late final HabitStatisticsService _statisticsService;
+  HabitRepository? _repository;
+  HabitStatisticsService? _statisticsService;
 
   @override
   Future<HabitDetailState> build(int habitId) async {
-    _repository = HabitRepository();
-    _statisticsService = HabitStatisticsService(_repository);
+    _repository ??= HabitRepository();
+    _statisticsService ??= HabitStatisticsService(_repository!);
 
     try {
-      final habit = await _repository.getHabitById(habitId);
+      final habit = await _repository!.getHabitById(habitId);
       if (habit == null) {
         CoreLoggingUtility.warning(
           'HabitDetailProvider',
@@ -63,9 +63,9 @@ class HabitDetailNotifier extends _$HabitDetailNotifier {
         throw HabitNotFoundException(habitId);
       }
 
-      final events = await _repository.getEventsForHabit(habitId);
+      final events = await _repository!.getEventsForHabit(habitId);
       final streaks = await _loadStreaks(habitId);
-      final statistics = await _statisticsService.calculateStatistics(habitId, habit);
+      final statistics = await _statisticsService!.calculateStatistics(habitId, habit);
 
       CoreLoggingUtility.info(
         'HabitDetailProvider',
@@ -96,7 +96,7 @@ class HabitDetailNotifier extends _$HabitDetailNotifier {
   Future<Map<StreakType, HabitStreak>> _loadStreaks(int habitId) async {
     final streaks = <StreakType, HabitStreak>{};
     for (final type in StreakType.values) {
-      final streak = await _repository.getStreakForHabit(habitId, type);
+      final streak = await _repository!.getStreakForHabit(habitId, type);
       if (streak != null) {
         streaks[type] = streak;
       }
@@ -119,7 +119,7 @@ class HabitDetailNotifier extends _$HabitDetailNotifier {
           throw Exception('No habit ID available');
         }
         
-        final habit = await _repository.getHabitById(habitId);
+        final habit = await _repository!.getHabitById(habitId);
         if (habit == null) {
           CoreLoggingUtility.warning(
             'HabitDetailProvider',
@@ -129,9 +129,9 @@ class HabitDetailNotifier extends _$HabitDetailNotifier {
           throw HabitNotFoundException(habitId);
         }
 
-        final events = await _repository.getEventsForHabit(habitId);
+        final events = await _repository!.getEventsForHabit(habitId);
         final streaks = await _loadStreaks(habitId);
-        final statistics = await _statisticsService.calculateStatistics(habitId, habit);
+        final statistics = await _statisticsService!.calculateStatistics(habitId, habit);
 
         CoreLoggingUtility.info(
           'HabitDetailProvider',

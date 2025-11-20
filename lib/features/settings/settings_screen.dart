@@ -5,6 +5,8 @@ import 'package:numu/core/providers/navigation_provider.dart';
 import 'package:numu/core/models/navigation_item.dart';
 import 'package:numu/core/utils/core_logging_utility.dart';
 import 'package:numu/core/widgets/shell/numu_app_bar.dart';
+import 'package:numu/features/profile/providers/user_profile_provider.dart';
+import 'package:numu/features/habits/providers/habits_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -56,6 +58,7 @@ class SettingsScreen extends ConsumerWidget {
 
   Widget _buildSettingsContent(BuildContext context, WidgetRef ref, ThemeMode currentThemeMode) {
     final navigationAsync = ref.watch(navigationProvider);
+    final userProfileAsync = ref.watch(userProfileProvider);
     
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -63,6 +66,36 @@ class SettingsScreen extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildAppearanceSection(context, ref, currentThemeMode),
+          const SizedBox(height: 24),
+          userProfileAsync.when(
+            data: (profile) => _buildPreferencesSection(context, ref, profile),
+            loading: () => const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32.0),
+                child: Column(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Loading preferences...'),
+                  ],
+                ),
+              ),
+            ),
+            error: (error, stackTrace) {
+              CoreLoggingUtility.error(
+                'SettingsScreen',
+                '_buildSettingsContent',
+                'Error loading user profile: $error\nStack trace: $stackTrace',
+              );
+              return _buildErrorState(
+                context,
+                ref,
+                'Failed to load preferences',
+                error.toString(),
+                () => ref.invalidate(userProfileProvider),
+              );
+            },
+          ),
           const SizedBox(height: 24),
           navigationAsync.when(
             data: (navigationItems) => _buildNavigationSection(context, ref, navigationItems),
@@ -236,6 +269,226 @@ class SettingsScreen extends ConsumerWidget {
         return 'Dark mode';
       case ThemeMode.system:
         return 'System default';
+    }
+  }
+
+  Widget _buildPreferencesSection(BuildContext context, WidgetRef ref, dynamic profile) {
+    final theme = Theme.of(context);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Preferences',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: Column(
+            children: [
+              ListTile(
+                leading: Icon(
+                  Icons.calendar_today,
+                  color: theme.colorScheme.primary,
+                ),
+                title: const Text('Week Starts On'),
+                subtitle: Text(
+                  profile != null 
+                    ? _getDayName(profile.startOfWeek)
+                    : 'Monday',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _showWeekStartPicker(context, ref, profile),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getDayName(int dayNumber) {
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    
+    if (dayNumber < 1 || dayNumber > 7) {
+      return 'Monday'; // Default fallback
+    }
+    
+    return days[dayNumber - 1];
+  }
+
+  Future<void> _showWeekStartPicker(
+    BuildContext context,
+    WidgetRef ref,
+    dynamic profile,
+  ) async {
+    if (profile == null) {
+      CoreLoggingUtility.warning(
+        'SettingsScreen',
+        '_showWeekStartPicker',
+        'Cannot change week start: no user profile found',
+      );
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please create a profile first'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+      return;
+    }
+
+    final theme = Theme.of(context);
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+    
+    final selected = await showDialog<int>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Week Starts On'),
+        contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: 7,
+            itemBuilder: (context, index) {
+              final dayNumber = index + 1;
+              final isSelected = profile.startOfWeek == dayNumber;
+              
+              return ListTile(
+                leading: Icon(
+                  isSelected ? Icons.check_circle : Icons.circle_outlined,
+                  color: isSelected ? theme.colorScheme.primary : null,
+                ),
+                title: Text(
+                  days[index],
+                  style: TextStyle(
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected ? theme.colorScheme.primary : null,
+                  ),
+                ),
+                onTap: () => Navigator.pop(context, dayNumber),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+    
+    if (selected != null && selected != profile.startOfWeek) {
+      CoreLoggingUtility.info(
+        'SettingsScreen',
+        '_showWeekStartPicker',
+        'Week start changed from ${profile.startOfWeek} to $selected',
+      );
+      
+      try {
+        final updatedProfile = profile.copyWith(
+          startOfWeek: selected,
+          updatedAt: DateTime.now(),
+        );
+        
+        await ref.read(userProfileProvider.notifier).updateProfile(updatedProfile);
+        
+        CoreLoggingUtility.info(
+          'SettingsScreen',
+          '_showWeekStartPicker',
+          'Successfully updated week start preference',
+        );
+        
+        // Invalidate habit providers to trigger recalculation with new week start
+        ref.invalidate(habitsProvider);
+        
+        CoreLoggingUtility.info(
+          'SettingsScreen',
+          '_showWeekStartPicker',
+          'Invalidated habit providers for recalculation',
+        );
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Text('Week now starts on ${_getDayName(selected)}'),
+                ],
+              ),
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e, stackTrace) {
+        CoreLoggingUtility.error(
+          'SettingsScreen',
+          '_showWeekStartPicker',
+          'Failed to update week start preference: $e\n$stackTrace',
+        );
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.error, color: Colors.white),
+                      SizedBox(width: 12),
+                      Text('Failed to update week start'),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    e.toString(),
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+              duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.red,
+              action: SnackBarAction(
+                label: 'Retry',
+                textColor: Colors.white,
+                onPressed: () => _showWeekStartPicker(context, ref, profile),
+              ),
+            ),
+          );
+        }
+      }
     }
   }
 

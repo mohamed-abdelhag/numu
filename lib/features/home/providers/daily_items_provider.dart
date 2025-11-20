@@ -26,26 +26,24 @@ class DailyItemsState {
 
 @riverpod
 class DailyItemsNotifier extends _$DailyItemsNotifier {
-  late final HabitRepository _habitRepository;
-  late final TasksRepository _taskRepository;
-
   @override
   Future<DailyItemsState> build() async {
-    _habitRepository = HabitRepository();
-    _taskRepository = TasksRepository();
+    // Create repository instances locally to avoid re-initialization issues
+    final habitRepository = HabitRepository();
+    final taskRepository = TasksRepository();
 
     try {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       
       // Fetch all active habits
-      final allHabits = await _habitRepository.getActiveHabits();
+      final allHabits = await habitRepository.getActiveHabits();
       
       // Filter habits that are active today
       final todayHabits = allHabits.where((habit) => _isHabitActiveToday(habit, today)).toList();
       
       // Fetch all tasks
-      final allTasks = await _taskRepository.getTasks();
+      final allTasks = await taskRepository.getTasks();
       
       // Filter tasks due today (not completed)
       final todayTasks = allTasks.where((task) => 
@@ -54,7 +52,7 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
       
       // Convert habits to DailyItems
       final habitItems = await Future.wait(
-        todayHabits.map((habit) => _habitToDailyItem(habit, today))
+        todayHabits.map((habit) => _habitToDailyItem(habit, today, habitRepository))
       );
       
       // Convert tasks to DailyItems
@@ -114,9 +112,9 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
   }
 
   /// Convert a habit to a DailyItem
-  Future<DailyItem> _habitToDailyItem(Habit habit, DateTime date) async {
+  Future<DailyItem> _habitToDailyItem(Habit habit, DateTime date, HabitRepository habitRepository) async {
     // Get today's events for this habit
-    final events = await _habitRepository.getEventsForHabit(habit.id!);
+    final events = await habitRepository.getEventsForHabit(habit.id!);
     final todayEvents = events.where((event) => _isSameDay(event.eventDate, date)).toList();
     
     // Calculate current value and completion status

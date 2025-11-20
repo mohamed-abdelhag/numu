@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/habit.dart';
+import '../models/habit_event.dart';
 import '../models/enums/tracking_type.dart';
+import '../models/enums/streak_type.dart';
+import '../models/enums/goal_type.dart';
+import '../providers/habit_detail_provider.dart';
+import '../../../features/profile/providers/user_profile_provider.dart';
 import 'habit_quick_action_button.dart';
 
 /// Represents the status of a habit for a specific day
@@ -27,24 +32,54 @@ class DailyHabitStatus {
 
 class HabitCard extends ConsumerWidget {
   final Habit habit;
-  final List<DailyHabitStatus> weeklyProgress;
-  final int score;
-  final double overallProgress; // 0.0 to 1.0
-  final double? todayValue; // Today's logged value for value-based habits
   final VoidCallback? onQuickActionComplete;
 
   const HabitCard({
     super.key,
     required this.habit,
-    required this.weeklyProgress,
-    this.score = 0,
-    this.overallProgress = 0,
-    this.todayValue,
     this.onQuickActionComplete,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Watch habit detail for real-time data
+    final habitDetailAsync = ref.watch(habitDetailProvider(habit.id!));
+    final userProfileAsync = ref.watch(userProfileProvider);
+
+    return habitDetailAsync.when(
+      data: (detailState) {
+        final startOfWeek = userProfileAsync.value?.startOfWeek ?? 1;
+        final weeklyProgress = _calculateWeeklyProgress(
+          detailState.events,
+          startOfWeek,
+        );
+        final currentStreak = detailState.streaks[StreakType.completion]?.currentStreak ?? 0;
+        final longestStreak = detailState.streaks[StreakType.completion]?.longestStreak ?? 0;
+        final weekProgress = _calculateWeekProgress(detailState.events, startOfWeek);
+        final todayValue = _calculateTodayValue(detailState.events);
+
+        return _buildCard(
+          context: context,
+          weeklyProgress: weeklyProgress,
+          currentStreak: currentStreak,
+          longestStreak: longestStreak,
+          weekProgress: weekProgress,
+          todayValue: todayValue,
+        );
+      },
+      loading: () => _buildLoadingCard(context),
+      error: (error, stack) => _buildErrorCard(context),
+    );
+  }
+
+  Widget _buildCard({
+    required BuildContext context,
+    required List<DailyHabitStatus> weeklyProgress,
+    required int currentStreak,
+    required int longestStreak,
+    required double weekProgress,
+    required double? todayValue,
+  }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     
@@ -98,11 +133,8 @@ class HabitCard extends ConsumerWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      // We don't have category name directly in Habit, assuming passed or looked up
-                      // For now, just showing "Category" placeholder or omitting if not available
-                      // Ideally, we should pass the Category object or name to this widget
                       Text(
-                        habit.description ?? '', // Using description as subtitle for now
+                        habit.description ?? '',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -122,8 +154,8 @@ class HabitCard extends ConsumerWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      todayValue != null && todayValue! > 0
-                          ? '${todayValue!.toInt()} ${habit.unit ?? ''}'.trim()
+                      todayValue != null && todayValue > 0
+                          ? '${todayValue.toInt()} ${habit.unit ?? ''}'.trim()
                           : '0 ${habit.unit ?? ''}'.trim(),
                       style: theme.textTheme.labelMedium?.copyWith(
                         color: habitColor,
@@ -134,11 +166,11 @@ class HabitCard extends ConsumerWidget {
                   const SizedBox(width: 8),
                 ],
                 
-                // Score Badge
+                // Score Badge (current streak)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE67E22).withValues(alpha: 0.2), // Orange tint
+                    color: const Color(0xFFE67E22).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -147,7 +179,7 @@ class HabitCard extends ConsumerWidget {
                       const Icon(Icons.local_fire_department, size: 16, color: Color(0xFFE67E22)),
                       const SizedBox(width: 4),
                       Text(
-                        score.toString(),
+                        currentStreak.toString(),
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: const Color(0xFFE67E22),
                           fontWeight: FontWeight.bold,
@@ -176,13 +208,13 @@ class HabitCard extends ConsumerWidget {
               children: [
                 // Weekly Days + Indicators
                 Expanded(
-                  child: _buildWeeklyProgress(context, habitColor),
+                  child: _buildWeeklyProgress(context, habitColor, weeklyProgress),
                 ),
                 
                 const SizedBox(width: 16),
 
                 // Circular Progress
-                _buildCircularProgress(context, habitColor),
+                _buildCircularProgress(context, habitColor, weekProgress),
               ],
             ),
           ],
@@ -191,7 +223,48 @@ class HabitCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildWeeklyProgress(BuildContext context, Color habitColor) {
+  Widget _buildLoadingCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      child: const Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Center(
+          child: Text(
+            'Error loading habit data',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: colorScheme.error,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeeklyProgress(BuildContext context, Color habitColor, List<DailyHabitStatus> weeklyProgress) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -324,7 +397,7 @@ class HabitCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildCircularProgress(BuildContext context, Color habitColor) {
+  Widget _buildCircularProgress(BuildContext context, Color habitColor, double weekProgress) {
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -332,19 +405,190 @@ class HabitCard extends ConsumerWidget {
           width: 48,
           height: 48,
           child: CircularProgressIndicator(
-            value: overallProgress,
+            value: weekProgress,
             backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
             color: habitColor,
             strokeWidth: 4,
           ),
         ),
         Text(
-          '${(overallProgress * 100).toInt()}%',
+          '${(weekProgress * 100).toInt()}%',
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
       ],
     );
+  }
+
+  /// Calculate weekly progress for the current week based on user's week start preference
+  List<DailyHabitStatus> _calculateWeeklyProgress(
+    List<HabitEvent> events,
+    int startOfWeek,
+  ) {
+    final now = DateTime.now();
+    final daysFromWeekStart = (now.weekday - startOfWeek + 7) % 7;
+    final weekStart = now.subtract(Duration(days: daysFromWeekStart));
+    
+    return List.generate(7, (index) {
+      final date = weekStart.add(Duration(days: index));
+      final dayEvents = _getEventsForDate(events, date);
+      
+      return _calculateDayStatus(date, dayEvents, now);
+    });
+  }
+
+  /// Get events for a specific date
+  List<HabitEvent> _getEventsForDate(List<HabitEvent> events, DateTime date) {
+    return events.where((e) {
+      final eventDay = DateTime(e.eventDate.year, e.eventDate.month, e.eventDate.day);
+      final targetDay = DateTime(date.year, date.month, date.day);
+      return eventDay.isAtSameMomentAs(targetDay);
+    }).toList();
+  }
+
+  /// Calculate the status for a specific day
+  DailyHabitStatus _calculateDayStatus(
+    DateTime date,
+    List<HabitEvent> dayEvents,
+    DateTime now,
+  ) {
+    final isToday = date.year == now.year && 
+                    date.month == now.month && 
+                    date.day == now.day;
+    final isFuture = date.isAfter(now) && !isToday;
+    
+    // Future days are empty
+    if (isFuture) {
+      return DailyHabitStatus(
+        date: date,
+        isEmpty: true,
+        isCurrentDay: false,
+      );
+    }
+
+    // Calculate progress based on tracking type
+    double progress = 0.0;
+    double target = habit.targetValue ?? 1.0;
+    int quality = 0;
+
+    if (habit.trackingType == TrackingType.value) {
+      // For value-based habits, sum up all values/deltas for the day
+      for (final event in dayEvents) {
+        if (event.valueDelta != null) {
+          progress += event.valueDelta!;
+        } else if (event.value != null) {
+          progress = event.value!;
+        }
+      }
+    } else {
+      // For binary habits, check if completed
+      final hasCompletedEvent = dayEvents.any((e) => e.completed == true);
+      progress = hasCompletedEvent ? 1.0 : 0.0;
+      target = 1.0;
+    }
+
+    // Check quality if enabled
+    if (habit.qualityLayerEnabled) {
+      final hasQuality = dayEvents.any((e) => e.qualityAchieved == true);
+      quality = hasQuality ? 1 : 0; // Simplified: 1 if quality achieved, 0 otherwise
+    }
+
+    return DailyHabitStatus(
+      date: date,
+      progress: progress,
+      target: target,
+      quality: quality,
+      isCurrentDay: isToday,
+      isEmpty: false,
+    );
+  }
+
+  /// Calculate week-based progress percentage
+  double _calculateWeekProgress(List<HabitEvent> events, int startOfWeek) {
+    final now = DateTime.now();
+    final daysFromWeekStart = (now.weekday - startOfWeek + 7) % 7;
+    final weekStart = now.subtract(Duration(days: daysFromWeekStart));
+    
+    int completedDays = 0;
+    int totalDays = 0;
+    
+    // Only count days up to and including today
+    for (int i = 0; i <= daysFromWeekStart; i++) {
+      final date = weekStart.add(Duration(days: i));
+      final dayEvents = _getEventsForDate(events, date);
+      
+      totalDays++;
+      
+      if (_isDayCompleted(dayEvents)) {
+        completedDays++;
+      }
+    }
+    
+    return totalDays > 0 ? completedDays / totalDays : 0.0;
+  }
+
+  /// Check if a day is completed based on events
+  bool _isDayCompleted(List<HabitEvent> dayEvents) {
+    if (dayEvents.isEmpty) {
+      return false;
+    }
+
+    if (habit.trackingType == TrackingType.value) {
+      // For value-based habits, check if target is met
+      double totalValue = 0.0;
+      for (final event in dayEvents) {
+        if (event.valueDelta != null) {
+          totalValue += event.valueDelta!;
+        } else if (event.value != null) {
+          totalValue = event.value!;
+        }
+      }
+      
+      final target = habit.targetValue ?? 1.0;
+      
+      // Check goal type (minimum or maximum)
+      if (habit.goalType == GoalType.minimum) {
+        return totalValue >= target;
+      } else {
+        // For maximum goals, completed if value is at or below target
+        return totalValue <= target;
+      }
+    } else {
+      // For binary habits, check if any event is marked as completed
+      return dayEvents.any((e) => e.completed == true);
+    }
+  }
+
+  /// Calculate today's total value from events
+  double? _calculateTodayValue(List<HabitEvent> events) {
+    if (habit.trackingType != TrackingType.value) {
+      return null;
+    }
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    double totalValue = 0.0;
+    bool hasEvents = false;
+
+    for (final event in events) {
+      final eventDate = DateTime(
+        event.eventDate.year,
+        event.eventDate.month,
+        event.eventDate.day,
+      );
+      
+      if (eventDate.isAtSameMomentAs(today)) {
+        hasEvents = true;
+        if (event.valueDelta != null) {
+          totalValue += event.valueDelta!;
+        } else if (event.value != null) {
+          totalValue = event.value!;
+        }
+      }
+    }
+
+    return hasEvents ? totalValue : null;
   }
 }

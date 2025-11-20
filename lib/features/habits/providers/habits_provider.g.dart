@@ -39,7 +39,7 @@ final class HabitsNotifierProvider
   HabitsNotifier create() => HabitsNotifier();
 }
 
-String _$habitsNotifierHash() => r'58118eae3d38413442a04d4931f293ea4015662c';
+String _$habitsNotifierHash() => r'5623bac38b0d803f178b5ba6a28bc2d600b73ee9';
 
 /// Provider for managing the list of active habits
 /// Handles CRUD operations and event logging with automatic state refresh

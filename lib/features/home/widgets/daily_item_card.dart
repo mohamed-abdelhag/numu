@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/daily_item.dart';
 import '../../habits/models/habit.dart';
+import '../../habits/models/enums/tracking_type.dart';
+import '../../habits/models/enums/streak_type.dart';
 import '../../habits/widgets/habit_quick_action_button.dart';
-import '../../habits/repositories/habit_repository.dart';
+import '../../habits/providers/habit_detail_provider.dart';
 import '../../tasks/tasks_provider.dart';
 
 class DailyItemCard extends ConsumerWidget {
@@ -21,6 +23,37 @@ class DailyItemCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     
+    // For habits, watch the HabitDetailProvider for real-time data
+    if (item.type == DailyItemType.habit && item.habitId != null) {
+      final habitDetailAsync = ref.watch(habitDetailProvider(item.habitId!));
+      
+      return habitDetailAsync.when(
+        data: (detailState) => _buildHabitCard(context, ref, theme, detailState.habit, detailState),
+        loading: () => _buildLoadingCard(theme),
+        error: (_, __) => _buildErrorCard(context, theme),
+      );
+    }
+    
+    // For tasks, use the existing item data
+    return _buildTaskCard(context, ref, theme);
+  }
+
+  Widget _buildHabitCard(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    Habit habit,
+    HabitDetailState detailState,
+  ) {
+    // Calculate today's value from provider events
+    final todayValue = _calculateTodayValue(detailState);
+    
+    // Get current streak from provider
+    final currentStreak = detailState.streaks[StreakType.completion]?.currentStreak ?? 0;
+    
+    // Determine if habit is completed today
+    final isCompletedToday = _isCompletedToday(habit, detailState);
+    
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: InkWell(
@@ -31,7 +64,92 @@ class DailyItemCard extends ConsumerWidget {
           child: Row(
             children: [
               // Icon
-              _buildIcon(theme),
+              _buildHabitIcon(theme, habit, isCompletedToday),
+              const SizedBox(width: 16),
+              
+              // Title and details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      habit.name,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        decoration: isCompletedToday 
+                            ? TextDecoration.lineThrough 
+                            : null,
+                        color: isCompletedToday
+                            ? theme.colorScheme.onSurface.withValues(alpha: 0.5)
+                            : null,
+                      ),
+                    ),
+                    if (item.scheduledTime != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        _formatTime(item.scheduledTime!),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                    ],
+                    // Show current streak
+                    if (currentStreak > 0) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.local_fire_department,
+                            size: 16,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$currentStreak day${currentStreak != 1 ? 's' : ''} streak',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    // Show today's value for value-based habits
+                    if (habit.trackingType == TrackingType.value && 
+                        habit.targetValue != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '${todayValue.toInt()}/${habit.targetValue!.toInt()} ${habit.unit ?? ''}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              
+              // Quick action button
+              _buildHabitQuickAction(context, ref, habit),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTaskCard(BuildContext context, WidgetRef ref, ThemeData theme) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: InkWell(
+        onTap: () => _navigateToDetail(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Icon
+              _buildTaskIcon(theme),
               const SizedBox(width: 16),
               
               // Title and time
@@ -59,24 +177,12 @@ class DailyItemCard extends ConsumerWidget {
                         ),
                       ),
                     ],
-                    if (item.type == DailyItemType.habit && 
-                        item.currentValue != null && 
-                        item.targetValue != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        '${item.currentValue!.toInt()}/${item.targetValue!.toInt()} ${item.unit ?? ''}',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
               
-              // Quick action button
-              _buildQuickAction(context, ref),
+              // Task checkbox
+              _buildTaskCheckbox(ref),
             ],
           ),
         ),
@@ -84,89 +190,226 @@ class DailyItemCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildIcon(ThemeData theme) {
-    if (item.type == DailyItemType.habit && item.icon != null) {
-      // Parse icon from string (e.g., "0xe047" or "fitness_center")
-      IconData iconData;
-      try {
-        if (item.icon!.startsWith('0x')) {
-          iconData = IconData(
-            int.parse(item.icon!),
-            fontFamily: 'MaterialIcons',
-          );
-        } else {
-          // Default icon if parsing fails
-          iconData = Icons.check_circle_outline;
-        }
-      } catch (e) {
-        iconData = Icons.check_circle_outline;
-      }
-
-      return Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: item.color?.withValues(alpha: 0.1) ?? theme.colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(12),
+  Widget _buildLoadingCard(ThemeData theme) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    height: 16,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    height: 12,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 16),
+            const SizedBox(
+              width: 48,
+              height: 48,
+              child: Center(
+                child: SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            ),
+          ],
         ),
-        child: Icon(
-          iconData,
-          color: item.color ?? theme.colorScheme.primary,
-          size: 24,
-        ),
-      );
-    } else {
-      // Task icon
-      return Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.secondaryContainer,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(
-          Icons.task_alt,
-          color: theme.colorScheme.secondary,
-          size: 24,
-        ),
-      );
-    }
+      ),
+    );
   }
 
-  Widget _buildQuickAction(BuildContext context, WidgetRef ref) {
-    if (item.type == DailyItemType.habit && item.habitId != null) {
-      // Use habit quick action button
-      return FutureBuilder<Habit?>(
-        future: HabitRepository().getHabitById(item.habitId!),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const SizedBox(width: 48);
-          }
+  Widget _buildErrorCard(BuildContext context, ThemeData theme) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Icon(
+              Icons.error_outline,
+              color: theme.colorScheme.error,
+              size: 48,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                'Failed to load habit',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-          final habit = snapshot.data!;
-          final now = DateTime.now();
-          final today = DateTime(now.year, now.month, now.day);
-
-          return HabitQuickActionButton(
-            habit: habit,
-            date: today,
-            onActionComplete: onActionComplete,
-          );
-        },
-      );
-    } else if (item.type == DailyItemType.task && item.taskId != null) {
-      // Task checkbox
-      return Checkbox(
-        value: item.isCompleted,
-        onChanged: (value) async {
-          if (value != null) {
-            await _toggleTask(ref);
-          }
-        },
-      );
+  Widget _buildHabitIcon(ThemeData theme, Habit habit, bool isCompleted) {
+    // Parse icon from string (e.g., "0xe047")
+    IconData iconData;
+    try {
+      if (habit.icon.startsWith('0x')) {
+        iconData = IconData(
+          int.parse(habit.icon),
+          fontFamily: 'MaterialIcons',
+        );
+      } else {
+        iconData = Icons.check_circle_outline;
+      }
+    } catch (e) {
+      iconData = Icons.check_circle_outline;
     }
 
-    return const SizedBox(width: 48);
+    // Parse color from hex string
+    Color iconColor;
+    try {
+      iconColor = Color(int.parse(habit.color.replaceFirst('#', '0xff')));
+    } catch (e) {
+      iconColor = theme.colorScheme.primary;
+    }
+
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: iconColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(
+        iconData,
+        color: iconColor,
+        size: 24,
+      ),
+    );
+  }
+
+  Widget _buildTaskIcon(ThemeData theme) {
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(
+        Icons.task_alt,
+        color: theme.colorScheme.secondary,
+        size: 24,
+      ),
+    );
+  }
+
+  Widget _buildHabitQuickAction(BuildContext context, WidgetRef ref, Habit habit) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    return HabitQuickActionButton(
+      habit: habit,
+      date: today,
+      onActionComplete: onActionComplete,
+    );
+  }
+
+  Widget _buildTaskCheckbox(WidgetRef ref) {
+    return Checkbox(
+      value: item.isCompleted,
+      onChanged: (value) async {
+        if (value != null) {
+          await _toggleTask(ref);
+        }
+      },
+    );
+  }
+
+  /// Calculate today's total value from habit events
+  double _calculateTodayValue(HabitDetailState detailState) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    // Filter events for today
+    final todayEvents = detailState.events.where((event) {
+      final eventDate = DateTime(
+        event.eventDate.year,
+        event.eventDate.month,
+        event.eventDate.day,
+      );
+      return eventDate.isAtSameMomentAs(today);
+    }).toList();
+    
+    // Sum up the values
+    double total = 0.0;
+    for (final event in todayEvents) {
+      total += event.value ?? 0.0;
+    }
+    
+    return total;
+  }
+
+  /// Check if habit is completed today
+  bool _isCompletedToday(Habit habit, HabitDetailState detailState) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    // Filter events for today
+    final todayEvents = detailState.events.where((event) {
+      final eventDate = DateTime(
+        event.eventDate.year,
+        event.eventDate.month,
+        event.eventDate.day,
+      );
+      return eventDate.isAtSameMomentAs(today);
+    }).toList();
+    
+    if (todayEvents.isEmpty) {
+      return false;
+    }
+    
+    // For binary habits, any event means completed
+    if (habit.trackingType == TrackingType.binary) {
+      return true;
+    }
+    
+    // For value habits, check if target is met
+    if (habit.trackingType == TrackingType.value && habit.targetValue != null) {
+      double total = 0.0;
+      for (final event in todayEvents) {
+        total += event.value ?? 0.0;
+      }
+      return total >= habit.targetValue!;
+    }
+    
+    return false;
   }
 
   Future<void> _toggleTask(WidgetRef ref) async {

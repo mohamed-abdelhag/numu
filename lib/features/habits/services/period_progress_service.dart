@@ -15,20 +15,28 @@ class PeriodProgressService {
   PeriodProgressService(this._repository);
 
   /// Recalculate period progress for a habit
-  Future<void> recalculatePeriodProgress(int habitId) async {
+  /// [startOfWeek] - Day of week that starts the week (1 = Monday, 7 = Sunday)
+  Future<void> recalculatePeriodProgress(
+    int habitId, {
+    int startOfWeek = 1,
+  }) async {
     final habit = await _repository.getHabitById(habitId);
     if (habit == null) return;
 
     // Only calculate for non-daily habits
     if (habit.frequency == Frequency.daily) return;
 
-    final progress = await _calculatePeriodProgress(habit);
+    final progress = await _calculatePeriodProgress(habit, startOfWeek);
     await _repository.savePeriodProgress(progress);
   }
 
   /// Calculate period progress for a habit
-  Future<HabitPeriodProgress> _calculatePeriodProgress(Habit habit) async {
-    final period = _getCurrentPeriod(habit);
+  /// [startOfWeek] - Day of week that starts the week (1 = Monday, 7 = Sunday)
+  Future<HabitPeriodProgress> _calculatePeriodProgress(
+    Habit habit,
+    int startOfWeek,
+  ) async {
+    final period = _getCurrentPeriod(habit, startOfWeek);
     final events = await _repository.getEventsForHabit(
       habit.id!,
       startDate: period.start,
@@ -80,16 +88,22 @@ class PeriodProgressService {
   }
 
   /// Get the current period start and end dates based on habit frequency
-  ({DateTime start, DateTime end}) _getCurrentPeriod(Habit habit) {
+  /// [startOfWeek] - Day of week that starts the week (1 = Monday, 7 = Sunday)
+  ({DateTime start, DateTime end}) _getCurrentPeriod(
+    Habit habit,
+    int startOfWeek,
+  ) {
     final now = DateTime.now();
 
     switch (habit.frequency) {
       case Frequency.weekly:
-        // Week starts on Monday (weekday 1)
-        final monday = now.subtract(Duration(days: now.weekday - 1));
+        // Calculate week start based on user preference
+        // startOfWeek: 1 = Monday, 7 = Sunday
+        final daysFromWeekStart = (now.weekday - startOfWeek + 7) % 7;
+        final weekStart = now.subtract(Duration(days: daysFromWeekStart));
         return (
-          start: DateTime(monday.year, monday.month, monday.day),
-          end: DateTime(monday.year, monday.month, monday.day)
+          start: DateTime(weekStart.year, weekStart.month, weekStart.day),
+          end: DateTime(weekStart.year, weekStart.month, weekStart.day)
               .add(const Duration(days: 6, hours: 23, minutes: 59, seconds: 59)),
         );
 
