@@ -303,7 +303,7 @@ packages:
     source: hosted
     version: "7.2.0"
   flutter_logs:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: flutter_logs
       sha256: "46880b3da87bf66d10c69505fd8dec1ef78fe1793fc909169ddb9aa9fe34f164"

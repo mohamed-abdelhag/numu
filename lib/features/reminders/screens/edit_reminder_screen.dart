@@ -815,29 +815,29 @@ class _EditReminderScreenState extends ConsumerState<EditReminderScreen> {
         const SizedBox(height: 24),
         Text('Reminder Text', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        RadioListTile<bool>(
-          contentPadding: EdgeInsets.zero,
-          title: Text('Do ${habit.name}'),
-          subtitle: const Text('Use default habit text'),
-          value: true,
+        RadioGroup<bool>(
           groupValue: _useDefaultText,
           onChanged: (value) {
             setState(() {
               _useDefaultText = value ?? true;
             });
           },
-        ),
-        RadioListTile<bool>(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Custom text'),
-          subtitle: const Text('Enter your own reminder text'),
-          value: false,
-          groupValue: _useDefaultText,
-          onChanged: (value) {
-            setState(() {
-              _useDefaultText = value ?? true;
-            });
-          },
+          child: Column(
+            children: [
+              RadioListTile<bool>(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Do ${habit.name}'),
+                subtitle: const Text('Use default habit text'),
+                value: true,
+              ),
+              RadioListTile<bool>(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Custom text'),
+                subtitle: const Text('Enter your own reminder text'),
+                value: false,
+              ),
+            ],
+          ),
         ),
         if (!_useDefaultText) ...[
           const SizedBox(height: 8),

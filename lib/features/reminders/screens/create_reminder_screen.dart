@@ -42,7 +42,7 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
   ScheduleFrequency _frequency = ScheduleFrequency.none;
   DateTime? _specificDateTime;
   TimeOfDay? _timeOfDay;
-  List<int> _activeWeekdays = [1, 2, 3, 4, 5]; // Mon-Fri default
+  final List<int> _activeWeekdays = [1, 2, 3, 4, 5]; // Mon-Fri default
   int _dayOfMonth = 1;
   bool _useHabitTimeWindow = false;
   bool _useHabitActiveDays = false;
@@ -99,7 +99,8 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text(
-                  'Selected habit must have a time window configured'),
+                'Selected habit must have a time window configured',
+              ),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
@@ -109,12 +110,11 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
     }
 
     // Show loading indicator
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
     try {
@@ -127,18 +127,23 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
             ? _specificDateTime
             : null,
         timeOfDay: _frequency != ScheduleFrequency.none ? _timeOfDay : null,
-        activeWeekdays:
-            _frequency == ScheduleFrequency.weekly ? _activeWeekdays : null,
-        dayOfMonth:
-            _frequency == ScheduleFrequency.monthly ? _dayOfMonth : null,
-        minutesBefore: (_linkOption == LinkOption.task ||
+        activeWeekdays: _frequency == ScheduleFrequency.weekly
+            ? _activeWeekdays
+            : null,
+        dayOfMonth: _frequency == ScheduleFrequency.monthly
+            ? _dayOfMonth
+            : null,
+        minutesBefore:
+            (_linkOption == LinkOption.task ||
                 (_linkOption == LinkOption.habit && _useHabitTimeWindow))
             ? int.tryParse(_minutesBeforeController.text.trim())
             : null,
-        useHabitTimeWindow: _linkOption == LinkOption.habit &&
+        useHabitTimeWindow:
+            _linkOption == LinkOption.habit &&
             _selectedHabitId != null &&
             _useHabitTimeWindow,
-        useHabitActiveDays: _linkOption == LinkOption.habit &&
+        useHabitActiveDays:
+            _linkOption == LinkOption.habit &&
             _selectedHabitId != null &&
             _useHabitActiveDays,
       );
@@ -156,7 +161,9 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
           useDefaultText: _useDefaultText,
         );
       } else if (_linkOption == LinkOption.task && _selectedTaskId != null) {
-        final task = await ref.read(taskDetailProvider(_selectedTaskId!).future);
+        final task = await ref.read(
+          taskDetailProvider(_selectedTaskId!).future,
+        );
         link = ReminderLink(
           type: LinkType.task,
           entityId: _selectedTaskId!,
@@ -175,7 +182,9 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
         final habit = habits.firstWhere((h) => h.id == _selectedHabitId);
         title = 'Do ${habit.name}';
       } else if (_linkOption == LinkOption.task && _selectedTaskId != null) {
-        final task = await ref.read(taskDetailProvider(_selectedTaskId!).future);
+        final task = await ref.read(
+          taskDetailProvider(_selectedTaskId!).future,
+        );
         title = task!.title;
       } else if (_linkOption == LinkOption.habit && !_useDefaultText) {
         title = _customTextController.text.trim();
@@ -230,10 +239,7 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Reminder Type',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Reminder Type', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         SegmentedButton<ReminderType>(
           segments: const [
@@ -263,8 +269,8 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
               ? 'Standard notification in notification tray'
               : 'Full-screen alarm requiring dismissal',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -274,10 +280,7 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Link To',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Link To', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         SegmentedButton<LinkOption>(
           segments: const [
@@ -285,14 +288,8 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
               value: LinkOption.standalone,
               label: Text('Standalone'),
             ),
-            ButtonSegment(
-              value: LinkOption.habit,
-              label: Text('Habit'),
-            ),
-            ButtonSegment(
-              value: LinkOption.task,
-              label: Text('Task'),
-            ),
+            ButtonSegment(value: LinkOption.habit, label: Text('Habit')),
+            ButtonSegment(value: LinkOption.task, label: Text('Task')),
           ],
           selected: {_linkOption},
           onSelectionChanged: (Set<LinkOption> selected) {
@@ -402,15 +399,10 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Frequency',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Frequency', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         DropdownButtonFormField<ScheduleFrequency>(
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(border: OutlineInputBorder()),
           initialValue: _frequency,
           items: const [
             DropdownMenuItem(
@@ -474,7 +466,8 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
                 final time = await showTimePicker(
                   context: context,
                   initialTime: TimeOfDay.fromDateTime(
-                      _specificDateTime ?? DateTime.now()),
+                    _specificDateTime ?? DateTime.now(),
+                  ),
                 );
                 if (time != null) {
                   setState(() {
@@ -546,10 +539,7 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        Text(
-          'Active Days',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Active Days', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -584,22 +574,14 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        Text(
-          'Day of Month',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Day of Month', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         DropdownButtonFormField<int>(
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(border: OutlineInputBorder()),
           initialValue: _dayOfMonth,
           items: List.generate(31, (index) {
             final day = index + 1;
-            return DropdownMenuItem(
-              value: day,
-              child: Text('Day $day'),
-            );
+            return DropdownMenuItem(value: day, child: Text('Day $day'));
           }),
           onChanged: (value) {
             setState(() {
@@ -624,10 +606,7 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 24),
-        Text(
-          'Habit Options',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Habit Options', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         if (habit.timeWindowEnabled && habit.timeWindowStart != null)
           CheckboxListTile(
@@ -692,10 +671,7 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 24),
-        Text(
-          'Task Options',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Task Options', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
         TextFormField(
           controller: _minutesBeforeController,
@@ -737,34 +713,31 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 24),
-        Text(
-          'Reminder Text',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        Text('Reminder Text', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        RadioListTile<bool>(
-          contentPadding: EdgeInsets.zero,
-          title: Text('Do ${habit.name}'),
-          subtitle: const Text('Use default habit text'),
-          value: true,
+        RadioGroup<bool>(
           groupValue: _useDefaultText,
           onChanged: (value) {
             setState(() {
               _useDefaultText = value ?? true;
             });
           },
-        ),
-        RadioListTile<bool>(
-          contentPadding: EdgeInsets.zero,
-          title: const Text('Custom text'),
-          subtitle: const Text('Enter your own reminder text'),
-          value: false,
-          groupValue: _useDefaultText,
-          onChanged: (value) {
-            setState(() {
-              _useDefaultText = value ?? true;
-            });
-          },
+          child: Column(
+            children: [
+              RadioListTile<bool>(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Do ${habit.name}'),
+                subtitle: const Text('Use default habit text'),
+                value: true,
+              ),
+              RadioListTile<bool>(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Custom text'),
+                subtitle: const Text('Enter your own reminder text'),
+                value: false,
+              ),
+            ],
+          ),
         ),
         if (!_useDefaultText) ...[
           const SizedBox(height: 8),
@@ -792,9 +765,7 @@ class _CreateReminderScreenState extends ConsumerState<CreateReminderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Reminder'),
-      ),
+      appBar: AppBar(title: const Text('Create Reminder')),
       body: Form(
         key: _formKey,
         child: ListView(

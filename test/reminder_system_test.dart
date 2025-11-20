@@ -21,33 +21,36 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('Reminder Model Serialization Tests', () {
-    test('Reminder with notification type serializes and deserializes correctly', () {
-      final now = DateTime.now();
-      final reminder = Reminder(
-        id: 1,
-        title: 'Test Reminder',
-        description: 'Test Description',
-        type: ReminderType.notification,
-        schedule: const ReminderSchedule(
-          frequency: ScheduleFrequency.daily,
-          timeOfDay: TimeOfDay(hour: 9, minute: 0),
-        ),
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-      );
+    test(
+      'Reminder with notification type serializes and deserializes correctly',
+      () {
+        final now = DateTime.now();
+        final reminder = Reminder(
+          id: 1,
+          title: 'Test Reminder',
+          description: 'Test Description',
+          type: ReminderType.notification,
+          schedule: const ReminderSchedule(
+            frequency: ScheduleFrequency.daily,
+            timeOfDay: TimeOfDay(hour: 9, minute: 0),
+          ),
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        );
 
-      final map = reminder.toMap();
-      final deserialized = Reminder.fromMap(map);
+        final map = reminder.toMap();
+        final deserialized = Reminder.fromMap(map);
 
-      expect(deserialized.id, reminder.id);
-      expect(deserialized.title, reminder.title);
-      expect(deserialized.description, reminder.description);
-      expect(deserialized.type, reminder.type);
-      expect(deserialized.schedule.frequency, reminder.schedule.frequency);
-      expect(deserialized.schedule.timeOfDay, reminder.schedule.timeOfDay);
-      expect(deserialized.isActive, reminder.isActive);
-    });
+        expect(deserialized.id, reminder.id);
+        expect(deserialized.title, reminder.title);
+        expect(deserialized.description, reminder.description);
+        expect(deserialized.type, reminder.type);
+        expect(deserialized.schedule.frequency, reminder.schedule.frequency);
+        expect(deserialized.schedule.timeOfDay, reminder.schedule.timeOfDay);
+        expect(deserialized.isActive, reminder.isActive);
+      },
+    );
 
     test('Reminder with full-screen alarm type serializes correctly', () {
       final now = DateTime.now();
@@ -186,19 +189,19 @@ void main() {
       databaseFactory = databaseFactoryFfi;
     });
 
-    // tearDown() async {
-    //   try {
-    //     await testDb.close();
-    //     await databaseFactory.deleteDatabase(':memory:${dbCounter}');
-    //   } catch (e) {
-    //     // Ignore errors during cleanup
-    //   }
-    // }
+    tearDown(() async {
+      try {
+        await testDb.close();
+        await databaseFactory.deleteDatabase(':memory:$dbCounter');
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
+    });
 
     Future<void> setupDatabase() async {
       dbCounter++;
       testDb = await databaseFactory.openDatabase(
-        ':memory:${dbCounter}',
+        ':memory:$dbCounter',
         options: OpenDatabaseOptions(
           version: 9,
           onCreate: (db, version) async {
@@ -235,7 +238,7 @@ void main() {
 
     test('Create reminder and retrieve by ID', () async {
       await setupDatabase();
-      
+
       final now = DateTime.now();
       final reminder = Reminder(
         title: 'Test Reminder',
@@ -261,27 +264,31 @@ void main() {
 
     test('Get all reminders returns correct list', () async {
       await setupDatabase();
-      
-      final now = DateTime.now();
-      
-      // Create multiple reminders
-      await repository.createReminder(Reminder(
-        title: 'Reminder 1',
-        type: ReminderType.notification,
-        schedule: const ReminderSchedule(frequency: ScheduleFrequency.daily),
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-      ));
 
-      await repository.createReminder(Reminder(
-        title: 'Reminder 2',
-        type: ReminderType.fullScreenAlarm,
-        schedule: const ReminderSchedule(frequency: ScheduleFrequency.weekly),
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-      ));
+      final now = DateTime.now();
+
+      // Create multiple reminders
+      await repository.createReminder(
+        Reminder(
+          title: 'Reminder 1',
+          type: ReminderType.notification,
+          schedule: const ReminderSchedule(frequency: ScheduleFrequency.daily),
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      await repository.createReminder(
+        Reminder(
+          title: 'Reminder 2',
+          type: ReminderType.fullScreenAlarm,
+          schedule: const ReminderSchedule(frequency: ScheduleFrequency.weekly),
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
 
       final allReminders = await repository.getAllReminders();
       expect(allReminders.length, 2);
@@ -289,26 +296,30 @@ void main() {
 
     test('Get active reminders filters correctly', () async {
       await setupDatabase();
-      
-      final now = DateTime.now();
-      
-      await repository.createReminder(Reminder(
-        title: 'Active Reminder',
-        type: ReminderType.notification,
-        schedule: const ReminderSchedule(frequency: ScheduleFrequency.daily),
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-      ));
 
-      await repository.createReminder(Reminder(
-        title: 'Inactive Reminder',
-        type: ReminderType.notification,
-        schedule: const ReminderSchedule(frequency: ScheduleFrequency.daily),
-        isActive: false,
-        createdAt: now,
-        updatedAt: now,
-      ));
+      final now = DateTime.now();
+
+      await repository.createReminder(
+        Reminder(
+          title: 'Active Reminder',
+          type: ReminderType.notification,
+          schedule: const ReminderSchedule(frequency: ScheduleFrequency.daily),
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      await repository.createReminder(
+        Reminder(
+          title: 'Inactive Reminder',
+          type: ReminderType.notification,
+          schedule: const ReminderSchedule(frequency: ScheduleFrequency.daily),
+          isActive: false,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
 
       final activeReminders = await repository.getActiveReminders();
       expect(activeReminders.length, 1);
@@ -317,7 +328,7 @@ void main() {
 
     test('Update reminder modifies existing record', () async {
       await setupDatabase();
-      
+
       final now = DateTime.now();
       final reminder = Reminder(
         title: 'Original Title',
@@ -345,7 +356,7 @@ void main() {
 
     test('Delete reminder removes record', () async {
       await setupDatabase();
-      
+
       final now = DateTime.now();
       final reminder = Reminder(
         title: 'To Delete',
@@ -365,36 +376,40 @@ void main() {
 
     test('Get reminders by habit ID filters correctly', () async {
       await setupDatabase();
-      
-      final now = DateTime.now();
-      
-      await repository.createReminder(Reminder(
-        title: 'Habit 1 Reminder',
-        type: ReminderType.notification,
-        schedule: const ReminderSchedule(frequency: ScheduleFrequency.daily),
-        link: const ReminderLink(
-          type: LinkType.habit,
-          entityId: 1,
-          entityName: 'Habit 1',
-        ),
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-      ));
 
-      await repository.createReminder(Reminder(
-        title: 'Habit 2 Reminder',
-        type: ReminderType.notification,
-        schedule: const ReminderSchedule(frequency: ScheduleFrequency.daily),
-        link: const ReminderLink(
-          type: LinkType.habit,
-          entityId: 2,
-          entityName: 'Habit 2',
+      final now = DateTime.now();
+
+      await repository.createReminder(
+        Reminder(
+          title: 'Habit 1 Reminder',
+          type: ReminderType.notification,
+          schedule: const ReminderSchedule(frequency: ScheduleFrequency.daily),
+          link: const ReminderLink(
+            type: LinkType.habit,
+            entityId: 1,
+            entityName: 'Habit 1',
+          ),
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
         ),
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-      ));
+      );
+
+      await repository.createReminder(
+        Reminder(
+          title: 'Habit 2 Reminder',
+          type: ReminderType.notification,
+          schedule: const ReminderSchedule(frequency: ScheduleFrequency.daily),
+          link: const ReminderLink(
+            type: LinkType.habit,
+            entityId: 2,
+            entityName: 'Habit 2',
+          ),
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
 
       final habit1Reminders = await repository.getRemindersByHabitId(1);
       expect(habit1Reminders.length, 1);
@@ -403,36 +418,40 @@ void main() {
 
     test('Delete reminders by habit ID removes all linked reminders', () async {
       await setupDatabase();
-      
-      final now = DateTime.now();
-      
-      await repository.createReminder(Reminder(
-        title: 'Habit Reminder 1',
-        type: ReminderType.notification,
-        schedule: const ReminderSchedule(frequency: ScheduleFrequency.daily),
-        link: const ReminderLink(
-          type: LinkType.habit,
-          entityId: 5,
-          entityName: 'Test Habit',
-        ),
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-      ));
 
-      await repository.createReminder(Reminder(
-        title: 'Habit Reminder 2',
-        type: ReminderType.notification,
-        schedule: const ReminderSchedule(frequency: ScheduleFrequency.weekly),
-        link: const ReminderLink(
-          type: LinkType.habit,
-          entityId: 5,
-          entityName: 'Test Habit',
+      final now = DateTime.now();
+
+      await repository.createReminder(
+        Reminder(
+          title: 'Habit Reminder 1',
+          type: ReminderType.notification,
+          schedule: const ReminderSchedule(frequency: ScheduleFrequency.daily),
+          link: const ReminderLink(
+            type: LinkType.habit,
+            entityId: 5,
+            entityName: 'Test Habit',
+          ),
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
         ),
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-      ));
+      );
+
+      await repository.createReminder(
+        Reminder(
+          title: 'Habit Reminder 2',
+          type: ReminderType.notification,
+          schedule: const ReminderSchedule(frequency: ScheduleFrequency.weekly),
+          link: const ReminderLink(
+            type: LinkType.habit,
+            entityId: 5,
+            entityName: 'Test Habit',
+          ),
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
 
       await repository.deleteRemindersByHabitId(5);
 
@@ -755,56 +774,59 @@ void main() {
       expect(triggerTime.minute, 0);
     });
 
-    test('Habit-linked reminder with both time window and active days', () async {
-      // Create habit with time window and active days
-      final habit = Habit(
-        name: 'Morning Meditation',
-        icon: '🧘',
-        color: '0xFF2196F3',
-        trackingType: TrackingType.binary,
-        goalType: GoalType.minimum,
-        frequency: Frequency.weekly,
-        activeDaysMode: ActiveDaysMode.selected,
-        activeWeekdays: [1, 2, 3, 4, 5], // Weekdays
-        requireMode: RequireMode.each,
-        timeWindowEnabled: true,
-        timeWindowStart: const TimeOfDay(hour: 6, minute: 0),
-        timeWindowEnd: const TimeOfDay(hour: 8, minute: 0),
-        qualityLayerEnabled: false,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+    test(
+      'Habit-linked reminder with both time window and active days',
+      () async {
+        // Create habit with time window and active days
+        final habit = Habit(
+          name: 'Morning Meditation',
+          icon: '🧘',
+          color: '0xFF2196F3',
+          trackingType: TrackingType.binary,
+          goalType: GoalType.minimum,
+          frequency: Frequency.weekly,
+          activeDaysMode: ActiveDaysMode.selected,
+          activeWeekdays: [1, 2, 3, 4, 5], // Weekdays
+          requireMode: RequireMode.each,
+          timeWindowEnabled: true,
+          timeWindowStart: const TimeOfDay(hour: 6, minute: 0),
+          timeWindowEnd: const TimeOfDay(hour: 8, minute: 0),
+          qualityLayerEnabled: false,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
 
-      final savedHabit = await habitRepository.createHabit(habit);
+        final savedHabit = await habitRepository.createHabit(habit);
 
-      // Create reminder using both configurations
-      final reminder = Reminder(
-        title: 'Meditation Reminder',
-        type: ReminderType.notification,
-        schedule: const ReminderSchedule(
-          frequency: ScheduleFrequency.weekly,
-          useHabitTimeWindow: true,
-          useHabitActiveDays: true,
-          minutesBefore: 10,
-        ),
-        link: ReminderLink(
-          type: LinkType.habit,
-          entityId: savedHabit.id!,
-          entityName: savedHabit.name,
-        ),
-        isActive: true,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+        // Create reminder using both configurations
+        final reminder = Reminder(
+          title: 'Meditation Reminder',
+          type: ReminderType.notification,
+          schedule: const ReminderSchedule(
+            frequency: ScheduleFrequency.weekly,
+            useHabitTimeWindow: true,
+            useHabitActiveDays: true,
+            minutesBefore: 10,
+          ),
+          link: ReminderLink(
+            type: LinkType.habit,
+            entityId: savedHabit.id!,
+            entityName: savedHabit.name,
+          ),
+          isActive: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
 
-      final triggerTime = await scheduler.calculateNextTriggerTime(reminder);
-      expect(triggerTime, isNotNull);
-      // Should be on a weekday
-      expect([1, 2, 3, 4, 5].contains(triggerTime!.weekday), true);
-      // Should be 5:50 AM (6:00 - 10 minutes)
-      expect(triggerTime.hour, 5);
-      expect(triggerTime.minute, 50);
-    });
+        final triggerTime = await scheduler.calculateNextTriggerTime(reminder);
+        expect(triggerTime, isNotNull);
+        // Should be on a weekday
+        expect([1, 2, 3, 4, 5].contains(triggerTime!.weekday), true);
+        // Should be 5:50 AM (6:00 - 10 minutes)
+        expect(triggerTime.hour, 5);
+        expect(triggerTime.minute, 50);
+      },
+    );
   });
 
   group('Reminder Scheduler Service - Task Integration', () {
@@ -909,10 +931,13 @@ void main() {
 
       final triggerTime = await scheduler.calculateNextTriggerTime(reminder);
       expect(triggerTime, isNotNull);
-      
+
       // Should be 1 hour before due date
       final expectedTime = dueDate.subtract(const Duration(hours: 1));
-      expect(triggerTime!.difference(expectedTime).inMinutes.abs(), lessThan(1));
+      expect(
+        triggerTime!.difference(expectedTime).inMinutes.abs(),
+        lessThan(1),
+      );
     });
 
     test('Task-linked reminder returns null for completed task', () async {
@@ -947,36 +972,36 @@ void main() {
       expect(triggerTime, isNull); // Should not schedule for completed tasks
     });
 
-    test('Task-linked reminder returns null for task without due date', () async {
-      // Create task without due date
-      final task = Task(
-        title: 'No Due Date Task',
-        isCompleted: false,
-      );
+    test(
+      'Task-linked reminder returns null for task without due date',
+      () async {
+        // Create task without due date
+        final task = Task(title: 'No Due Date Task', isCompleted: false);
 
-      final savedTask = await tasksRepository.createTask(task);
+        final savedTask = await tasksRepository.createTask(task);
 
-      // Create reminder for task without due date
-      final reminder = Reminder(
-        title: 'Task Reminder',
-        type: ReminderType.notification,
-        schedule: const ReminderSchedule(
-          frequency: ScheduleFrequency.none,
-          minutesBefore: 60,
-        ),
-        link: ReminderLink(
-          type: LinkType.task,
-          entityId: savedTask.id!,
-          entityName: savedTask.title,
-        ),
-        isActive: true,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+        // Create reminder for task without due date
+        final reminder = Reminder(
+          title: 'Task Reminder',
+          type: ReminderType.notification,
+          schedule: const ReminderSchedule(
+            frequency: ScheduleFrequency.none,
+            minutesBefore: 60,
+          ),
+          link: ReminderLink(
+            type: LinkType.task,
+            entityId: savedTask.id!,
+            entityName: savedTask.title,
+          ),
+          isActive: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
 
-      final triggerTime = await scheduler.calculateNextTriggerTime(reminder);
-      expect(triggerTime, isNull); // Should not schedule without due date
-    });
+        final triggerTime = await scheduler.calculateNextTriggerTime(reminder);
+        expect(triggerTime, isNull); // Should not schedule without due date
+      },
+    );
 
     test('Task-linked reminder with past due date returns null', () async {
       // Create task with past due date
@@ -1039,11 +1064,16 @@ void main() {
         updatedAt: DateTime.now(),
       );
 
-      final triggerTime1Day = await scheduler.calculateNextTriggerTime(reminder1Day);
+      final triggerTime1Day = await scheduler.calculateNextTriggerTime(
+        reminder1Day,
+      );
       expect(triggerTime1Day, isNotNull);
-      
+
       final expected1Day = dueDate.subtract(const Duration(days: 1));
-      expect(triggerTime1Day!.difference(expected1Day).inMinutes.abs(), lessThan(1));
+      expect(
+        triggerTime1Day!.difference(expected1Day).inMinutes.abs(),
+        lessThan(1),
+      );
 
       // Test 15 minutes before
       final reminder15Min = Reminder(
@@ -1063,11 +1093,16 @@ void main() {
         updatedAt: DateTime.now(),
       );
 
-      final triggerTime15Min = await scheduler.calculateNextTriggerTime(reminder15Min);
+      final triggerTime15Min = await scheduler.calculateNextTriggerTime(
+        reminder15Min,
+      );
       expect(triggerTime15Min, isNotNull);
-      
+
       final expected15Min = dueDate.subtract(const Duration(minutes: 15));
-      expect(triggerTime15Min!.difference(expected15Min).inMinutes.abs(), lessThan(1));
+      expect(
+        triggerTime15Min!.difference(expected15Min).inMinutes.abs(),
+        lessThan(1),
+      );
     });
   });
 }

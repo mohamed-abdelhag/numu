@@ -1,0 +1,157 @@
+00:00 +0: loading /Users/mohamedelobaid/baseet/ZKR/numu/test/reminder_system_test.dart                                                                                                                 00:01 +0: loading /Users/mohamedelobaid/baseet/ZKR/numu/test/reminder_system_test.dart                                                                                                                 00:01 +0: Reminder Model Serialization Tests Reminder with notification type serializes and deserializes correctly                                                                                     00:01 +1: Reminder Model Serialization Tests Reminder with notification type serializes and deserializes correctly                                                                                     00:01 +1: Reminder Model Serialization Tests Reminder with full-screen alarm type serializes correctly                                                                                                 00:01 +2: Reminder Model Serialization Tests Reminder with full-screen alarm type serializes correctly                                                                                                 00:01 +2: Reminder Model Serialization Tests Reminder with habit link serializes and deserializes correctly                                                                                            00:01 +3: Reminder Model Serialization Tests Reminder with habit link serializes and deserializes correctly                                                                                            00:01 +3: Reminder Model Serialization Tests Reminder with task link serializes correctly                                                                                                              00:01 +4: Reminder Model Serialization Tests Reminder with task link serializes correctly                                                                                                              00:01 +4: Reminder Model Serialization Tests Weekly reminder with active weekdays serializes correctly                                                                                                 00:01 +5: Reminder Model Serialization Tests Weekly reminder with active weekdays serializes correctly                                                                                                 00:01 +5: Reminder Model Serialization Tests Monthly reminder with day of month serializes correctly                                                                                                   00:01 +6: Reminder Model Serialization Tests Monthly reminder with day of month serializes correctly                                                                                                   00:01 +6: Reminder Repository CRUD Tests Create reminder and retrieve by ID                                                                                                                            00:01 +7: Reminder Repository CRUD Tests Create reminder and retrieve by ID                                                                                                                            00:01 +7: Reminder Repository CRUD Tests Get all reminders returns correct list                                                                                                                        00:01 +7: Reminder Repository CRUD Tests Get all reminders returns correct list                                                                                                                        
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +7 -1: Reminder Repository CRUD Tests Get all reminders returns correct list [E]                                                                                                                 
+  Expected: <2>
+    Actual: <95>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test/reminder_system_test.dart 294:7                main.<fn>.<fn>
+  
+
+To run this test again: /Users/mohamedelobaid/sdk/flutter/bin/cache/dart-sdk/bin/dart test /Users/mohamedelobaid/baseet/ZKR/numu/test/reminder_system_test.dart -p vm --plain-name 'Reminder Repository CRUD Tests Get all reminders returns correct list'
+00:01 +7 -1: Reminder Repository CRUD Tests Get active reminders filters correctly                                                                                                                     00:01 +7 -1: Reminder Repository CRUD Tests Get active reminders filters correctly                                                                                                                     
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +7 -2: Reminder Repository CRUD Tests Get active reminders filters correctly [E]                                                                                                                 
+  Expected: <1>
+    Actual: <76>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test/reminder_system_test.dart 325:7                main.<fn>.<fn>
+  
+
+To run this test again: /Users/mohamedelobaid/sdk/flutter/bin/cache/dart-sdk/bin/dart test /Users/mohamedelobaid/baseet/ZKR/numu/test/reminder_system_test.dart -p vm --plain-name 'Reminder Repository CRUD Tests Get active reminders filters correctly'
+00:01 +7 -2: Reminder Repository CRUD Tests Update reminder modifies existing record                                                                                                                   00:01 +7 -2: Reminder Repository CRUD Tests Update reminder modifies existing record                                                                                                                   
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +8 -2: Reminder Repository CRUD Tests Update reminder modifies existing record                                                                                                                   00:01 +8 -2: Reminder Repository CRUD Tests Delete reminder removes record                                                                                                                             00:01 +8 -2: Reminder Repository CRUD Tests Delete reminder removes record                                                                                                                             
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +9 -2: Reminder Repository CRUD Tests Delete reminder removes record                                                                                                                             00:01 +9 -2: Reminder Repository CRUD Tests Get reminders by habit ID filters correctly                                                                                                                00:01 +9 -2: Reminder Repository CRUD Tests Get reminders by habit ID filters correctly                                                                                                                
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +9 -3: Reminder Repository CRUD Tests Get reminders by habit ID filters correctly [E]                                                                                                            
+  Expected: <1>
+    Actual: <9>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test/reminder_system_test.dart 415:7                main.<fn>.<fn>
+  
+
+To run this test again: /Users/mohamedelobaid/sdk/flutter/bin/cache/dart-sdk/bin/dart test /Users/mohamedelobaid/baseet/ZKR/numu/test/reminder_system_test.dart -p vm --plain-name 'Reminder Repository CRUD Tests Get reminders by habit ID filters correctly'
+00:01 +9 -3: Reminder Repository CRUD Tests Delete reminders by habit ID removes all linked reminders                                                                                                  00:01 +9 -3: Reminder Repository CRUD Tests Delete reminders by habit ID removes all linked reminders                                                                                                  
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +10 -3: Reminder Repository CRUD Tests Delete reminders by habit ID removes all linked reminders                                                                                                 00:01 +10 -3: Reminder Scheduler Service - Trigger Time Calculations One-time reminder calculates correct trigger time                                                                                 00:01 +11 -3: Reminder Scheduler Service - Trigger Time Calculations One-time reminder calculates correct trigger time                                                                                 00:01 +11 -3: Reminder Scheduler Service - Trigger Time Calculations One-time reminder in the past returns null                                                                                        00:01 +12 -3: Reminder Scheduler Service - Trigger Time Calculations One-time reminder in the past returns null                                                                                        00:01 +12 -3: Reminder Scheduler Service - Trigger Time Calculations Daily reminder calculates next occurrence                                                                                         00:01 +13 -3: Reminder Scheduler Service - Trigger Time Calculations Daily reminder calculates next occurrence                                                                                         00:01 +13 -3: Reminder Scheduler Service - Trigger Time Calculations Weekly reminder calculates next active weekday                                                                                    00:01 +14 -3: Reminder Scheduler Service - Trigger Time Calculations Weekly reminder calculates next active weekday                                                                                    00:01 +14 -3: Reminder Scheduler Service - Trigger Time Calculations Monthly reminder calculates correct day of month                                                                                  00:01 +15 -3: Reminder Scheduler Service - Trigger Time Calculations Monthly reminder calculates correct day of month                                                                                  00:01 +15 -3: Reminder Scheduler Service - Trigger Time Calculations Monthly reminder handles month-end edge case                                                                                      00:01 +16 -3: Reminder Scheduler Service - Trigger Time Calculations Monthly reminder handles month-end edge case                                                                                      00:01 +16 -3: Reminder Scheduler Service - Habit Integration Habit-linked reminder uses habit time window                                                                                              00:01 +16 -3: Reminder Scheduler Service - Habit Integration Habit-linked reminder uses habit time window                                                                                              
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +17 -3: Reminder Scheduler Service - Habit Integration Habit-linked reminder uses habit time window                                                                                              00:01 +17 -3: Reminder Scheduler Service - Habit Integration Habit-linked reminder uses habit active days                                                                                              00:01 +17 -3: Reminder Scheduler Service - Habit Integration Habit-linked reminder uses habit active days                                                                                              
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +18 -3: Reminder Scheduler Service - Habit Integration Habit-linked reminder uses habit active days                                                                                              00:01 +18 -3: Reminder Scheduler Service - Habit Integration Habit-linked reminder with both time window and active days                                                                               00:01 +18 -3: Reminder Scheduler Service - Habit Integration Habit-linked reminder with both time window and active days                                                                               
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +19 -3: Reminder Scheduler Service - Habit Integration Habit-linked reminder with both time window and active days                                                                               00:01 +19 -3: Reminder Scheduler Service - Task Integration Task-linked reminder calculates time based on due date                                                                                     00:01 +19 -3: Reminder Scheduler Service - Task Integration Task-linked reminder calculates time based on due date                                                                                     
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +20 -3: Reminder Scheduler Service - Task Integration Task-linked reminder calculates time based on due date                                                                                     00:01 +20 -3: Reminder Scheduler Service - Task Integration Task-linked reminder returns null for completed task                                                                                       00:01 +20 -3: Reminder Scheduler Service - Task Integration Task-linked reminder returns null for completed task                                                                                       
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +21 -3: Reminder Scheduler Service - Task Integration Task-linked reminder returns null for completed task                                                                                       00:01 +21 -3: Reminder Scheduler Service - Task Integration Task-linked reminder returns null for task without due date                                                                                00:01 +21 -3: Reminder Scheduler Service - Task Integration Task-linked reminder returns null for task without due date                                                                                
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +22 -3: Reminder Scheduler Service - Task Integration Task-linked reminder returns null for task without due date                                                                                00:01 +22 -3: Reminder Scheduler Service - Task Integration Task-linked reminder with past due date returns null                                                                                       00:01 +22 -3: Reminder Scheduler Service - Task Integration Task-linked reminder with past due date returns null                                                                                       
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +23 -3: Reminder Scheduler Service - Task Integration Task-linked reminder with past due date returns null                                                                                       00:01 +23 -3: Reminder Scheduler Service - Task Integration Task-linked reminder with different offset values                                                                                          00:01 +23 -3: Reminder Scheduler Service - Task Integration Task-linked reminder with different offset values                                                                                          
+*** sqflite warning ***
+
+You are changing sqflite default factory.
+Be aware of the potential side effects. Any library using sqflite
+will have this factory as the default for all operations.
+
+*** sqflite warning ***
+
+00:01 +24 -3: Reminder Scheduler Service - Task Integration Task-linked reminder with different offset values                                                                                          00:01 +24 -3: Some tests failed.                                                                                                                                                                       

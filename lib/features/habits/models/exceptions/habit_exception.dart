@@ -17,8 +17,7 @@ class HabitException implements Exception {
 
 /// Exception thrown when habit validation fails
 class HabitValidationException extends HabitException {
-  HabitValidationException(String message)
-    : super(message, code: 'VALIDATION_ERROR');
+  HabitValidationException(super.message) : super(code: 'VALIDATION_ERROR');
 
   @override
   String toString() => 'HabitValidationException: $message';
@@ -38,8 +37,8 @@ class HabitNotFoundException extends HabitException {
 
 /// Exception thrown when database operations fail
 class HabitDatabaseException extends HabitException {
-  HabitDatabaseException(String message, {dynamic originalError})
-    : super(message, code: 'DATABASE_ERROR', originalError: originalError);
+  HabitDatabaseException(super.message, {super.originalError})
+    : super(code: 'DATABASE_ERROR');
 
   @override
   String toString() {

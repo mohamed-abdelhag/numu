@@ -7,7 +7,7 @@ import 'package:numu/features/habits/models/enums/frequency.dart';
 import 'package:numu/features/habits/models/enums/active_days_mode.dart';
 import 'package:numu/features/habits/models/enums/require_mode.dart';
 import 'package:numu/features/habits/repositories/habit_repository.dart';
-import 'package:numu/features/habits/services/streak_calculation_service.dart';
+// import 'package:numu/features/habits/services/streak_calculation_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -15,13 +15,13 @@ void main() {
   group('Active Days and Quality Layer Tests', () {
     late Database testDb;
     late HabitRepository repository;
-    late StreakCalculationService streakService;
+    // late StreakCalculationService streakService;
 
     setUp(() async {
       // Initialize FFI for testing
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
-      
+
       // Create in-memory database for testing
       testDb = await databaseFactory.openDatabase(
         inMemoryDatabasePath,
@@ -107,37 +107,40 @@ void main() {
       );
 
       repository = HabitRepository();
-      streakService = StreakCalculationService(repository);
+      // streakService = StreakCalculationService(repository);
     });
 
     tearDown(() async {
       await testDb.close();
     });
 
-    test('Binary habit with active days configuration can be created', () async {
-      final habit = Habit(
-        name: 'Morning Exercise',
-        icon: '🏃',
-        color: '0xFF64B5F6',
-        trackingType: TrackingType.binary,
-        goalType: GoalType.minimum,
-        frequency: Frequency.daily,
-        activeDaysMode: ActiveDaysMode.selected,
-        activeWeekdays: [1, 2, 3, 4, 5], // Monday to Friday
-        requireMode: RequireMode.each,
-        timeWindowEnabled: false,
-        qualityLayerEnabled: false,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+    test(
+      'Binary habit with active days configuration can be created',
+      () async {
+        final habit = Habit(
+          name: 'Morning Exercise',
+          icon: '🏃',
+          color: '0xFF64B5F6',
+          trackingType: TrackingType.binary,
+          goalType: GoalType.minimum,
+          frequency: Frequency.daily,
+          activeDaysMode: ActiveDaysMode.selected,
+          activeWeekdays: [1, 2, 3, 4, 5], // Monday to Friday
+          requireMode: RequireMode.each,
+          timeWindowEnabled: false,
+          qualityLayerEnabled: false,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
 
-      final savedHabit = await repository.createHabit(habit);
-      
-      expect(savedHabit.id, isNotNull);
-      expect(savedHabit.trackingType, TrackingType.binary);
-      expect(savedHabit.activeDaysMode, ActiveDaysMode.selected);
-      expect(savedHabit.activeWeekdays, [1, 2, 3, 4, 5]);
-    });
+        final savedHabit = await repository.createHabit(habit);
+
+        expect(savedHabit.id, isNotNull);
+        expect(savedHabit.trackingType, TrackingType.binary);
+        expect(savedHabit.activeDaysMode, ActiveDaysMode.selected);
+        expect(savedHabit.activeWeekdays, [1, 2, 3, 4, 5]);
+      },
+    );
 
     test('Value habit with active days configuration can be created', () async {
       final habit = Habit(
@@ -159,7 +162,7 @@ void main() {
       );
 
       final savedHabit = await repository.createHabit(habit);
-      
+
       expect(savedHabit.id, isNotNull);
       expect(savedHabit.trackingType, TrackingType.value);
       expect(savedHabit.activeDaysMode, ActiveDaysMode.selected);
@@ -186,7 +189,7 @@ void main() {
       );
 
       final savedHabit = await repository.createHabit(habit);
-      
+
       expect(savedHabit.id, isNotNull);
       expect(savedHabit.trackingType, TrackingType.binary);
       expect(savedHabit.qualityLayerEnabled, true);
@@ -213,7 +216,7 @@ void main() {
       );
 
       final savedHabit = await repository.createHabit(habit);
-      
+
       expect(savedHabit.id, isNotNull);
       expect(savedHabit.trackingType, TrackingType.value);
       expect(savedHabit.qualityLayerEnabled, true);
@@ -222,142 +225,154 @@ void main() {
       expect(savedHabit.unit, 'minutes');
     });
 
-    test('Binary habit with active days stores configuration correctly', () async {
-      // Create a binary habit with weekdays only (Mon-Fri)
-      final habit = Habit(
-        name: 'Work Task',
-        icon: '💼',
-        color: '0xFF64B5F6',
-        trackingType: TrackingType.binary,
-        goalType: GoalType.minimum,
-        frequency: Frequency.daily,
-        activeDaysMode: ActiveDaysMode.selected,
-        activeWeekdays: [1, 2, 3, 4, 5], // Monday to Friday
-        requireMode: RequireMode.each,
-        timeWindowEnabled: false,
-        qualityLayerEnabled: false,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+    test(
+      'Binary habit with active days stores configuration correctly',
+      () async {
+        // Create a binary habit with weekdays only (Mon-Fri)
+        final habit = Habit(
+          name: 'Work Task',
+          icon: '💼',
+          color: '0xFF64B5F6',
+          trackingType: TrackingType.binary,
+          goalType: GoalType.minimum,
+          frequency: Frequency.daily,
+          activeDaysMode: ActiveDaysMode.selected,
+          activeWeekdays: [1, 2, 3, 4, 5], // Monday to Friday
+          requireMode: RequireMode.each,
+          timeWindowEnabled: false,
+          qualityLayerEnabled: false,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
 
-      final savedHabit = await repository.createHabit(habit);
-      
-      // Verify the habit was saved with active days configuration
-      expect(savedHabit.id, isNotNull);
-      expect(savedHabit.trackingType, TrackingType.binary);
-      expect(savedHabit.activeDaysMode, ActiveDaysMode.selected);
-      expect(savedHabit.activeWeekdays, [1, 2, 3, 4, 5]);
-      
-      // Retrieve the habit from database to verify persistence
-      final retrievedHabit = await repository.getHabitById(savedHabit.id!);
-      expect(retrievedHabit, isNotNull);
-      expect(retrievedHabit!.activeDaysMode, ActiveDaysMode.selected);
-      expect(retrievedHabit.activeWeekdays, [1, 2, 3, 4, 5]);
-    });
+        final savedHabit = await repository.createHabit(habit);
 
-    test('Value habit with active days stores configuration correctly', () async {
-      // Create a value habit with specific days
-      final habit = Habit(
-        name: 'Study Hours',
-        icon: '📖',
-        color: '0xFF64B5F6',
-        trackingType: TrackingType.value,
-        goalType: GoalType.minimum,
-        targetValue: 2.0,
-        unit: 'hours',
-        frequency: Frequency.daily,
-        activeDaysMode: ActiveDaysMode.selected,
-        activeWeekdays: [1, 3, 5], // Mon, Wed, Fri
-        requireMode: RequireMode.each,
-        timeWindowEnabled: false,
-        qualityLayerEnabled: false,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+        // Verify the habit was saved with active days configuration
+        expect(savedHabit.id, isNotNull);
+        expect(savedHabit.trackingType, TrackingType.binary);
+        expect(savedHabit.activeDaysMode, ActiveDaysMode.selected);
+        expect(savedHabit.activeWeekdays, [1, 2, 3, 4, 5]);
 
-      final savedHabit = await repository.createHabit(habit);
-      
-      // Verify the habit was saved with active days configuration
-      expect(savedHabit.id, isNotNull);
-      expect(savedHabit.trackingType, TrackingType.value);
-      expect(savedHabit.activeDaysMode, ActiveDaysMode.selected);
-      expect(savedHabit.activeWeekdays, [1, 3, 5]);
-      expect(savedHabit.targetValue, 2.0);
-      expect(savedHabit.unit, 'hours');
-      
-      // Retrieve the habit from database to verify persistence
-      final retrievedHabit = await repository.getHabitById(savedHabit.id!);
-      expect(retrievedHabit, isNotNull);
-      expect(retrievedHabit!.activeDaysMode, ActiveDaysMode.selected);
-      expect(retrievedHabit.activeWeekdays, [1, 3, 5]);
-    });
+        // Retrieve the habit from database to verify persistence
+        final retrievedHabit = await repository.getHabitById(savedHabit.id!);
+        expect(retrievedHabit, isNotNull);
+        expect(retrievedHabit!.activeDaysMode, ActiveDaysMode.selected);
+        expect(retrievedHabit.activeWeekdays, [1, 2, 3, 4, 5]);
+      },
+    );
 
-    test('Binary habit with quality layer stores configuration correctly', () async {
-      final habit = Habit(
-        name: 'Yoga',
-        icon: '🧘',
-        color: '0xFF64B5F6',
-        trackingType: TrackingType.binary,
-        goalType: GoalType.minimum,
-        frequency: Frequency.daily,
-        activeDaysMode: ActiveDaysMode.all,
-        requireMode: RequireMode.each,
-        timeWindowEnabled: false,
-        qualityLayerEnabled: true,
-        qualityLayerLabel: 'Form Quality',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+    test(
+      'Value habit with active days stores configuration correctly',
+      () async {
+        // Create a value habit with specific days
+        final habit = Habit(
+          name: 'Study Hours',
+          icon: '📖',
+          color: '0xFF64B5F6',
+          trackingType: TrackingType.value,
+          goalType: GoalType.minimum,
+          targetValue: 2.0,
+          unit: 'hours',
+          frequency: Frequency.daily,
+          activeDaysMode: ActiveDaysMode.selected,
+          activeWeekdays: [1, 3, 5], // Mon, Wed, Fri
+          requireMode: RequireMode.each,
+          timeWindowEnabled: false,
+          qualityLayerEnabled: false,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
 
-      final savedHabit = await repository.createHabit(habit);
-      
-      // Verify the habit was saved with quality layer configuration
-      expect(savedHabit.id, isNotNull);
-      expect(savedHabit.trackingType, TrackingType.binary);
-      expect(savedHabit.qualityLayerEnabled, true);
-      expect(savedHabit.qualityLayerLabel, 'Form Quality');
-      
-      // Retrieve the habit from database to verify persistence
-      final retrievedHabit = await repository.getHabitById(savedHabit.id!);
-      expect(retrievedHabit, isNotNull);
-      expect(retrievedHabit!.qualityLayerEnabled, true);
-      expect(retrievedHabit.qualityLayerLabel, 'Form Quality');
-    });
+        final savedHabit = await repository.createHabit(habit);
 
-    test('Value habit with quality layer stores configuration correctly', () async {
-      final habit = Habit(
-        name: 'Running Distance',
-        icon: '🏃',
-        color: '0xFF64B5F6',
-        trackingType: TrackingType.value,
-        goalType: GoalType.minimum,
-        targetValue: 5.0,
-        unit: 'km',
-        frequency: Frequency.daily,
-        activeDaysMode: ActiveDaysMode.all,
-        requireMode: RequireMode.each,
-        timeWindowEnabled: false,
-        qualityLayerEnabled: true,
-        qualityLayerLabel: 'Pace Quality',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+        // Verify the habit was saved with active days configuration
+        expect(savedHabit.id, isNotNull);
+        expect(savedHabit.trackingType, TrackingType.value);
+        expect(savedHabit.activeDaysMode, ActiveDaysMode.selected);
+        expect(savedHabit.activeWeekdays, [1, 3, 5]);
+        expect(savedHabit.targetValue, 2.0);
+        expect(savedHabit.unit, 'hours');
 
-      final savedHabit = await repository.createHabit(habit);
-      
-      // Verify the habit was saved with quality layer configuration
-      expect(savedHabit.id, isNotNull);
-      expect(savedHabit.trackingType, TrackingType.value);
-      expect(savedHabit.qualityLayerEnabled, true);
-      expect(savedHabit.qualityLayerLabel, 'Pace Quality');
-      expect(savedHabit.targetValue, 5.0);
-      expect(savedHabit.unit, 'km');
-      
-      // Retrieve the habit from database to verify persistence
-      final retrievedHabit = await repository.getHabitById(savedHabit.id!);
-      expect(retrievedHabit, isNotNull);
-      expect(retrievedHabit!.qualityLayerEnabled, true);
-      expect(retrievedHabit.qualityLayerLabel, 'Pace Quality');
-    });
+        // Retrieve the habit from database to verify persistence
+        final retrievedHabit = await repository.getHabitById(savedHabit.id!);
+        expect(retrievedHabit, isNotNull);
+        expect(retrievedHabit!.activeDaysMode, ActiveDaysMode.selected);
+        expect(retrievedHabit.activeWeekdays, [1, 3, 5]);
+      },
+    );
+
+    test(
+      'Binary habit with quality layer stores configuration correctly',
+      () async {
+        final habit = Habit(
+          name: 'Yoga',
+          icon: '🧘',
+          color: '0xFF64B5F6',
+          trackingType: TrackingType.binary,
+          goalType: GoalType.minimum,
+          frequency: Frequency.daily,
+          activeDaysMode: ActiveDaysMode.all,
+          requireMode: RequireMode.each,
+          timeWindowEnabled: false,
+          qualityLayerEnabled: true,
+          qualityLayerLabel: 'Form Quality',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        final savedHabit = await repository.createHabit(habit);
+
+        // Verify the habit was saved with quality layer configuration
+        expect(savedHabit.id, isNotNull);
+        expect(savedHabit.trackingType, TrackingType.binary);
+        expect(savedHabit.qualityLayerEnabled, true);
+        expect(savedHabit.qualityLayerLabel, 'Form Quality');
+
+        // Retrieve the habit from database to verify persistence
+        final retrievedHabit = await repository.getHabitById(savedHabit.id!);
+        expect(retrievedHabit, isNotNull);
+        expect(retrievedHabit!.qualityLayerEnabled, true);
+        expect(retrievedHabit.qualityLayerLabel, 'Form Quality');
+      },
+    );
+
+    test(
+      'Value habit with quality layer stores configuration correctly',
+      () async {
+        final habit = Habit(
+          name: 'Running Distance',
+          icon: '🏃',
+          color: '0xFF64B5F6',
+          trackingType: TrackingType.value,
+          goalType: GoalType.minimum,
+          targetValue: 5.0,
+          unit: 'km',
+          frequency: Frequency.daily,
+          activeDaysMode: ActiveDaysMode.all,
+          requireMode: RequireMode.each,
+          timeWindowEnabled: false,
+          qualityLayerEnabled: true,
+          qualityLayerLabel: 'Pace Quality',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        final savedHabit = await repository.createHabit(habit);
+
+        // Verify the habit was saved with quality layer configuration
+        expect(savedHabit.id, isNotNull);
+        expect(savedHabit.trackingType, TrackingType.value);
+        expect(savedHabit.qualityLayerEnabled, true);
+        expect(savedHabit.qualityLayerLabel, 'Pace Quality');
+        expect(savedHabit.targetValue, 5.0);
+        expect(savedHabit.unit, 'km');
+
+        // Retrieve the habit from database to verify persistence
+        final retrievedHabit = await repository.getHabitById(savedHabit.id!);
+        expect(retrievedHabit, isNotNull);
+        expect(retrievedHabit!.qualityLayerEnabled, true);
+        expect(retrievedHabit.qualityLayerLabel, 'Pace Quality');
+      },
+    );
   });
 }
