@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/icon_helper.dart';
 
 /// Represents a navigation item in the app's side panel
 class NavigationItem {
@@ -60,10 +61,14 @@ class NavigationItem {
 
   /// Creates a NavigationItem from a JSON map
   factory NavigationItem.fromJson(Map<String, dynamic> json) {
+    // Use IconHelper to get constant icon from stored codepoint
+    final iconCodePoint = json['icon'] as int;
+    final iconString = '0x${iconCodePoint.toRadixString(16)}';
+    
     return NavigationItem(
       id: json['id'] as String,
       label: json['label'] as String,
-      icon: IconData(json['icon'] as int, fontFamily: 'MaterialIcons'),
+      icon: IconHelper.getIcon(iconString),
       route: json['route'] as String,
       isHome: json['isHome'] as bool,
       isEnabled: json['isEnabled'] as bool,

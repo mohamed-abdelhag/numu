@@ -9,6 +9,7 @@ import '../../habits/widgets/habit_quick_action_button.dart';
 import '../../habits/providers/habit_detail_provider.dart';
 import '../../tasks/tasks_provider.dart';
 import '../../../core/utils/core_logging_utility.dart';
+import '../../../core/utils/icon_helper.dart';
 
 class DailyItemCard extends ConsumerWidget {
   final DailyItem item;
@@ -283,20 +284,8 @@ class DailyItemCard extends ConsumerWidget {
   }
 
   Widget _buildHabitIcon(ThemeData theme, Habit habit, bool isCompleted) {
-    // Parse icon from string (e.g., "0xe047")
-    IconData iconData;
-    try {
-      if (habit.icon.startsWith('0x')) {
-        iconData = IconData(
-          int.parse(habit.icon),
-          fontFamily: 'MaterialIcons',
-        );
-      } else {
-        iconData = Icons.check_circle_outline;
-      }
-    } catch (e) {
-      iconData = Icons.check_circle_outline;
-    }
+    // Get icon using helper to support tree-shaking
+    final iconData = IconHelper.getIcon(habit.icon);
 
     // Parse color from hex string
     Color iconColor;
