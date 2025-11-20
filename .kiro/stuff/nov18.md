@@ -1,4 +1,4 @@
-1. hbait card should show current value if the habit type is value 
+1. hbait card should show current value if the habit type is value.
 
 2. the qualty deailts scfreen if the habit has a qilty layer show the streak for qulaty layer prgess under the nomal deails not split them via seclect widget if no qulty then dont show that section at all
 
@@ -12,8 +12,7 @@ and also the qulty is yes no , so like if i have 20 reps with qulty layer labled
 6. oping the side bar in the taks screen doesnt work
 
 7. the habit card isnt showing accuret strek numberss smilar to the one in the habti deails screen AND THE PERCANTGE ITS SHOWING is also place holder no caludalcted and it doenst have a place to tick or add one to the value of today so fix that , the previous befoer of the tick box
-yes no habits click turns done 
-if has qulty layer scon tick adds qulty layer done 
-
-for vlaude a tick adds one if goal reached then a tick show the fill dialog where ucan tick teh qulty options aside the actul value number 
-if the habit is min a click adds only and qulty cant be ticked unless u click in teh calneder in the habit deatils screen this is already implemnted but add that in the comments to do later
+yes no habits click turns done.
+if has qulty layer scon tick adds qulty layer done.
+for vlaude a tick adds one if goal reached then a tick show the fill dialog where ucan tick teh qulty options aside the actul value number. 
+if the habit is min a click adds only and qulty cant be ticked unless u click in teh calneder in the habit deatils screen this is already implemnted but add that in the comments to do later.

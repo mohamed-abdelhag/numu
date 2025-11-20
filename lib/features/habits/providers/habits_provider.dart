@@ -8,6 +8,7 @@ import '../../../core/utils/core_logging_utility.dart';
 import '../../reminders/services/reminder_scheduler_service.dart';
 import '../../profile/providers/user_profile_provider.dart';
 import 'habit_detail_provider.dart';
+import '../../home/providers/daily_items_provider.dart';
 
 part 'habits_provider.g.dart';
 
@@ -333,14 +334,15 @@ class HabitsNotifier extends _$HabitsNotifier {
       
       state = AsyncValue.data(habits);
       
-      // Invalidate the habit detail provider to refresh UI components
+      // Refresh providers to fetch latest data from database
       // This ensures cards, calendars, and other views update immediately
-      ref.invalidate(habitDetailProvider(event.habitId));
+      final _ = await ref.refresh(habitDetailProvider(event.habitId).future);
+      ref.invalidate(dailyItemsProvider);
       
       CoreLoggingUtility.info(
         'HabitsProvider',
         'logEvent',
-        'Invalidated habitDetailProvider for habit ID: ${event.habitId}',
+        'Refreshed habitDetailProvider and invalidated dailyItemsProvider for habit ID: ${event.habitId}',
       );
     } catch (e, stackTrace) {
       CoreLoggingUtility.error(

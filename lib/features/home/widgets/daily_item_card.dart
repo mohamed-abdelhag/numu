@@ -8,6 +8,7 @@ import '../../habits/models/enums/streak_type.dart';
 import '../../habits/widgets/habit_quick_action_button.dart';
 import '../../habits/providers/habit_detail_provider.dart';
 import '../../tasks/tasks_provider.dart';
+import '../../../core/utils/core_logging_utility.dart';
 
 class DailyItemCard extends ConsumerWidget {
   final DailyItem item;
@@ -47,6 +48,12 @@ class DailyItemCard extends ConsumerWidget {
   ) {
     // Calculate today's value from provider events
     final todayValue = _calculateTodayValue(detailState);
+    
+    CoreLoggingUtility.info(
+      'DailyItemCard',
+      '_buildHabitCard',
+      'Rebuilding card for habit ${habit.name} (ID: ${habit.id}) - Today Value: $todayValue, Events count: ${detailState.events.length}',
+    );
     
     // Get current streak from provider
     final currentStreak = detailState.streaks[StreakType.completion]?.currentStreak ?? 0;
