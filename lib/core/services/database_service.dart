@@ -29,7 +29,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 10,
+      version: 11,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -71,6 +71,10 @@ class DatabaseService {
     if (oldVersion < 10) {
       // Add start_of_week column to user_profile table
       await _addStartOfWeekToUserProfile(db);
+    }
+    if (oldVersion < 11) {
+      // Add habit_scores table for habit strength scoring
+      await _createHabitScoresTable(db);
     }
   }
 
@@ -154,6 +158,19 @@ class DatabaseService {
     ''');
   }
 
+  Future<void> _createHabitScoresTable(Database db) async {
+    // Create habit_scores table for storing habit strength scores
+    await db.execute('''
+      CREATE TABLE habit_scores (
+        habit_id INTEGER PRIMARY KEY,
+        score REAL NOT NULL DEFAULT 0.0,
+        calculated_at TEXT NOT NULL,
+        last_event_date TEXT,
+        FOREIGN KEY (habit_id) REFERENCES $habitsTable (habit_id) ON DELETE CASCADE
+      )
+    ''');
+  }
+
   // Create all tables here
   Future<void> _createDB(Database db, int version) async {
     await db.execute('''
@@ -205,6 +222,9 @@ class DatabaseService {
     
     // Create reminder tables
     await _createReminderTables(db);
+    
+    // Create habit scores table
+    await _createHabitScoresTable(db);
     
     // Create indexes for category relationships
     await _createCategoryIndexes(db);

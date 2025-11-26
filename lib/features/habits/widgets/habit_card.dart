@@ -6,6 +6,7 @@ import '../models/enums/tracking_type.dart';
 import '../models/enums/streak_type.dart';
 import '../models/enums/goal_type.dart';
 import '../providers/habit_detail_provider.dart';
+import '../providers/habit_score_provider.dart';
 import '../../../features/settings/providers/user_profile_provider.dart';
 import 'habit_quick_action_button.dart';
 
@@ -60,6 +61,7 @@ class HabitCard extends ConsumerWidget {
 
         return _buildCard(
           context: context,
+          ref: ref,
           weeklyProgress: weeklyProgress,
           currentStreak: currentStreak,
           longestStreak: longestStreak,
@@ -74,6 +76,7 @@ class HabitCard extends ConsumerWidget {
 
   Widget _buildCard({
     required BuildContext context,
+    required WidgetRef ref,
     required List<DailyHabitStatus> weeklyProgress,
     required int currentStreak,
     required int longestStreak,
@@ -166,7 +169,7 @@ class HabitCard extends ConsumerWidget {
                   const SizedBox(width: 8),
                 ],
                 
-                // Score Badge (current streak)
+                // Streak Badge (current streak)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
@@ -188,6 +191,12 @@ class HabitCard extends ConsumerWidget {
                     ],
                   ),
                 ),
+                
+                const SizedBox(width: 8),
+                
+                // Habit Score Badge
+                // **Validates: Requirements 4.2**
+                _buildScoreBadge(context, ref, habitColor),
                 
                 const SizedBox(width: 8),
                 
@@ -418,6 +427,71 @@ class HabitCard extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// Build a compact score badge for the habit card
+  /// **Validates: Requirements 4.2**
+  Widget _buildScoreBadge(BuildContext context, WidgetRef ref, Color habitColor) {
+    final scoreAsync = ref.watch(habitScoreProvider(habit.id!));
+
+    return scoreAsync.when(
+      loading: () => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (score) {
+        if (score == null) {
+          return const SizedBox.shrink();
+        }
+
+        final percentage = score.percentage;
+        
+        // Determine color based on score
+        Color scoreColor;
+        if (percentage >= 80) {
+          scoreColor = Colors.green;
+        } else if (percentage >= 60) {
+          scoreColor = Colors.lightGreen;
+        } else if (percentage >= 40) {
+          scoreColor = Colors.orange;
+        } else if (percentage >= 20) {
+          scoreColor = Colors.deepOrange;
+        } else {
+          scoreColor = Colors.grey;
+        }
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: scoreColor.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.speed, size: 16, color: scoreColor),
+              const SizedBox(width: 4),
+              Text(
+                '$percentage%',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: scoreColor,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

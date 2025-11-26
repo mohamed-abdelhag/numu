@@ -36,7 +36,7 @@ final class ThemeConfigProvider
   ThemeConfig create() => ThemeConfig();
 }
 
-String _$themeConfigHash() => r'd3dbe2168478d89d345822b47e74d6b5d98bd331';
+String _$themeConfigHash() => r'e9d80d7af852d57f4199d64e0288c3066c6a0a82';
 
 /// Notifier for managing theme configuration state
 

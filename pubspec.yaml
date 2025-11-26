@@ -45,6 +45,9 @@ dev_dependencies:
 
   # testing
   sqflite_common_ffi: ^2.3.0
+  
+  # property-based testing
+  glados: ^1.1.1
 
 flutter:
   uses-material-design: true

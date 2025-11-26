@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:numu/core/utils/core_logging_utility.dart';
 import '../providers/habit_detail_provider.dart';
+import '../providers/habit_score_provider.dart';
 import '../widgets/habit_streak_display.dart';
 import '../widgets/habit_calendar_view.dart';
 import '../widgets/log_habit_event_dialog.dart';
@@ -85,6 +86,10 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
                       children: [
                         // Habit header with icon and name
                         _buildHabitHeader(context, state),
+                        const SizedBox(height: 24),
+
+                        // Habit Score Display
+                        _buildScoreSection(context, ref),
                         const SizedBox(height: 24),
 
                         // Streak type selector (only if time window enabled without quality layer)
@@ -480,6 +485,141 @@ class _HabitDetailScreenState extends ConsumerState<HabitDetailScreen> {
           ],
         ],
       ),
+    );
+  }
+
+  /// Build the habit score section with a visual progress ring
+  /// **Validates: Requirements 4.1**
+  Widget _buildScoreSection(BuildContext context, WidgetRef ref) {
+    final scoreAsync = ref.watch(habitScoreProvider(widget.habitId));
+
+    return scoreAsync.when(
+      loading: () => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              const SizedBox(
+                width: 64,
+                height: 64,
+                child: CircularProgressIndicator(),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Habit Strength',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Loading...',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      error: (error, stack) => const SizedBox.shrink(),
+      data: (score) {
+        if (score == null) {
+          return const SizedBox.shrink();
+        }
+
+        final percentage = score.percentage;
+        final progressValue = score.score;
+
+        // Determine color based on score
+        Color scoreColor;
+        String strengthLabel;
+        if (percentage >= 80) {
+          scoreColor = Colors.green;
+          strengthLabel = 'Excellent';
+        } else if (percentage >= 60) {
+          scoreColor = Colors.lightGreen;
+          strengthLabel = 'Good';
+        } else if (percentage >= 40) {
+          scoreColor = Colors.orange;
+          strengthLabel = 'Building';
+        } else if (percentage >= 20) {
+          scoreColor = Colors.deepOrange;
+          strengthLabel = 'Developing';
+        } else {
+          scoreColor = Colors.grey;
+          strengthLabel = 'Starting';
+        }
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                // Progress ring
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: 64,
+                      height: 64,
+                      child: CircularProgressIndicator(
+                        value: progressValue,
+                        backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        color: scoreColor,
+                        strokeWidth: 6,
+                      ),
+                    ),
+                    Text(
+                      '$percentage%',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 16),
+                // Score details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Habit Strength',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        strengthLabel,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: scoreColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Based on your consistency over time',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

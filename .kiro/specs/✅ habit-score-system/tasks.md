@@ -1,0 +1,98 @@
+# Implementation Plan
+
+- [x] 1. Create HabitScore model and database schema
+  - [x] 1.1 Create HabitScore model class with serialization
+    - Create `lib/features/habits/models/habit_score.dart`
+    - Implement `fromMap`, `toMap`, `copyWith` methods
+    - Add `percentage` getter for UI display
+    - _Requirements: 7.3, 7.4_
+  - [x] 1.2 Write property test for HabitScore serialization round-trip
+    - **Property 9: Score serialization round-trip**
+    - **Validates: Requirements 7.3, 7.4**
+  - [x] 1.3 Add habit_scores table to database schema
+    - Add migration to create `habit_scores` table
+    - Add foreign key constraint to habits table
+    - _Requirements: 7.1, 7.2_
+
+- [x] 2. Implement core score calculation logic
+  - [x] 2.1 Create HabitScoreService with multiplier calculation
+    - Create `lib/features/habits/services/habit_score_service.dart`
+    - Implement `calculateMultiplier(double frequency)` method
+    - Implement `getFrequencyValue(Habit habit)` method
+    - _Requirements: 2.1, 2.2, 2.3, 2.4_
+  - [x] 2.2 Write property test for multiplier formula
+    - **Property 4: Multiplier formula correctness**
+    - **Validates: Requirements 2.1, 2.4**
+  - [x] 2.3 Implement checkmark value calculation
+    - Implement `calculateCheckmarkValue(Habit habit, List<HabitEvent> events)`
+    - Handle binary habits (1.0 for complete, 0.0 for miss)
+    - Handle value habits with minimum goal type
+    - Handle value habits with maximum goal type
+    - _Requirements: 3.1, 3.2, 3.3_
+  - [x] 2.4 Write property tests for checkmark value calculation
+    - **Property 5: Checkmark value for minimum goals**
+    - **Property 6: Checkmark value for maximum goals**
+    - **Validates: Requirements 3.1, 3.2, 3.3**
+  - [x] 2.5 Implement core score computation
+    - Implement `computeScore(double previousScore, double multiplier, double checkmarkValue)`
+    - Use formula: `newScore = previousScore * multiplier + checkmarkValue * (1 - multiplier)`
+    - _Requirements: 1.2, 1.3_
+  - [x] 2.6 Write property tests for score computation
+    - **Property 1: Score bounds invariant**
+    - **Property 2: Completion increases score**
+    - **Property 3: Miss decreases score**
+    - **Validates: Requirements 1.1, 1.2, 1.3**
+
+- [x] 3. Implement full score calculation with event processing
+  - [x] 3.1 Implement calculateScore method
+    - Iterate through days from habit creation to today
+    - Skip non-active days based on habit configuration
+    - Process events for each active day
+    - Accumulate score using exponential moving average
+    - _Requirements: 5.1, 5.3_
+  - [x] 3.2 Write property test for active days filtering
+    - **Property 7: Active days filtering**
+    - **Validates: Requirements 5.1**
+  - [x] 3.3 Handle skip entries in score calculation
+    - Detect skip entries and preserve previous score
+    - _Requirements: 5.2_
+  - [x] 3.4 Write property test for skip entries
+    - **Property 8: Skip entries preserve score**
+    - **Validates: Requirements 5.2**
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 5. Add repository methods and caching
+  - [x] 5.1 Add score methods to HabitRepository
+    - Add `getScore(int habitId)` method
+    - Add `saveScore(HabitScore score)` method
+    - Add `deleteScore(int habitId)` method
+    - _Requirements: 7.1, 7.2_
+  - [x] 5.2 Implement score caching in HabitScoreService
+    - Add `recalculateScore(int habitId)` method
+    - Cache score after calculation
+    - Return cached score when available
+    - _Requirements: 6.1, 6.2_
+  - [x] 5.3 Trigger recalculation on habit changes
+    - Recalculate when event is logged
+    - Recalculate when habit frequency changes
+    - Recalculate when active days change
+    - _Requirements: 6.3_
+
+- [x] 6. Integrate with providers and UI
+  - [x] 6.1 Create HabitScoreProvider
+    - Create Riverpod provider for habit scores
+    - Expose score as AsyncValue
+    - Handle loading and error states
+    - _Requirements: 4.3_
+  - [x] 6.2 Add score display to habit detail screen
+    - Display score as percentage
+    - Add visual indicator (progress ring or bar)
+    - _Requirements: 4.1_
+  - [x] 6.3 Add score indicator to habit card
+    - Add compact score display to habit list cards
+    - _Requirements: 4.2_
+
+- [x] 7. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

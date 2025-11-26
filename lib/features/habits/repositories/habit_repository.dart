@@ -4,6 +4,7 @@ import '../models/habit.dart';
 import '../models/habit_event.dart';
 import '../models/habit_streak.dart';
 import '../models/habit_period_progress.dart';
+import '../models/habit_score.dart';
 import '../models/enums/streak_type.dart';
 import '../models/exceptions/habit_exception.dart';
 import '../../reminders/repositories/reminder_repository.dart';
@@ -484,6 +485,97 @@ class HabitRepository {
       }
     } catch (e) {
       throw HabitDatabaseException('Failed to save period progress', originalError: e);
+    }
+  }
+
+  // ============================================================================
+  // HABIT SCORE OPERATIONS
+  // ============================================================================
+
+  /// Get the cached score for a habit
+  /// Returns null if no score has been calculated yet
+  ///
+  /// **Validates: Requirements 7.1, 7.2**
+  Future<HabitScore?> getScore(int habitId) async {
+    try {
+      final db = await _dbService.database;
+      final List<Map<String, dynamic>> maps = await db.query(
+        'habit_scores',
+        where: 'habit_id = ?',
+        whereArgs: [habitId],
+        limit: 1,
+      );
+
+      if (maps.isEmpty) {
+        return null;
+      }
+
+      return HabitScore.fromMap(maps.first);
+    } catch (e) {
+      CoreLoggingUtility.error(
+        'HabitRepository',
+        'getScore',
+        'Failed to fetch score for habit $habitId: $e',
+      );
+      throw HabitDatabaseException('Failed to fetch habit score', originalError: e);
+    }
+  }
+
+  /// Save or update a habit score
+  /// Uses INSERT OR REPLACE to handle both create and update
+  ///
+  /// **Validates: Requirements 7.1, 7.2**
+  Future<void> saveScore(HabitScore score) async {
+    try {
+      final db = await _dbService.database;
+      
+      await db.insert(
+        'habit_scores',
+        score.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      
+      CoreLoggingUtility.info(
+        'HabitRepository',
+        'saveScore',
+        'Saved score ${score.score} for habit ${score.habitId}',
+      );
+    } catch (e) {
+      CoreLoggingUtility.error(
+        'HabitRepository',
+        'saveScore',
+        'Failed to save score for habit ${score.habitId}: $e',
+      );
+      throw HabitDatabaseException('Failed to save habit score', originalError: e);
+    }
+  }
+
+  /// Delete the cached score for a habit
+  /// Called when a habit is deleted or needs full recalculation
+  ///
+  /// **Validates: Requirements 7.1, 7.2**
+  Future<void> deleteScore(int habitId) async {
+    try {
+      final db = await _dbService.database;
+      
+      await db.delete(
+        'habit_scores',
+        where: 'habit_id = ?',
+        whereArgs: [habitId],
+      );
+      
+      CoreLoggingUtility.info(
+        'HabitRepository',
+        'deleteScore',
+        'Deleted score for habit $habitId',
+      );
+    } catch (e) {
+      CoreLoggingUtility.error(
+        'HabitRepository',
+        'deleteScore',
+        'Failed to delete score for habit $habitId: $e',
+      );
+      throw HabitDatabaseException('Failed to delete habit score', originalError: e);
     }
   }
 }

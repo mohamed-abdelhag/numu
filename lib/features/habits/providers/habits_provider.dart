@@ -4,6 +4,7 @@ import '../models/habit_event.dart';
 import '../repositories/habit_repository.dart';
 import '../services/streak_calculation_service.dart';
 import '../services/period_progress_service.dart';
+import '../services/habit_score_service.dart';
 import '../../../core/utils/core_logging_utility.dart';
 import '../../reminders/services/reminder_scheduler_service.dart';
 import '../../settings/providers/user_profile_provider.dart';
@@ -19,6 +20,7 @@ class HabitsNotifier extends _$HabitsNotifier {
   late final HabitRepository _repository;
   late final StreakCalculationService _streakService;
   late final PeriodProgressService _periodService;
+  late final HabitScoreService _scoreService;
   late final ReminderSchedulerService _reminderSchedulerService;
   
   /// Track if the notifier is still mounted/active
@@ -29,6 +31,7 @@ class HabitsNotifier extends _$HabitsNotifier {
     _repository = HabitRepository();
     _streakService = StreakCalculationService(_repository);
     _periodService = PeriodProgressService(_repository);
+    _scoreService = HabitScoreService(repository: _repository);
     _reminderSchedulerService = ReminderSchedulerService();
     _isMounted = true;
     
@@ -162,6 +165,35 @@ class HabitsNotifier extends _$HabitsNotifier {
           'HabitsProvider',
           'updateHabit',
           'State update cancelled: provider disposed after reminder update',
+        );
+        return;
+      }
+      
+      // Recalculate habit score when frequency or active days change
+      // (Requirements 6.3: Trigger recalculation on habit configuration changes)
+      if (habit.id != null) {
+        try {
+          await _scoreService.recalculateScore(habit.id!);
+          CoreLoggingUtility.info(
+            'HabitsProvider',
+            'updateHabit',
+            'Successfully recalculated score for habit ID: ${habit.id}',
+          );
+        } catch (e) {
+          // Log but don't fail the update if score calculation fails
+          CoreLoggingUtility.error(
+            'HabitsProvider',
+            'updateHabit',
+            'Failed to recalculate score for habit ID ${habit.id}: $e',
+          );
+        }
+      }
+      
+      if (!_isMounted) {
+        CoreLoggingUtility.info(
+          'HabitsProvider',
+          'updateHabit',
+          'State update cancelled: provider disposed after score recalculation',
         );
         return;
       }
@@ -316,6 +348,33 @@ class HabitsNotifier extends _$HabitsNotifier {
           'HabitsProvider',
           'logEvent',
           'State update cancelled: provider disposed after recalculating progress',
+        );
+        return;
+      }
+
+      // Recalculate habit score when event is logged
+      // (Requirements 6.2: Incrementally update score from last cached value)
+      try {
+        await _scoreService.recalculateScore(event.habitId);
+        CoreLoggingUtility.info(
+          'HabitsProvider',
+          'logEvent',
+          'Successfully recalculated score for habit ID: ${event.habitId}',
+        );
+      } catch (e) {
+        // Log but don't fail the event logging if score calculation fails
+        CoreLoggingUtility.error(
+          'HabitsProvider',
+          'logEvent',
+          'Failed to recalculate score for habit ID ${event.habitId}: $e',
+        );
+      }
+
+      if (!_isMounted) {
+        CoreLoggingUtility.info(
+          'HabitsProvider',
+          'logEvent',
+          'State update cancelled: provider disposed after score recalculation',
         );
         return;
       }
