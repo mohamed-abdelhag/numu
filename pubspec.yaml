@@ -33,6 +33,12 @@ dependencies:
   permission_handler: ^11.0.0
   flutter_logs: ^2.2.1
 
+  # location services
+  geolocator: ^13.0.2
+
+  # HTTP client
+  http: ^1.2.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

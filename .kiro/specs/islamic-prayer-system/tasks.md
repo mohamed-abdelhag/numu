@@ -1,0 +1,242 @@
+# Implementation Plan: Islamic Prayer System
+
+- [x] 1. Set up database schema and core enums
+  - [x] 1.1 Create prayer type, status, and calculation method enums
+    - Create `lib/features/islamic/models/enums/prayer_type.dart` with Fajr, Dhuhr, Asr, Maghrib, Isha
+    - Create `lib/features/islamic/models/enums/prayer_status.dart` with Pending, Completed, Missed
+    - Create `lib/features/islamic/models/enums/calculation_method.dart` with all supported methods
+    - _Requirements: 1.6, 2.5_
+  - [x] 1.2 Add prayer tables to database service
+    - Add prayer_schedules, prayer_events, prayer_scores, prayer_settings tables
+    - Increment database version and add migration
+    - Create appropriate indexes for performance
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+  - [x] 1.3 Write property test for enum serialization round-trip
+    - **Property 16: Calculation Method Persistence**
+    - **Validates: Requirements 8.4**
+
+- [x] 2. Implement prayer data models
+  - [x] 2.1 Create PrayerSchedule model
+    - Implement `lib/features/islamic/models/prayer_schedule.dart`
+    - Include fromMap/toMap serialization, copyWith, getTimeForPrayer helper
+    - _Requirements: 1.2, 3.3_
+  - [x] 2.2 Write property test for PrayerSchedule round-trip persistence
+    - **Property 1: Prayer Schedule Round-Trip Persistence**
+    - **Validates: Requirements 1.2**
+  - [x] 2.3 Create PrayerEvent model
+    - Implement `lib/features/islamic/models/prayer_event.dart`
+    - Include prayer type, timestamps, Jamaah flag, time window flag
+    - _Requirements: 2.1, 2.2, 2.3_
+  - [x] 2.4 Write property test for PrayerEvent round-trip persistence
+    - **Property 2: Prayer Event Round-Trip Persistence**
+    - **Validates: Requirements 2.1, 2.2, 2.3**
+  - [x] 2.5 Create PrayerScore model
+    - Implement `lib/features/islamic/models/prayer_score.dart`
+    - Include score, streaks, Jamaah rate
+    - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5_
+  - [x] 2.6 Create PrayerSettings model
+    - Implement `lib/features/islamic/models/prayer_settings.dart`
+    - Include enabled flag, calculation method, time window, reminder settings
+    - _Requirements: 8.1, 8.4, 8.5_
+  - [x] 2.7 Write property test for time window configuration persistence
+    - **Property 17: Time Window Configuration Persistence**
+    - **Validates: Requirements 8.5**
+
+- [x] 3. Implement prayer repository
+  - [x] 3.1 Create PrayerRepository for data access
+    - Implement `lib/features/islamic/repositories/prayer_repository.dart`
+    - Add CRUD operations for prayer events, schedules, and scores
+    - _Requirements: 3.1, 3.2, 3.3_
+  - [x] 3.2 Create PrayerSettingsRepository
+    - Implement `lib/features/islamic/repositories/prayer_settings_repository.dart`
+    - Add methods for loading/saving prayer settings
+    - _Requirements: 8.1, 8.2, 8.3_
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 5. Implement prayer location service
+  - [x] 5.1 Create PrayerLocationService
+    - Implement `lib/features/islamic/services/prayer_location_service.dart`
+    - Add permission checking, requesting, and coordinate retrieval
+    - Implement Haversine distance calculation for location change detection (>10km)
+    - _Requirements: 1.3, 11.1, 11.2, 11.3, 11.4, 11.5_
+  - [x] 5.2 Write property test for location change detection
+    - **Property 3: Location Change Detection**
+    - **Validates: Requirements 1.3**
+
+- [x] 6. Implement prayer time service
+  - [x] 6.1 Create PrayerTimeService for API integration
+    - Implement `lib/features/islamic/services/prayer_time_service.dart`
+    - Add fetchPrayerTimes method using Aladhan API or similar
+    - Implement local caching for offline access
+    - Handle API errors with fallback to cached data
+    - _Requirements: 1.1, 1.2, 1.4, 1.5, 1.6_
+
+- [x] 7. Implement prayer status calculation
+  - [x] 7.1 Create prayer status calculation logic
+    - Add method to determine prayer status (pending, completed, missed)
+    - Implement time window expiration logic
+    - Add future time validation
+    - _Requirements: 2.4, 2.5, 2.6_
+  - [x] 7.2 Write property test for prayer status calculation
+    - **Property 4: Prayer Status Calculation**
+    - **Validates: Requirements 2.4, 2.5**
+  - [x] 7.3 Write property test for future time validation
+    - **Property 5: Future Time Validation**
+    - **Validates: Requirements 2.6**
+
+- [x] 8. Implement prayer score service
+  - [x] 8.1 Create PrayerScoreService
+    - Implement `lib/features/islamic/services/prayer_score_service.dart`
+    - Reuse exponential moving average algorithm from HabitScoreService
+    - Add Jamaah quality multiplier support
+    - _Requirements: 4.1, 4.5_
+  - [x] 8.2 Write property test for score calculation consistency
+    - **Property 6: Score Calculation Consistency**
+    - **Validates: Requirements 4.1**
+  - [x] 8.3 Implement overall score aggregation
+    - Calculate average of all five prayer scores
+    - _Requirements: 4.2, 4.3_
+  - [x] 8.4 Write property test for overall score aggregation
+    - **Property 7: Overall Score Aggregation**
+    - **Validates: Requirements 4.2, 4.3**
+  - [x] 8.5 Implement streak calculation for prayers
+    - Track current and longest streak per prayer type
+    - _Requirements: 4.4_
+  - [x] 8.6 Write property test for streak calculation
+    - **Property 8: Streak Calculation Correctness**
+    - **Validates: Requirements 4.4**
+  - [x] 8.7 Write property test for Jamaah quality rate
+    - **Property 9: Jamaah Quality Multiplier**
+    - **Validates: Requirements 4.5**
+  - [x] 8.8 Implement weekly completion percentage
+    - Calculate completion rate per prayer across the week
+    - _Requirements: 4.6_
+  - [x] 8.9 Write property test for weekly completion percentage
+    - **Property 10: Weekly Completion Percentage**
+    - **Validates: Requirements 4.6**
+
+- [x] 9. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [-] 10. Implement prayer reminder service
+  - [-] 10.1 Create PrayerReminderService
+    - Implement `lib/features/islamic/services/prayer_reminder_service.dart`
+    - Integrate with existing NotificationService
+    - Add scheduling with configurable offset
+    - Handle automatic rescheduling on prayer time changes
+    - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
+  - [ ] 10.2 Write property test for reminder scheduling with offset
+    - **Property 11: Reminder Scheduling with Offset**
+    - **Validates: Requirements 5.2, 5.3**
+
+- [ ] 11. Implement prayer providers
+  - [ ] 11.1 Create PrayerSettingsProvider
+    - Implement `lib/features/islamic/providers/prayer_settings_provider.dart`
+    - Manage enabled state and configuration
+    - _Requirements: 8.1, 8.2, 8.3, 9.1, 9.2_
+  - [ ] 11.2 Write property test for enabled state propagation
+    - **Property 18: Enabled State Propagation**
+    - **Validates: Requirements 9.2**
+  - [ ] 11.3 Create PrayerScheduleProvider
+    - Implement `lib/features/islamic/providers/prayer_schedule_provider.dart`
+    - Manage today's prayer times and next prayer identification
+    - _Requirements: 6.2, 6.3_
+  - [ ] 11.4 Write property test for next prayer identification
+    - **Property 12: Next Prayer Identification**
+    - **Validates: Requirements 6.3, 7.2**
+  - [ ] 11.5 Create PrayerProvider for main prayer state
+    - Implement `lib/features/islamic/providers/prayer_provider.dart`
+    - Manage prayer events and status for today
+    - _Requirements: 2.1, 6.1, 6.5_
+  - [ ] 11.6 Write property test for completion count accuracy
+    - **Property 13: Completion Count Accuracy**
+    - **Validates: Requirements 6.5**
+  - [ ] 11.7 Create PrayerScoreProvider
+    - Implement `lib/features/islamic/providers/prayer_score_provider.dart`
+    - Manage score state and statistics display
+    - _Requirements: 4.2, 4.3, 6.6_
+
+- [ ] 12. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [ ] 13. Implement prayer UI widgets
+  - [ ] 13.1 Create PrayerCard widget
+    - Implement `lib/features/islamic/widgets/prayer_card.dart`
+    - Display prayer name, time, status with appropriate styling
+    - _Requirements: 6.1, 6.2_
+  - [ ] 13.2 Create PrayerLogDialog widget
+    - Implement `lib/features/islamic/widgets/prayer_log_dialog.dart`
+    - Allow marking prayer as completed with Jamaah option
+    - Allow specifying actual prayer time
+    - _Requirements: 2.1, 2.2, 2.3, 6.4_
+  - [ ] 13.3 Create PrayerProgressHeader widget
+    - Implement `lib/features/islamic/widgets/prayer_progress_header.dart`
+    - Display daily score and completion count (e.g., "3/5")
+    - _Requirements: 6.5_
+  - [ ] 13.4 Create PrayerScoreDisplay widget
+    - Implement `lib/features/islamic/widgets/prayer_score_display.dart`
+    - Visualize prayer score and streaks
+    - _Requirements: 6.6_
+  - [ ] 13.5 Create NextPrayerCountdown widget
+    - Implement `lib/features/islamic/widgets/next_prayer_countdown.dart`
+    - Show remaining time until next pending prayer
+    - _Requirements: 6.3_
+
+- [ ] 14. Implement Islamic Prayer Screen
+  - [ ] 14.1 Create IslamicPrayerScreen
+    - Implement `lib/features/islamic/screens/islamic_prayer_screen.dart`
+    - Display all five prayers with status
+    - Include progress header and statistics
+    - Handle prayer logging via dialog
+    - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
+  - [ ] 14.2 Create PrayerSettingsScreen
+    - Implement `lib/features/islamic/screens/prayer_settings_screen.dart`
+    - Allow configuration of calculation method, time window, reminders
+    - Handle location permission prompts
+    - _Requirements: 8.3, 8.4, 8.5, 8.6_
+
+- [ ] 15. Integrate with home screen
+  - [ ] 15.1 Update DailyItemsProvider to include prayers
+    - Modify `lib/features/home/providers/daily_items_provider.dart`
+    - Add prayer items when Islamic Prayer System is enabled
+    - Include prayers in completion percentage calculation
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
+  - [ ] 15.2 Write property test for daily progress inclusion
+    - **Property 14: Daily Progress Inclusion**
+    - **Validates: Requirements 7.5**
+  - [ ] 15.3 Update DailyItemCard for prayer display
+    - Modify `lib/features/home/widgets/daily_item_card.dart`
+    - Add prayer-specific styling and quick log action
+    - _Requirements: 7.2, 7.3_
+  - [ ] 15.4 Write property test for visibility toggle consistency
+    - **Property 15: Visibility Toggle Consistency**
+    - **Validates: Requirements 7.4, 8.2, 12.3**
+
+- [ ] 16. Integrate with settings screen
+  - [ ] 16.1 Add Islamic Prayer System toggle to settings
+    - Modify `lib/features/settings/settings_screen.dart`
+    - Add enable/disable toggle and link to prayer settings
+    - _Requirements: 8.1, 8.2, 8.3_
+
+- [ ] 17. Integrate with profile screen
+  - [ ] 17.1 Add prayer toggle and summary to profile
+    - Update profile screen to show prayer system toggle
+    - Display prayer statistics summary when enabled
+    - _Requirements: 9.1, 9.2, 9.3_
+
+- [ ] 18. Integrate with onboarding
+  - [ ] 18.1 Add Islamic Prayer System step to onboarding
+    - Add onboarding card asking about prayer tracking
+    - Request location permission with explanation if enabled
+    - _Requirements: 10.1, 10.2, 10.3_
+
+- [ ] 19. Integrate with navigation
+  - [ ] 19.1 Add prayer navigation item
+    - Update navigation to show/hide prayer menu item based on enabled state
+    - Add route to Islamic Prayer Screen
+    - _Requirements: 12.1, 12.2, 12.3_
+
+- [ ] 20. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

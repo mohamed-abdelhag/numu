@@ -16,6 +16,12 @@ class DatabaseService {
   static const String userProfileTable = 'user_profile';
   static const String tutorialCardsTable = 'tutorial_cards';
   static const String remindersTable = 'reminders';
+  
+  // Prayer tables
+  static const String prayerSchedulesTable = 'prayer_schedules';
+  static const String prayerEventsTable = 'prayer_events';
+  static const String prayerScoresTable = 'prayer_scores';
+  static const String prayerSettingsTable = 'prayer_settings';
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -29,7 +35,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -75,6 +81,10 @@ class DatabaseService {
     if (oldVersion < 11) {
       // Add habit_scores table for habit strength scoring
       await _createHabitScoresTable(db);
+    }
+    if (oldVersion < 12) {
+      // Add Islamic Prayer System tables
+      await _createPrayerTables(db);
     }
   }
 
@@ -225,6 +235,9 @@ class DatabaseService {
     
     // Create habit scores table
     await _createHabitScoresTable(db);
+    
+    // Create prayer tables
+    await _createPrayerTables(db);
     
     // Create indexes for category relationships
     await _createCategoryIndexes(db);
@@ -446,6 +459,92 @@ class DatabaseService {
 
     await db.execute('''
       CREATE INDEX idx_reminders_habit_link ON $remindersTable (link_type, link_entity_id)
+    ''');
+  }
+
+  Future<void> _createPrayerTables(Database db) async {
+    // Create prayer_schedules table (cached daily prayer times)
+    await db.execute('''
+      CREATE TABLE $prayerSchedulesTable (
+        schedule_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date TEXT NOT NULL UNIQUE,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        calculation_method TEXT NOT NULL,
+        fajr_time TEXT NOT NULL,
+        dhuhr_time TEXT NOT NULL,
+        asr_time TEXT NOT NULL,
+        maghrib_time TEXT NOT NULL,
+        isha_time TEXT NOT NULL,
+        sunrise_time TEXT NOT NULL,
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    // Create prayer_events table (completion logs)
+    await db.execute('''
+      CREATE TABLE $prayerEventsTable (
+        event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        prayer_type TEXT NOT NULL,
+        event_date TEXT NOT NULL,
+        event_timestamp TEXT NOT NULL,
+        actual_prayer_time TEXT,
+        prayed_in_jamaah INTEGER NOT NULL DEFAULT 0,
+        within_time_window INTEGER NOT NULL DEFAULT 0,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    // Create prayer_scores table (cached scores per prayer type)
+    await db.execute('''
+      CREATE TABLE $prayerScoresTable (
+        prayer_type TEXT PRIMARY KEY,
+        score REAL NOT NULL DEFAULT 0.0,
+        current_streak INTEGER NOT NULL DEFAULT 0,
+        longest_streak INTEGER NOT NULL DEFAULT 0,
+        jamaah_rate REAL NOT NULL DEFAULT 0.0,
+        calculated_at TEXT NOT NULL,
+        last_event_date TEXT
+      )
+    ''');
+
+    // Create prayer_settings table (user preferences)
+    await db.execute('''
+      CREATE TABLE $prayerSettingsTable (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        is_enabled INTEGER NOT NULL DEFAULT 0,
+        calculation_method TEXT NOT NULL DEFAULT 'muslimWorldLeague',
+        time_window_minutes INTEGER NOT NULL DEFAULT 30,
+        last_latitude REAL,
+        last_longitude REAL,
+        reminder_fajr_enabled INTEGER NOT NULL DEFAULT 1,
+        reminder_dhuhr_enabled INTEGER NOT NULL DEFAULT 1,
+        reminder_asr_enabled INTEGER NOT NULL DEFAULT 1,
+        reminder_maghrib_enabled INTEGER NOT NULL DEFAULT 1,
+        reminder_isha_enabled INTEGER NOT NULL DEFAULT 1,
+        reminder_fajr_offset INTEGER NOT NULL DEFAULT 15,
+        reminder_dhuhr_offset INTEGER NOT NULL DEFAULT 15,
+        reminder_asr_offset INTEGER NOT NULL DEFAULT 15,
+        reminder_maghrib_offset INTEGER NOT NULL DEFAULT 15,
+        reminder_isha_offset INTEGER NOT NULL DEFAULT 15,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    // Create indexes for performance
+    await db.execute('''
+      CREATE INDEX idx_prayer_events_date ON $prayerEventsTable (event_date)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX idx_prayer_events_type_date ON $prayerEventsTable (prayer_type, event_date)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX idx_prayer_schedules_date ON $prayerSchedulesTable (date)
     ''');
   }
 
