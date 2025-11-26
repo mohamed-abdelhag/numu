@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-supabase"],
+      "env": {
+        "SUPABASE_URL": "https://your-project-id.supabase.co",
+        "SUPABASE_KEY": "your-anon-key"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
