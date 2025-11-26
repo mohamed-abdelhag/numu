@@ -483,4 +483,137 @@ void main() {
       expect(count, equals(2));
     });
   });
+
+  group('Next Prayer Identification Property Tests', () {
+    /// **Feature: islamic-prayer-system, Property 12: Next Prayer Identification**
+    /// **Validates: Requirements 6.3, 7.2**
+    ///
+    /// *For any* prayer schedule and current time, the next pending prayer SHALL be
+    /// the prayer with the earliest start time that is after the current time and
+    /// has not been completed.
+    Glados2(any.prayerSchedule, any.timeWindowMinutes).test(
+      'Property 12: Next Prayer Identification - returns earliest pending prayer',
+      (schedule, windowMinutes) {
+        // Test at various times throughout the day
+        final testTimes = [
+          // Before any prayer
+          DateTime(schedule.date.year, schedule.date.month, schedule.date.day, 0, 0),
+          // After Fajr, before Dhuhr
+          DateTime(schedule.date.year, schedule.date.month, schedule.date.day, 10, 0),
+          // After Dhuhr, before Asr
+          DateTime(schedule.date.year, schedule.date.month, schedule.date.day, 14, 0),
+          // After Asr, before Maghrib
+          DateTime(schedule.date.year, schedule.date.month, schedule.date.day, 17, 0),
+          // After Maghrib, before Isha
+          DateTime(schedule.date.year, schedule.date.month, schedule.date.day, 18, 30),
+          // After all prayers
+          DateTime(schedule.date.year, schedule.date.month, schedule.date.day, 23, 0),
+        ];
+
+        for (final currentTime in testTimes) {
+          final nextPrayer = PrayerStatusService.getNextPendingPrayer(
+            schedule: schedule,
+            events: [], // No completed prayers
+            currentTime: currentTime,
+            timeWindowMinutes: windowMinutes,
+          );
+
+          if (nextPrayer != null) {
+            // Verify the next prayer is pending (not missed)
+            final status = PrayerStatusService.calculateStatus(
+              prayerType: nextPrayer,
+              schedule: schedule,
+              events: [],
+              currentTime: currentTime,
+              timeWindowMinutes: windowMinutes,
+            );
+            expect(status, equals(PrayerStatus.pending),
+                reason: 'Next prayer should be pending at time $currentTime');
+
+            // Verify no earlier prayer is pending
+            for (final type in PrayerType.values) {
+              if (type == nextPrayer) continue;
+              
+              final otherTime = schedule.getTimeForPrayer(type);
+              final nextTime = schedule.getTimeForPrayer(nextPrayer);
+              
+              if (otherTime.isBefore(nextTime)) {
+                final otherStatus = PrayerStatusService.calculateStatus(
+                  prayerType: type,
+                  schedule: schedule,
+                  events: [],
+                  currentTime: currentTime,
+                  timeWindowMinutes: windowMinutes,
+                );
+                expect(otherStatus, isNot(equals(PrayerStatus.pending)),
+                    reason: 'Earlier prayer ${type.englishName} should not be pending');
+              }
+            }
+          }
+        }
+      },
+    );
+
+    /// Property: Completed prayers are skipped when finding next prayer
+    Glados(any.prayerSchedule).test(
+      'Property 12: Next Prayer Identification - skips completed prayers',
+      (schedule) {
+        // Complete Fajr
+        final fajrEvent = PrayerEvent(
+          prayerType: PrayerType.fajr,
+          eventDate: schedule.date,
+          eventTimestamp: schedule.fajrTime,
+          prayedInJamaah: false,
+          withinTimeWindow: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        // Current time is before Dhuhr window ends
+        final currentTime = DateTime(
+          schedule.date.year,
+          schedule.date.month,
+          schedule.date.day,
+          schedule.dhuhrTime.hour,
+          schedule.dhuhrTime.minute,
+        );
+
+        final nextPrayer = PrayerStatusService.getNextPendingPrayer(
+          schedule: schedule,
+          events: [fajrEvent],
+          currentTime: currentTime,
+        );
+
+        // Should not return Fajr since it's completed
+        expect(nextPrayer, isNot(equals(PrayerType.fajr)),
+            reason: 'Should skip completed Fajr prayer');
+      },
+    );
+
+    /// Property: Returns null when all prayers are completed or missed
+    Glados(any.prayerSchedule).test(
+      'Property 12: Next Prayer Identification - returns null when no pending prayers',
+      (schedule) {
+        // Complete all prayers
+        final allEvents = PrayerType.values.map((type) => PrayerEvent(
+          prayerType: type,
+          eventDate: schedule.date,
+          eventTimestamp: schedule.getTimeForPrayer(type),
+          prayedInJamaah: false,
+          withinTimeWindow: true,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        )).toList();
+
+        final nextPrayer = PrayerStatusService.getNextPendingPrayer(
+          schedule: schedule,
+          events: allEvents,
+          currentTime: DateTime.now(),
+        );
+
+        expect(nextPrayer, isNull,
+            reason: 'Should return null when all prayers are completed');
+      },
+    );
+  });
 }

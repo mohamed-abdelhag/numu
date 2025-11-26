@@ -120,30 +120,30 @@
 - [x] 9. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-- [-] 10. Implement prayer reminder service
-  - [-] 10.1 Create PrayerReminderService
+- [x] 10. Implement prayer reminder service
+  - [x] 10.1 Create PrayerReminderService
     - Implement `lib/features/islamic/services/prayer_reminder_service.dart`
     - Integrate with existing NotificationService
     - Add scheduling with configurable offset
     - Handle automatic rescheduling on prayer time changes
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6_
-  - [ ] 10.2 Write property test for reminder scheduling with offset
+  - [x] 10.2 Write property test for reminder scheduling with offset
     - **Property 11: Reminder Scheduling with Offset**
     - **Validates: Requirements 5.2, 5.3**
 
-- [ ] 11. Implement prayer providers
-  - [ ] 11.1 Create PrayerSettingsProvider
+- [-] 11. Implement prayer providers
+  - [x] 11.1 Create PrayerSettingsProvider
     - Implement `lib/features/islamic/providers/prayer_settings_provider.dart`
     - Manage enabled state and configuration
     - _Requirements: 8.1, 8.2, 8.3, 9.1, 9.2_
-  - [ ] 11.2 Write property test for enabled state propagation
+  - [x] 11.2 Write property test for enabled state propagation
     - **Property 18: Enabled State Propagation**
     - **Validates: Requirements 9.2**
-  - [ ] 11.3 Create PrayerScheduleProvider
+  - [x] 11.3 Create PrayerScheduleProvider
     - Implement `lib/features/islamic/providers/prayer_schedule_provider.dart`
     - Manage today's prayer times and next prayer identification
     - _Requirements: 6.2, 6.3_
-  - [ ] 11.4 Write property test for next prayer identification
+  - [x] 11.4 Write property test for next prayer identification
     - **Property 12: Next Prayer Identification**
     - **Validates: Requirements 6.3, 7.2**
   - [ ] 11.5 Create PrayerProvider for main prayer state

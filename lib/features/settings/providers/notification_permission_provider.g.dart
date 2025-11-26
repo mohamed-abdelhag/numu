@@ -41,7 +41,7 @@ final class NotificationPermissionProvider
 }
 
 String _$notificationPermissionHash() =>
-    r'e71d428182a1659cf473a628da3ea964db62bf7e';
+    r'ed58ee14abb5ed555ab847dd2de65736f4437a3b';
 
 /// Provider for managing notification permission status
 
