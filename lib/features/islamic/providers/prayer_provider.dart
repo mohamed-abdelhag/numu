@@ -1,7 +1,6 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/utils/core_logging_utility.dart';
 import '../models/prayer_event.dart';
-import '../models/prayer_schedule.dart';
 import '../models/enums/prayer_type.dart';
 import '../models/enums/prayer_status.dart';
 import '../repositories/prayer_repository.dart';
@@ -48,7 +47,6 @@ class PrayerState {
   /// Get the status for a specific prayer
   PrayerStatus? getStatus(PrayerType type) => statuses[type];
 }
-
 
 /// Provider for managing prayer events and status for today.
 ///
@@ -126,3 +124,151 @@ class PrayerNotifier extends _$PrayerNotifier {
       rethrow;
     }
   }
+
+  /// Log a prayer as completed.
+  ///
+  /// **Validates: Requirements 2.1, 2.2, 2.3**
+  Future<void> logPrayer({
+    required PrayerType prayerType,
+    DateTime? actualPrayerTime,
+    bool prayedInJamaah = false,
+    String? notes,
+  }) async {
+    if (!_isMounted) return;
+
+    try {
+      CoreLoggingUtility.info(
+        'PrayerProvider',
+        'logPrayer',
+        'Logging ${prayerType.englishName} prayer',
+      );
+
+      final now = DateTime.now();
+      final prayerTime = actualPrayerTime ?? now;
+
+      // Validate that prayer time is not in the future
+      final validation = PrayerStatusService.validatePrayerTime(
+        actualPrayerTime: prayerTime,
+        currentTime: now,
+      );
+
+      if (!validation.isValid) {
+        throw ArgumentError(validation.errorMessage);
+      }
+
+      // Get current schedule to determine if within time window
+      final settings = await ref.read(prayerSettingsProvider.future);
+      final schedule = await ref.read(todayPrayerScheduleProvider.future);
+      
+      bool withinTimeWindow = false;
+      if (schedule != null) {
+        withinTimeWindow = PrayerStatusService.isWithinTimeWindow(
+          actualPrayerTime: prayerTime,
+          scheduledPrayerTime: schedule.getTimeForPrayer(prayerType),
+          timeWindowMinutes: settings.timeWindowMinutes,
+        );
+      }
+
+      // Create the prayer event
+      final event = PrayerEvent(
+        prayerType: prayerType,
+        eventDate: now,
+        eventTimestamp: now,
+        actualPrayerTime: actualPrayerTime,
+        prayedInJamaah: prayedInJamaah,
+        withinTimeWindow: withinTimeWindow,
+        notes: notes,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      // Save to repository
+      await _repository.logPrayerEvent(event);
+
+      // Recalculate score for this prayer type
+      await _scoreService.recalculateScore(prayerType);
+
+      CoreLoggingUtility.info(
+        'PrayerProvider',
+        'logPrayer',
+        'Successfully logged ${prayerType.englishName} prayer',
+      );
+
+      // Refresh state
+      if (_isMounted) {
+        ref.invalidateSelf();
+      }
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'PrayerProvider',
+        'logPrayer',
+        'Failed to log prayer: $e\n$stackTrace',
+      );
+      rethrow;
+    }
+  }
+
+  /// Delete a prayer event.
+  Future<void> deletePrayerEvent(int eventId) async {
+    if (!_isMounted) return;
+
+    try {
+      CoreLoggingUtility.info(
+        'PrayerProvider',
+        'deletePrayerEvent',
+        'Deleting prayer event ID $eventId',
+      );
+
+      await _repository.deletePrayerEvent(eventId);
+
+      // Refresh state
+      if (_isMounted) {
+        ref.invalidateSelf();
+      }
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'PrayerProvider',
+        'deletePrayerEvent',
+        'Failed to delete prayer event: $e\n$stackTrace',
+      );
+      rethrow;
+    }
+  }
+
+  /// Refresh the prayer state.
+  Future<void> refresh() async {
+    if (!_isMounted) return;
+    ref.invalidateSelf();
+  }
+}
+
+/// Provider for getting the completion count for today.
+///
+/// **Validates: Requirements 6.5**
+@riverpod
+Future<int> prayerCompletionCount(Ref ref) async {
+  final prayerState = await ref.watch(prayerProvider.future);
+  return prayerState.completedCount;
+}
+
+/// Provider for getting the status of a specific prayer.
+@riverpod
+Future<PrayerStatus?> prayerStatus(Ref ref, PrayerType type) async {
+  final prayerState = await ref.watch(prayerProvider.future);
+  return prayerState.getStatus(type);
+}
+
+/// Provider for checking if a specific prayer is completed.
+@riverpod
+Future<bool> isPrayerCompleted(Ref ref, PrayerType type) async {
+  final prayerState = await ref.watch(prayerProvider.future);
+  return prayerState.isPrayerCompleted(type);
+}
+
+/// Utility function to count completed prayers from a list of events.
+/// This is exposed for testing purposes.
+///
+/// **Validates: Requirements 6.5**
+int countCompletedPrayers(List<PrayerEvent> events) {
+  return PrayerStatusService.countCompletedPrayers(events);
+}
