@@ -9,6 +9,7 @@ import 'package:numu/features/settings/providers/user_profile_provider.dart';
 import 'package:numu/features/habits/providers/habits_provider.dart';
 import 'package:numu/features/settings/widgets/profile_section.dart';
 import 'package:numu/features/settings/providers/theme_config_provider.dart';
+import 'package:numu/features/settings/providers/notification_permission_provider.dart';
 import 'package:numu/features/settings/screens/theme_selector_screen.dart';
 import 'package:numu/app/theme/theme_registry.dart';
 
@@ -73,6 +74,8 @@ class SettingsScreen extends ConsumerWidget {
           const ProfileSection(),
           const SizedBox(height: 24),
           _buildAppearanceSection(context, ref, currentThemeMode),
+          const SizedBox(height: 24),
+          _buildNotificationsSection(context, ref),
           const SizedBox(height: 24),
           userProfileAsync.when(
             data: (profile) => _buildPreferencesSection(context, ref, profile),
@@ -352,6 +355,253 @@ class SettingsScreen extends ConsumerWidget {
         return 'Dark mode';
       case ThemeMode.system:
         return 'System default';
+    }
+  }
+
+  Widget _buildNotificationsSection(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final permissionAsync = ref.watch(notificationPermissionProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Notification Permission',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: permissionAsync.when(
+            data: (status) => _buildNotificationPermissionTile(context, ref, status),
+            loading: () => const ListTile(
+              leading: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              title: Text('Checking notification permissions...'),
+            ),
+            error: (error, stackTrace) {
+              CoreLoggingUtility.error(
+                'SettingsScreen',
+                '_buildNotificationsSection',
+                'Error checking notification permissions: $error',
+              );
+              return ListTile(
+                leading: Icon(
+                  Icons.error,
+                  color: theme.colorScheme.error,
+                ),
+                title: const Text('Error checking permissions'),
+                subtitle: Text(error.toString()),
+                trailing: IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () {
+                    ref.invalidate(notificationPermissionProvider);
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNotificationPermissionTile(
+    BuildContext context,
+    WidgetRef ref,
+    NotificationPermissionStatus status,
+  ) {
+    final theme = Theme.of(context);
+
+    IconData icon;
+    Color iconColor;
+    String title;
+    String subtitle;
+    VoidCallback? onTap;
+
+    switch (status) {
+      case NotificationPermissionStatus.granted:
+        icon = Icons.notifications_active;
+        iconColor = Colors.green;
+        title = 'Notifications enabled';
+        subtitle = 'You will receive reminders for your habits';
+        onTap = null;
+        break;
+      case NotificationPermissionStatus.denied:
+        icon = Icons.notifications_off;
+        iconColor = Colors.orange;
+        title = 'Notifications disabled';
+        subtitle = 'Tap to enable notifications for reminders';
+        onTap = () => _requestNotificationPermissions(context, ref);
+        break;
+      case NotificationPermissionStatus.permanentlyDenied:
+        icon = Icons.notifications_paused;
+        iconColor = theme.colorScheme.error;
+        title = 'Notifications blocked';
+        subtitle = 'Open device settings to enable notifications';
+        onTap = () => _openNotificationSettings(context, ref);
+        break;
+      case NotificationPermissionStatus.unknown:
+        icon = Icons.notifications;
+        iconColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
+        title = 'Notification status unknown';
+        subtitle = 'Tap to check and enable notifications';
+        onTap = () => _requestNotificationPermissions(context, ref);
+        break;
+    }
+
+    return ListTile(
+      leading: Icon(icon, color: iconColor),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Refresh button to check current status
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              ref.read(notificationPermissionProvider.notifier).refresh();
+            },
+            tooltip: 'Refresh status',
+          ),
+          if (status == NotificationPermissionStatus.granted)
+            const Icon(Icons.check_circle, color: Colors.green)
+          else
+            const Icon(Icons.chevron_right),
+        ],
+      ),
+      onTap: onTap,
+    );
+  }
+
+  Future<void> _requestNotificationPermissions(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    CoreLoggingUtility.info(
+      'SettingsScreen',
+      '_requestNotificationPermissions',
+      'Requesting notification permissions',
+    );
+
+    try {
+      final granted = await ref
+          .read(notificationPermissionProvider.notifier)
+          .requestPermissions();
+
+      if (context.mounted) {
+        if (granted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 12),
+                  Text('Notifications enabled successfully'),
+                ],
+              ),
+              duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          // Check if permanently denied
+          await ref.read(notificationPermissionProvider.notifier).refresh();
+          final newStatus = ref.read(notificationPermissionProvider).value;
+
+          if (newStatus == NotificationPermissionStatus.permanentlyDenied) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Row(
+                  children: [
+                    Icon(Icons.warning, color: Colors.white),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text('Please enable notifications in device settings'),
+                    ),
+                  ],
+                ),
+                duration: const Duration(seconds: 4),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.orange,
+                action: SnackBarAction(
+                  label: 'Open Settings',
+                  textColor: Colors.white,
+                  onPressed: () => _openNotificationSettings(context, ref),
+                ),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      CoreLoggingUtility.error(
+        'SettingsScreen',
+        '_requestNotificationPermissions',
+        'Failed to request permissions: $e',
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to request permissions: $e'),
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openNotificationSettings(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    CoreLoggingUtility.info(
+      'SettingsScreen',
+      '_openNotificationSettings',
+      'Opening app settings for notifications',
+    );
+
+    try {
+      final opened = await ref
+          .read(notificationPermissionProvider.notifier)
+          .openSettings();
+
+      if (!opened && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open settings'),
+            duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      CoreLoggingUtility.error(
+        'SettingsScreen',
+        '_openNotificationSettings',
+        'Failed to open settings: $e',
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to open settings: $e'),
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

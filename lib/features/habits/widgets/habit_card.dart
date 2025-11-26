@@ -103,7 +103,8 @@ class HabitCard extends ConsumerWidget {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Header Row
+            // Header Row - Contains only icon, name/description, and quick action button
+            // **Validates: Requirements 1.1**
             Row(
               children: [
                 // Icon Box
@@ -123,7 +124,7 @@ class HabitCard extends ConsumerWidget {
                 ),
                 const SizedBox(width: 12),
                 
-                // Name and Category
+                // Name and Description
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -147,58 +148,6 @@ class HabitCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-
-                // Today's Value Display (for value-based habits)
-                if (habit.trackingType == TrackingType.value) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: habitColor.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      todayValue != null && todayValue > 0
-                          ? '${todayValue.toInt()} ${habit.unit ?? ''}'.trim()
-                          : '0 ${habit.unit ?? ''}'.trim(),
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: habitColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                
-                // Streak Badge (current streak)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE67E22).withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.local_fire_department, size: 16, color: Color(0xFFE67E22)),
-                      const SizedBox(width: 4),
-                      Text(
-                        currentStreak.toString(),
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: const Color(0xFFE67E22),
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(width: 8),
-                
-                // Habit Score Badge
-                // **Validates: Requirements 4.2**
-                _buildScoreBadge(context, ref, habitColor),
-                
-                const SizedBox(width: 8),
                 
                 // Quick Action Button
                 HabitQuickActionButton(
@@ -209,7 +158,19 @@ class HabitCard extends ConsumerWidget {
               ],
             ),
             
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
+            
+            // Badge Row - Contains streak, score, and optionally value badges
+            // **Validates: Requirements 1.2, 1.3, 1.4**
+            _buildBadgeRow(
+              context: context,
+              ref: ref,
+              habitColor: habitColor,
+              currentStreak: currentStreak,
+              todayValue: todayValue,
+            ),
+            
+            const SizedBox(height: 12),
 
             // Progress Body
             Row(
@@ -426,6 +387,71 @@ class HabitCard extends ConsumerWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
+      ],
+    );
+  }
+
+  /// Build the badge row containing streak, score, and optionally value badges
+  /// **Validates: Requirements 1.2, 1.3, 1.4**
+  Widget _buildBadgeRow({
+    required BuildContext context,
+    required WidgetRef ref,
+    required Color habitColor,
+    required int currentStreak,
+    required double? todayValue,
+  }) {
+    final theme = Theme.of(context);
+    
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      alignment: WrapAlignment.start,
+      children: [
+        // Value Badge (conditionally shown for value-based habits)
+        // **Validates: Requirements 1.3**
+        if (habit.trackingType == TrackingType.value)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: habitColor.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              todayValue != null && todayValue > 0
+                  ? '${todayValue.toInt()} ${habit.unit ?? ''}'.trim()
+                  : '0 ${habit.unit ?? ''}'.trim(),
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: habitColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        
+        // Streak Badge
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE67E22).withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.local_fire_department, size: 16, color: Color(0xFFE67E22)),
+              const SizedBox(width: 4),
+              Text(
+                currentStreak.toString(),
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: const Color(0xFFE67E22),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Score Badge
+        _buildScoreBadge(context, ref, habitColor),
       ],
     );
   }

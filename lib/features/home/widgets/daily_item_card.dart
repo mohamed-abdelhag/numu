@@ -349,6 +349,7 @@ class DailyItemCard extends ConsumerWidget {
   }
 
   /// Calculate today's total value from habit events
+  /// Uses valueDelta sum to match the HabitCard implementation
   double _calculateTodayValue(HabitDetailState detailState) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -367,12 +368,17 @@ class DailyItemCard extends ConsumerWidget {
       return 0.0;
     }
     
-    // Sort events by timestamp descending (most recent first)
-    todayEvents.sort((a, b) => b.eventTimestamp.compareTo(a.eventTimestamp));
+    // Sum up valueDelta for all events today (same as HabitCard)
+    double totalValue = 0.0;
+    for (final event in todayEvents) {
+      if (event.valueDelta != null) {
+        totalValue += event.valueDelta!;
+      } else if (event.value != null) {
+        totalValue = event.value!;
+      }
+    }
     
-    // Return the latest value (most recent event's value field)
-    // This represents the current total for today
-    return todayEvents.first.value ?? 0.0;
+    return totalValue;
   }
 
   /// Check if habit is completed today
@@ -399,11 +405,12 @@ class DailyItemCard extends ConsumerWidget {
       return true;
     }
     
-    // For value habits, check if target is met
+    // For value habits, check if target is met using valueDelta sum
     if (habit.trackingType == TrackingType.value && habit.targetValue != null) {
       double total = 0.0;
       for (final event in todayEvents) {
-        total += event.value ?? 0.0;
+        // Use valueDelta for incremental tracking, not value (which is cumulative)
+        total += event.valueDelta ?? 0.0;
       }
       return total >= habit.targetValue!;
     }
@@ -433,9 +440,9 @@ class DailyItemCard extends ConsumerWidget {
 
   void _navigateToDetail(BuildContext context) {
     if (item.type == DailyItemType.habit && item.habitId != null) {
-      context.push('/habits/detail/${item.habitId}');
+      context.push('/habits/${item.habitId}');
     } else if (item.type == DailyItemType.task && item.taskId != null) {
-      context.push('/tasks/detail/${item.taskId}');
+      context.push('/tasks/${item.taskId}');
     }
   }
 
