@@ -238,5 +238,5 @@
     - Add route to Islamic Prayer Screen
     - _Requirements: 12.1, 12.2, 12.3_
 
-- [-] 20. Final Checkpoint - Ensure all tests pass
+- [x] 20. Final Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
