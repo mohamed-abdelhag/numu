@@ -8,6 +8,9 @@ import '../../habits/models/enums/streak_type.dart';
 import '../../habits/widgets/habit_quick_action_button.dart';
 import '../../habits/providers/habit_detail_provider.dart';
 import '../../tasks/tasks_provider.dart';
+import '../../islamic/models/enums/prayer_status.dart';
+import '../../islamic/widgets/prayer_log_dialog.dart';
+import '../../islamic/providers/prayer_provider.dart';
 import '../../../core/utils/core_logging_utility.dart';
 import '../../../core/utils/icon_helper.dart';
 
@@ -34,6 +37,12 @@ class DailyItemCard extends ConsumerWidget {
         loading: () => _buildLoadingCard(theme),
         error: (_, __) => _buildErrorCard(context, theme),
       );
+    }
+    
+    // For prayers, build prayer-specific card
+    // **Validates: Requirements 7.2, 7.3**
+    if (item.type == DailyItemType.prayer && item.prayerType != null) {
+      return _buildPrayerCard(context, ref, theme);
     }
     
     // For tasks, use the existing item data
@@ -196,6 +205,220 @@ class DailyItemCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Build a prayer-specific card with Islamic styling.
+  ///
+  /// **Validates: Requirements 7.2, 7.3**
+  Widget _buildPrayerCard(BuildContext context, WidgetRef ref, ThemeData theme) {
+    final prayerStatus = item.prayerStatus ?? PrayerStatus.pending;
+    final isCompleted = item.isCompleted;
+    final isMissed = prayerStatus == PrayerStatus.missed;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: InkWell(
+        onTap: () => _navigateToPrayerScreen(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Prayer icon with status-based styling
+              _buildPrayerIcon(theme, prayerStatus),
+              const SizedBox(width: 16),
+              
+              // Prayer name and details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // English name with status styling
+                    Text(
+                      item.title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        decoration: isCompleted 
+                            ? TextDecoration.lineThrough 
+                            : null,
+                        color: isCompleted
+                            ? theme.colorScheme.onSurface.withValues(alpha: 0.5)
+                            : isMissed
+                                ? theme.colorScheme.error
+                                : null,
+                      ),
+                    ),
+                    // Arabic name
+                    if (item.arabicName != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        item.arabicName!,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          fontFamily: 'Arial', // Better Arabic rendering
+                        ),
+                      ),
+                    ],
+                    // Prayer time
+                    if (item.scheduledTime != null) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.schedule,
+                            size: 14,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _formatTime(item.scheduledTime!),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    // Status indicator
+                    if (isMissed) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            size: 14,
+                            color: theme.colorScheme.error,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Missed',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.error,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              
+              // Quick log action button
+              _buildPrayerQuickAction(context, ref, theme, prayerStatus),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build prayer icon with status-based styling
+  Widget _buildPrayerIcon(ThemeData theme, PrayerStatus status) {
+    Color iconColor;
+    Color backgroundColor;
+    
+    switch (status) {
+      case PrayerStatus.completed:
+        iconColor = const Color(0xFF4CAF50); // Green
+        backgroundColor = const Color(0xFF4CAF50).withValues(alpha: 0.1);
+        break;
+      case PrayerStatus.pending:
+        iconColor = theme.colorScheme.primary;
+        backgroundColor = theme.colorScheme.primary.withValues(alpha: 0.1);
+        break;
+      case PrayerStatus.missed:
+        iconColor = theme.colorScheme.error;
+        backgroundColor = theme.colorScheme.error.withValues(alpha: 0.1);
+        break;
+    }
+
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(
+        Icons.mosque,
+        color: iconColor,
+        size: 24,
+      ),
+    );
+  }
+
+  /// Build quick action button for prayer logging.
+  ///
+  /// **Validates: Requirements 7.3**
+  Widget _buildPrayerQuickAction(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    PrayerStatus status,
+  ) {
+    // If already completed, show checkmark
+    if (status == PrayerStatus.completed) {
+      return Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.check,
+          color: Color(0xFF4CAF50),
+          size: 24,
+        ),
+      );
+    }
+
+    // For pending or missed, show log button
+    return IconButton(
+      onPressed: () => _showPrayerLogDialog(context, ref),
+      icon: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: status == PrayerStatus.missed
+              ? theme.colorScheme.error.withValues(alpha: 0.1)
+              : theme.colorScheme.primary.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.add,
+          color: status == PrayerStatus.missed
+              ? theme.colorScheme.error
+              : theme.colorScheme.primary,
+          size: 20,
+        ),
+      ),
+      tooltip: 'Log prayer',
+    );
+  }
+
+  /// Show the prayer log dialog.
+  Future<void> _showPrayerLogDialog(BuildContext context, WidgetRef ref) async {
+    if (item.prayerType == null) return;
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => PrayerLogDialog(
+        prayerType: item.prayerType!,
+        scheduledTime: item.scheduledTime,
+      ),
+    );
+
+    if (result == true) {
+      // Refresh the prayer provider to update the UI
+      ref.invalidate(prayerProvider);
+      onActionComplete?.call();
+    }
+  }
+
+  /// Navigate to the Islamic Prayer Screen.
+  void _navigateToPrayerScreen(BuildContext context) {
+    context.push('/islamic-prayer');
   }
 
   Widget _buildLoadingCard(ThemeData theme) {

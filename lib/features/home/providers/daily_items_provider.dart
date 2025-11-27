@@ -7,6 +7,13 @@ import '../../habits/models/enums/goal_type.dart';
 import '../../habits/repositories/habit_repository.dart';
 import '../../tasks/tasks_repository.dart';
 import '../../tasks/task.dart';
+import '../../islamic/models/enums/prayer_type.dart';
+import '../../islamic/models/enums/prayer_status.dart';
+import '../../islamic/repositories/prayer_repository.dart';
+import '../../islamic/repositories/prayer_settings_repository.dart';
+import '../../islamic/services/prayer_time_service.dart';
+import '../../islamic/services/prayer_location_service.dart';
+import '../../islamic/services/prayer_status_service.dart';
 import '../../../core/utils/core_logging_utility.dart';
 
 part 'daily_items_provider.g.dart';
@@ -16,12 +23,16 @@ class DailyItemsState {
   final int completionPercentage;
   final int habitCount;
   final int taskCount;
+  final int prayerCount;
+  final int completedPrayerCount;
 
   const DailyItemsState({
     required this.items,
     required this.completionPercentage,
     required this.habitCount,
     required this.taskCount,
+    this.prayerCount = 0,
+    this.completedPrayerCount = 0,
   });
 }
 
@@ -32,6 +43,8 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
     // Create repository instances locally to avoid re-initialization issues
     final habitRepository = HabitRepository();
     final taskRepository = TasksRepository();
+    final prayerSettingsRepository = PrayerSettingsRepository();
+    final prayerRepository = PrayerRepository();
 
     try {
       final now = DateTime.now();
@@ -59,11 +72,27 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
       // Convert tasks to DailyItems
       final taskItems = todayTasks.map((task) => _taskToDailyItem(task)).toList();
       
+      // Fetch prayer items if Islamic Prayer System is enabled
+      List<DailyItem> prayerItems = [];
+      int completedPrayerCount = 0;
+      
+      final prayerSettings = await prayerSettingsRepository.getSettings();
+      if (prayerSettings.isEnabled) {
+        final prayerResult = await _fetchPrayerItems(
+          prayerSettings: prayerSettings,
+          prayerRepository: prayerRepository,
+          now: now,
+        );
+        prayerItems = prayerResult.items;
+        completedPrayerCount = prayerResult.completedCount;
+      }
+      
       // Combine and sort items
-      final allItems = [...habitItems, ...taskItems];
+      final allItems = [...habitItems, ...taskItems, ...prayerItems];
       allItems.sort(_compareItems);
       
-      // Calculate completion percentage
+      // Calculate completion percentage including prayers
+      // **Validates: Requirements 7.5**
       final completedCount = allItems.where((item) => item.isCompleted).length;
       final totalCount = allItems.length;
       final percentage = totalCount > 0 ? ((completedCount / totalCount) * 100).round() : 0;
@@ -71,7 +100,7 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
       CoreLoggingUtility.info(
         'DailyItemsProvider',
         'build',
-        'Loaded ${habitItems.length} habits and ${taskItems.length} tasks for today',
+        'Loaded ${habitItems.length} habits, ${taskItems.length} tasks, and ${prayerItems.length} prayers for today',
       );
       
       return DailyItemsState(
@@ -79,6 +108,8 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
         completionPercentage: percentage,
         habitCount: habitItems.length,
         taskCount: taskItems.length,
+        prayerCount: prayerItems.length,
+        completedPrayerCount: completedPrayerCount,
       );
     } catch (e, stackTrace) {
       CoreLoggingUtility.error(
@@ -87,6 +118,107 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
         'Failed to load daily items: $e\n$stackTrace',
       );
       rethrow;
+    }
+  }
+  
+  /// Fetch prayer items when Islamic Prayer System is enabled.
+  ///
+  /// **Validates: Requirements 7.1, 7.2, 7.3, 7.4**
+  Future<_PrayerItemsResult> _fetchPrayerItems({
+    required dynamic prayerSettings,
+    required PrayerRepository prayerRepository,
+    required DateTime now,
+  }) async {
+    try {
+      final prayerTimeService = PrayerTimeService();
+      final prayerLocationService = PrayerLocationService();
+      
+      // Try to get prayer schedule for today
+      double? latitude = prayerSettings.lastLatitude;
+      double? longitude = prayerSettings.lastLongitude;
+      
+      // Try to get current location if we have permission
+      if (await prayerLocationService.hasLocationPermission()) {
+        final location = await prayerLocationService.getCurrentLocation();
+        if (location != null) {
+          latitude = location.latitude;
+          longitude = location.longitude;
+        }
+      }
+      
+      if (latitude == null || longitude == null) {
+        CoreLoggingUtility.warning(
+          'DailyItemsProvider',
+          '_fetchPrayerItems',
+          'No location available for prayer times',
+        );
+        return const _PrayerItemsResult(items: [], completedCount: 0);
+      }
+      
+      // Fetch prayer schedule (can throw PrayerTimeException)
+      final schedule = await prayerTimeService.getPrayerTimesForToday(
+        latitude: latitude,
+        longitude: longitude,
+        method: prayerSettings.calculationMethod,
+      );
+      
+      // Get today's prayer events
+      final events = await prayerRepository.getEventsForDate(now);
+      
+      // Calculate statuses for all prayers
+      final statuses = PrayerStatusService.calculateAllStatuses(
+        schedule: schedule,
+        events: events,
+        currentTime: now,
+        timeWindowMinutes: prayerSettings.timeWindowMinutes,
+      );
+      
+      // Convert prayers to DailyItems
+      final prayerItems = <DailyItem>[];
+      int completedCount = 0;
+      
+      for (final type in PrayerType.values) {
+        final status = statuses[type] ?? PrayerStatus.pending;
+        final isCompleted = status == PrayerStatus.completed;
+        
+        if (isCompleted) {
+          completedCount++;
+        }
+        
+        prayerItems.add(DailyItem(
+          id: 'prayer_${type.name}',
+          title: type.englishName,
+          type: DailyItemType.prayer,
+          scheduledTime: schedule.getTimeForPrayer(type),
+          isCompleted: isCompleted,
+          icon: 'mosque',
+          color: _getPrayerColor(status),
+          prayerType: type,
+          prayerStatus: status,
+          arabicName: type.arabicName,
+        ));
+      }
+      
+      return _PrayerItemsResult(items: prayerItems, completedCount: completedCount);
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'DailyItemsProvider',
+        '_fetchPrayerItems',
+        'Failed to fetch prayer items: $e\n$stackTrace',
+      );
+      return const _PrayerItemsResult(items: [], completedCount: 0);
+    }
+  }
+  
+  /// Get color for prayer based on status
+  Color _getPrayerColor(PrayerStatus status) {
+    switch (status) {
+      case PrayerStatus.completed:
+        return const Color(0xFF4CAF50); // Green
+      case PrayerStatus.pending:
+        return const Color(0xFF2196F3); // Blue
+      case PrayerStatus.missed:
+        return const Color(0xFFF44336); // Red
     }
   }
 
@@ -195,15 +327,14 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
       return 1;
     }
     
-    // Neither has scheduled time - maintain order (habits before tasks)
-    if (a.type == DailyItemType.habit && b.type == DailyItemType.task) {
-      return -1;
-    }
-    if (a.type == DailyItemType.task && b.type == DailyItemType.habit) {
-      return 1;
-    }
+    // Neither has scheduled time - maintain order (habits before tasks before prayers)
+    final typeOrder = {
+      DailyItemType.habit: 0,
+      DailyItemType.task: 1,
+      DailyItemType.prayer: 2,
+    };
     
-    return 0;
+    return typeOrder[a.type]!.compareTo(typeOrder[b.type]!);
   }
 
   /// Check if two dates are the same day
@@ -226,4 +357,16 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
     // Default color if parsing fails
     return const Color(0xFF6200EE);
   }
+}
+
+
+/// Helper class to return prayer items and completed count
+class _PrayerItemsResult {
+  final List<DailyItem> items;
+  final int completedCount;
+
+  const _PrayerItemsResult({
+    required this.items,
+    required this.completedCount,
+  });
 }

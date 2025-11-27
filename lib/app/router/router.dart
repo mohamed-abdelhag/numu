@@ -22,6 +22,8 @@ import 'package:numu/features/reminders/screens/reminder_list_screen.dart';
 import 'package:numu/features/reminders/screens/create_reminder_screen.dart';
 import 'package:numu/features/reminders/screens/edit_reminder_screen.dart';
 import 'package:numu/features/reminders/models/reminder.dart';
+import 'package:numu/features/islamic/screens/islamic_prayer_screen.dart';
+import 'package:numu/features/islamic/screens/prayer_settings_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:numu/core/widgets/shell/numu_app_shell.dart';
 
@@ -42,7 +44,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         // Valid shell routes - allow navigation
         final validShellRoutes = [
           '/home', '/settings', '/tasks', '/habits',
-          '/reminders', '/help', '/categories'
+          '/reminders', '/help', '/categories', '/prayers'
         ];
         
         final isValidRoute = validShellRoutes.any((route) => location.startsWith(route));
@@ -299,6 +301,25 @@ final routerProvider = Provider<GoRouter>((ref) {
                     },
                   ),
                 ],
+              ),
+            ],
+          ),
+          
+          // Islamic Prayer System routes
+          // **Validates: Requirements 12.1, 12.2**
+          GoRoute(
+            path: '/prayers',
+            name: 'prayers',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: IslamicPrayerScreen(),
+            ),
+            routes: [
+              GoRoute(
+                path: 'settings',
+                name: 'prayer-settings',
+                pageBuilder: (context, state) => const MaterialPage(
+                  child: PrayerSettingsScreen(),
+                ),
               ),
             ],
           ),

@@ -6,6 +6,7 @@ import '../utils/core_logging_utility.dart';
 import 'theme_provider.dart';
 import '../../features/habits/models/category.dart';
 import '../../features/habits/repositories/category_repository.dart';
+import '../../features/islamic/repositories/prayer_settings_repository.dart';
 
 part 'navigation_provider.g.dart';
 
@@ -14,8 +15,9 @@ part 'navigation_provider.g.dart';
 class NavigationNotifier extends _$NavigationNotifier {
   late final SettingsRepository _repository;
   late final CategoryRepository _categoryRepository;
+  late final PrayerSettingsRepository _prayerSettingsRepository;
 
-  /// Default navigation items for the app
+  /// Default navigation items for the app (excluding conditional items like prayers)
   static final List<NavigationItem> _defaultItems = [
     const NavigationItem(
       id: 'home',
@@ -73,10 +75,23 @@ class NavigationNotifier extends _$NavigationNotifier {
     ),
   ];
 
+  /// Prayer navigation item - shown only when Islamic Prayer System is enabled
+  /// **Validates: Requirements 12.1, 12.2, 12.3**
+  static const NavigationItem _prayerItem = NavigationItem(
+    id: 'prayers',
+    label: 'Prayers',
+    icon: Icons.mosque,
+    route: '/prayers',
+    isHome: false,
+    isEnabled: true,
+    order: 0, // Will be recalculated
+  );
+
   @override
   Future<List<NavigationItem>> build() async {
     _repository = ref.read(settingsRepositoryProvider);
     _categoryRepository = CategoryRepository();
+    _prayerSettingsRepository = PrayerSettingsRepository();
     CoreLoggingUtility.info(
       'NavigationNotifier',
       'build',
@@ -86,6 +101,7 @@ class NavigationNotifier extends _$NavigationNotifier {
   }
 
   /// Loads navigation items from storage and merges with defaults
+  /// **Validates: Requirements 12.1, 12.2, 12.3**
   Future<List<NavigationItem>> _loadNavigationItems() async {
     try {
       final visibility = await _repository.getNavigationItemsVisibility();
@@ -99,6 +115,44 @@ class NavigationNotifier extends _$NavigationNotifier {
 
       // Start with default items
       List<NavigationItem> items = List.from(_defaultItems);
+
+      // Check if Islamic Prayer System is enabled and add prayer item
+      // **Validates: Requirements 12.1, 12.3**
+      try {
+        final prayerSettings = await _prayerSettingsRepository.getSettings();
+        if (prayerSettings.isEnabled) {
+          // Insert prayer item after habits (index 3, before reminders)
+          final habitsIndex = items.indexWhere((item) => item.id == 'habits');
+          if (habitsIndex != -1) {
+            items.insert(habitsIndex + 1, _prayerItem);
+          } else {
+            // Fallback: insert before settings
+            final settingsIndex = items.indexWhere((item) => item.id == 'settings');
+            if (settingsIndex != -1) {
+              items.insert(settingsIndex, _prayerItem);
+            } else {
+              items.add(_prayerItem);
+            }
+          }
+          CoreLoggingUtility.info(
+            'NavigationNotifier',
+            '_loadNavigationItems',
+            'Added prayer navigation item (Islamic Prayer System enabled)',
+          );
+        } else {
+          CoreLoggingUtility.info(
+            'NavigationNotifier',
+            '_loadNavigationItems',
+            'Prayer navigation item hidden (Islamic Prayer System disabled)',
+          );
+        }
+      } catch (e) {
+        CoreLoggingUtility.warning(
+          'NavigationNotifier',
+          '_loadNavigationItems',
+          'Could not check prayer settings: $e',
+        );
+      }
 
       // Apply saved visibility preferences
       if (visibility.isNotEmpty) {

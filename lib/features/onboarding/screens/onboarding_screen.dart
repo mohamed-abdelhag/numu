@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/onboarding_provider.dart';
 import '../../help/providers/tutorial_cards_provider.dart';
 import '../widgets/onboarding_card.dart';
+import '../widgets/prayer_onboarding_card.dart';
 import '../../../core/utils/core_logging_utility.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -136,7 +137,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               );
             }
 
-            final totalPages = onboardingTutorials.length;
+            // Total pages includes tutorial cards + prayer onboarding card
+            // Prayer onboarding card is added after the first tutorial (whats_this_app)
+            // Order: whats_this_app -> prayer_onboarding -> enjoy_using_app
+            final totalPages = onboardingTutorials.length + 1;
 
             return Column(
               children: [
@@ -160,16 +164,35 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   ),
                 ),
                 
-                // PageView with tutorial cards
+                // PageView with tutorial cards and prayer onboarding
+                // Order: whats_this_app (0) -> prayer_onboarding (1) -> enjoy_using_app (2)
                 Expanded(
                   child: PageView.builder(
                     controller: _pageController,
                     onPageChanged: _onPageChanged,
                     itemCount: totalPages,
                     itemBuilder: (context, index) {
-                      return OnboardingCard(
-                        tutorial: onboardingTutorials[index],
-                      );
+                      // Index 0: First tutorial (whats_this_app)
+                      if (index == 0) {
+                        return OnboardingCard(
+                          tutorial: onboardingTutorials[0],
+                        );
+                      }
+                      // Index 1: Prayer onboarding card
+                      // **Validates: Requirements 10.1, 10.2, 10.3**
+                      if (index == 1) {
+                        return const PrayerOnboardingCard();
+                      }
+                      // Index 2+: Remaining tutorials (enjoy_using_app, etc.)
+                      // Adjust index to account for prayer card insertion
+                      final tutorialIndex = index - 1;
+                      if (tutorialIndex < onboardingTutorials.length) {
+                        return OnboardingCard(
+                          tutorial: onboardingTutorials[tutorialIndex],
+                        );
+                      }
+                      // Fallback (shouldn't happen)
+                      return const SizedBox.shrink();
                     },
                   ),
                 ),

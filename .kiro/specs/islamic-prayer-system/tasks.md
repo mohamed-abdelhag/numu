@@ -184,59 +184,59 @@
     - Show remaining time until next pending prayer
     - _Requirements: 6.3_
 
-- [-] 14. Implement Islamic Prayer Screen
-  - [ ] 14.1 Create IslamicPrayerScreen
+- [x] 14. Implement Islamic Prayer Screen
+  - [x] 14.1 Create IslamicPrayerScreen
     - Implement `lib/features/islamic/screens/islamic_prayer_screen.dart`
     - Display all five prayers with status
     - Include progress header and statistics
     - Handle prayer logging via dialog
     - _Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6_
-  - [ ] 14.2 Create PrayerSettingsScreen
+  - [x] 14.2 Create PrayerSettingsScreen
     - Implement `lib/features/islamic/screens/prayer_settings_screen.dart`
     - Allow configuration of calculation method, time window, reminders
     - Handle location permission prompts
     - _Requirements: 8.3, 8.4, 8.5, 8.6_
 
-- [ ] 15. Integrate with home screen
-  - [ ] 15.1 Update DailyItemsProvider to include prayers
+- [x] 15. Integrate with home screen
+  - [x] 15.1 Update DailyItemsProvider to include prayers
     - Modify `lib/features/home/providers/daily_items_provider.dart`
     - Add prayer items when Islamic Prayer System is enabled
     - Include prayers in completion percentage calculation
     - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5_
-  - [ ] 15.2 Write property test for daily progress inclusion
+  - [x] 15.2 Write property test for daily progress inclusion
     - **Property 14: Daily Progress Inclusion**
     - **Validates: Requirements 7.5**
-  - [ ] 15.3 Update DailyItemCard for prayer display
+  - [x] 15.3 Update DailyItemCard for prayer display
     - Modify `lib/features/home/widgets/daily_item_card.dart`
     - Add prayer-specific styling and quick log action
     - _Requirements: 7.2, 7.3_
-  - [ ] 15.4 Write property test for visibility toggle consistency
+  - [x] 15.4 Write property test for visibility toggle consistency
     - **Property 15: Visibility Toggle Consistency**
     - **Validates: Requirements 7.4, 8.2, 12.3**
 
-- [ ] 16. Integrate with settings screen
-  - [ ] 16.1 Add Islamic Prayer System toggle to settings
+- [x] 16. Integrate with settings screen
+  - [x] 16.1 Add Islamic Prayer System toggle to settings
     - Modify `lib/features/settings/settings_screen.dart`
     - Add enable/disable toggle and link to prayer settings
     - _Requirements: 8.1, 8.2, 8.3_
 
-- [ ] 17. Integrate with profile screen
-  - [ ] 17.1 Add prayer toggle and summary to profile
+- [x] 17. Integrate with profile screen
+  - [x] 17.1 Add prayer toggle and summary to profile
     - Update profile screen to show prayer system toggle
     - Display prayer statistics summary when enabled
     - _Requirements: 9.1, 9.2, 9.3_
 
-- [ ] 18. Integrate with onboarding
-  - [ ] 18.1 Add Islamic Prayer System step to onboarding
+- [x] 18. Integrate with onboarding
+  - [x] 18.1 Add Islamic Prayer System step to onboarding
     - Add onboarding card asking about prayer tracking
     - Request location permission with explanation if enabled
     - _Requirements: 10.1, 10.2, 10.3_
 
-- [ ] 19. Integrate with navigation
-  - [ ] 19.1 Add prayer navigation item
+- [x] 19. Integrate with navigation
+  - [x] 19.1 Add prayer navigation item
     - Update navigation to show/hide prayer menu item based on enabled state
     - Add route to Islamic Prayer Screen
     - _Requirements: 12.1, 12.2, 12.3_
 
-- [ ] 20. Final Checkpoint - Ensure all tests pass
+- [-] 20. Final Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.

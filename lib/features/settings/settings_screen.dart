@@ -12,6 +12,8 @@ import 'package:numu/features/settings/providers/theme_config_provider.dart';
 import 'package:numu/features/settings/providers/notification_permission_provider.dart';
 import 'package:numu/features/settings/screens/theme_selector_screen.dart';
 import 'package:numu/app/theme/theme_registry.dart';
+import 'package:numu/features/islamic/providers/prayer_settings_provider.dart';
+import 'package:numu/features/islamic/screens/prayer_settings_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -106,6 +108,8 @@ class SettingsScreen extends ConsumerWidget {
               );
             },
           ),
+          const SizedBox(height: 24),
+          _buildIslamicPrayerSection(context, ref),
           const SizedBox(height: 24),
           navigationAsync.when(
             data: (navigationItems) => _buildNavigationSection(context, ref, navigationItems),
@@ -639,6 +643,179 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  /// Builds the Islamic Prayer System section with enable/disable toggle
+  /// and link to prayer settings.
+  ///
+  /// **Validates: Requirements 8.1, 8.2, 8.3**
+  Widget _buildIslamicPrayerSection(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final prayerSettingsAsync = ref.watch(prayerSettingsProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Islamic Prayer System',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: prayerSettingsAsync.when(
+            data: (settings) => Column(
+              children: [
+                SwitchListTile(
+                  secondary: Icon(
+                    Icons.mosque,
+                    color: settings.isEnabled
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  ),
+                  title: const Text('Enable Prayer Tracking'),
+                  subtitle: Text(
+                    settings.isEnabled
+                        ? 'Track your five daily prayers'
+                        : 'Enable to start tracking your prayers',
+                  ),
+                  value: settings.isEnabled,
+                  onChanged: (value) => _togglePrayerSystem(context, ref, value),
+                ),
+                if (settings.isEnabled)
+                  ListTile(
+                    leading: Icon(
+                      Icons.settings,
+                      color: theme.colorScheme.primary,
+                    ),
+                    title: const Text('Prayer Settings'),
+                    subtitle: const Text('Configure calculation method, reminders, and more'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _navigateToPrayerSettings(context),
+                  ),
+              ],
+            ),
+            loading: () => const ListTile(
+              leading: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              title: Text('Loading prayer settings...'),
+            ),
+            error: (error, stackTrace) {
+              CoreLoggingUtility.error(
+                'SettingsScreen',
+                '_buildIslamicPrayerSection',
+                'Error loading prayer settings: $error\nStack trace: $stackTrace',
+              );
+              return ListTile(
+                leading: Icon(
+                  Icons.error,
+                  color: theme.colorScheme.error,
+                ),
+                title: const Text('Error loading prayer settings'),
+                subtitle: Text(error.toString()),
+                trailing: IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () {
+                    CoreLoggingUtility.info(
+                      'SettingsScreen',
+                      '_buildIslamicPrayerSection',
+                      'Retrying prayer settings load',
+                    );
+                    ref.invalidate(prayerSettingsProvider);
+                  },
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Toggles the Islamic Prayer System enabled state.
+  ///
+  /// **Validates: Requirements 8.1, 8.2**
+  Future<void> _togglePrayerSystem(BuildContext context, WidgetRef ref, bool enabled) async {
+    CoreLoggingUtility.info(
+      'SettingsScreen',
+      '_togglePrayerSystem',
+      'Toggling prayer system to: $enabled',
+    );
+
+    try {
+      await ref.read(prayerSettingsProvider.notifier).setEnabled(enabled);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(
+                  enabled ? Icons.check_circle : Icons.info,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  enabled ? 'Prayer tracking enabled' : 'Prayer tracking disabled',
+                ),
+              ],
+            ),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: enabled ? Colors.green : Colors.orange,
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'SettingsScreen',
+        '_togglePrayerSystem',
+        'Failed to toggle prayer system: $e\n$stackTrace',
+      );
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Failed to update setting: $e')),
+              ],
+            ),
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _togglePrayerSystem(context, ref, enabled),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Navigates to the Prayer Settings screen.
+  ///
+  /// **Validates: Requirements 8.3**
+  void _navigateToPrayerSettings(BuildContext context) {
+    CoreLoggingUtility.info(
+      'SettingsScreen',
+      '_navigateToPrayerSettings',
+      'Navigating to prayer settings screen',
+    );
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const PrayerSettingsScreen(),
+      ),
     );
   }
 

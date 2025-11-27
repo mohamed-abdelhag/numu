@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../islamic/models/enums/prayer_type.dart';
+import '../../islamic/models/enums/prayer_status.dart';
 
-enum DailyItemType { habit, task }
+enum DailyItemType { habit, task, prayer }
 
 class DailyItem {
   final String id;
@@ -15,6 +17,11 @@ class DailyItem {
   final double? currentValue;
   final double? targetValue;
   final String? unit;
+  
+  // Prayer-specific fields
+  final PrayerType? prayerType;
+  final PrayerStatus? prayerStatus;
+  final String? arabicName;
 
   DailyItem({
     required this.id,
@@ -29,5 +36,17 @@ class DailyItem {
     this.currentValue,
     this.targetValue,
     this.unit,
+    this.prayerType,
+    this.prayerStatus,
+    this.arabicName,
   });
+  
+  /// Check if this item is a prayer
+  bool get isPrayer => type == DailyItemType.prayer;
+  
+  /// Check if this prayer is missed
+  bool get isMissed => prayerStatus == PrayerStatus.missed;
+  
+  /// Check if this prayer is pending
+  bool get isPending => prayerStatus == PrayerStatus.pending;
 }
