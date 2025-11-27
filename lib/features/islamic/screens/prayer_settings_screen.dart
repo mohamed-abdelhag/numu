@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/core_logging_utility.dart';
 import '../../../core/widgets/shell/numu_app_bar.dart';
+import '../models/city.dart';
 import '../models/enums/calculation_method.dart';
 import '../models/enums/prayer_type.dart';
 import '../providers/prayer_settings_provider.dart';
 import '../services/prayer_location_service.dart';
+import 'city_selection_screen.dart';
 
 /// Screen for configuring Islamic Prayer System settings.
 /// Allows configuration of calculation method, time window, and reminders.
@@ -122,6 +124,7 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
 
   Widget _buildLocationSection(BuildContext context, dynamic settings) {
     final theme = Theme.of(context);
+    final selectedCity = settings.selectedCity;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,60 +135,125 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        const SizedBox(height: 8),
+        Text(
+          'Choose how to determine your location for prayer times',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
         const SizedBox(height: 16),
         Card(
           child: Column(
             children: [
-              FutureBuilder<bool>(
-                future: _locationService.hasLocationPermission(),
-                builder: (context, snapshot) {
-                  final hasPermission = snapshot.data ?? false;
-                  
-                  return ListTile(
-                    leading: Icon(
-                      hasPermission ? Icons.location_on : Icons.location_off,
-                      color: hasPermission ? Colors.green : Colors.orange,
-                    ),
-                    title: Text(
-                      hasPermission ? 'Location Access Granted' : 'Location Access Required',
-                    ),
-                    subtitle: Text(
-                      hasPermission
-                          ? 'Prayer times are calculated based on your location'
-                          : 'Grant location access for accurate prayer times',
-                    ),
-                    trailing: _isCheckingLocation
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : hasPermission
-                            ? const Icon(Icons.check_circle, color: Colors.green)
-                            : TextButton(
-                                onPressed: _requestLocationPermission,
-                                child: const Text('Grant'),
-                              ),
-                  );
-                },
-              ),
-              if (settings.lastLatitude != null && settings.lastLongitude != null)
-                ListTile(
-                  leading: const Icon(Icons.my_location),
-                  title: const Text('Last Known Location'),
-                  subtitle: Text(
-                    'Lat: ${settings.lastLatitude!.toStringAsFixed(4)}, '
-                    'Lng: ${settings.lastLongitude!.toStringAsFixed(4)}',
-                  ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: _updateLocation,
-                    tooltip: 'Update location',
-                  ),
+              // Location mode toggle
+              SwitchListTile(
+                title: const Text('Use Manual City Selection'),
+                subtitle: Text(
+                  settings.useManualLocation
+                      ? 'Using selected city for prayer times'
+                      : 'Using device GPS for prayer times',
                 ),
+                value: settings.useManualLocation,
+                onChanged: (value) => _toggleManualLocation(value),
+                secondary: Icon(
+                  settings.useManualLocation ? Icons.location_city : Icons.gps_fixed,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const Divider(height: 1),
+              
+              // Manual city selection
+              if (settings.useManualLocation) ...[
+                ListTile(
+                  leading: const Icon(Icons.location_city),
+                  title: Text(
+                    selectedCity != null ? selectedCity.displayName : 'Select a City',
+                  ),
+                  subtitle: selectedCity != null
+                      ? Text('Lat: ${selectedCity.latitude.toStringAsFixed(2)}, '
+                          'Lng: ${selectedCity.longitude.toStringAsFixed(2)}')
+                      : const Text('Tap to choose a city'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _selectCity,
+                ),
+              ] else ...[
+                // GPS location status
+                FutureBuilder<bool>(
+                  future: _locationService.hasLocationPermission(),
+                  builder: (context, snapshot) {
+                    final hasPermission = snapshot.data ?? false;
+                    
+                    return ListTile(
+                      leading: Icon(
+                        hasPermission ? Icons.location_on : Icons.location_off,
+                        color: hasPermission ? Colors.green : Colors.orange,
+                      ),
+                      title: Text(
+                        hasPermission ? 'Location Access Granted' : 'Location Access Required',
+                      ),
+                      subtitle: Text(
+                        hasPermission
+                            ? 'Prayer times are calculated based on your GPS location'
+                            : 'Grant location access or use manual city selection',
+                      ),
+                      trailing: _isCheckingLocation
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : hasPermission
+                              ? const Icon(Icons.check_circle, color: Colors.green)
+                              : TextButton(
+                                  onPressed: _requestLocationPermission,
+                                  child: const Text('Grant'),
+                                ),
+                    );
+                  },
+                ),
+                if (settings.lastLatitude != null && settings.lastLongitude != null)
+                  ListTile(
+                    leading: const Icon(Icons.my_location),
+                    title: const Text('Last Known Location'),
+                    subtitle: Text(
+                      'Lat: ${settings.lastLatitude!.toStringAsFixed(4)}, '
+                      'Lng: ${settings.lastLongitude!.toStringAsFixed(4)}',
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.refresh),
+                      onPressed: _updateLocation,
+                      tooltip: 'Update location',
+                    ),
+                  ),
+              ],
             ],
           ),
         ),
+        
+        // Tip for users without location permission
+        if (!settings.useManualLocation)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 16,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Tip: If you prefer not to share your location, you can enable manual city selection above.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
@@ -583,6 +651,88 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
         setState(() {
           _isCheckingLocation = false;
         });
+      }
+    }
+  }
+
+  Future<void> _toggleManualLocation(bool useManual) async {
+    CoreLoggingUtility.info(
+      'PrayerSettingsScreen',
+      '_toggleManualLocation',
+      'Setting use manual location to: $useManual',
+    );
+
+    try {
+      await ref.read(prayerSettingsProvider.notifier).setUseManualLocation(useManual);
+      
+      if (useManual && mounted) {
+        // Prompt user to select a city if enabling manual mode
+        final settings = ref.read(prayerSettingsProvider).value;
+        if (settings?.selectedCityId == null) {
+          _selectCity();
+        }
+      }
+    } catch (e) {
+      CoreLoggingUtility.error(
+        'PrayerSettingsScreen',
+        '_toggleManualLocation',
+        'Failed to toggle manual location: $e',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update setting: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _selectCity() async {
+    final settings = ref.read(prayerSettingsProvider).value;
+    
+    final City? selectedCity = await Navigator.of(context).push<City>(
+      MaterialPageRoute(
+        builder: (context) => CitySelectionScreen(
+          selectedCityId: settings?.selectedCityId,
+        ),
+      ),
+    );
+
+    if (selectedCity != null && mounted) {
+      try {
+        await ref.read(prayerSettingsProvider.notifier).setManualCity(
+          selectedCity.id,
+          selectedCity.latitude,
+          selectedCity.longitude,
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Location set to ${selectedCity.displayName}'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        CoreLoggingUtility.error(
+          'PrayerSettingsScreen',
+          '_selectCity',
+          'Failed to set city: $e',
+        );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to set city: $e'),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+          );
+        }
       }
     }
   }

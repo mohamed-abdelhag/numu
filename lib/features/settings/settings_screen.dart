@@ -375,6 +375,13 @@ class SettingsScreen extends ConsumerWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
+        const SizedBox(height: 8),
+        Text(
+          'Required for habit and prayer reminders on Android & iOS',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
         const SizedBox(height: 16),
         Card(
           child: permissionAsync.when(
@@ -386,6 +393,7 @@ class SettingsScreen extends ConsumerWidget {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
               title: Text('Checking notification permissions...'),
+              subtitle: Text('Verifying Android & iOS permissions'),
             ),
             error: (error, stackTrace) {
               CoreLoggingUtility.error(
@@ -403,7 +411,7 @@ class SettingsScreen extends ConsumerWidget {
                 trailing: IconButton(
                   icon: const Icon(Icons.refresh),
                   onPressed: () {
-                    ref.invalidate(notificationPermissionProvider);
+                    ref.read(notificationPermissionProvider.notifier).refresh();
                   },
                 ),
               );
@@ -517,6 +525,10 @@ class SettingsScreen extends ConsumerWidget {
         } else {
           // Check if permanently denied
           await ref.read(notificationPermissionProvider.notifier).refresh();
+          
+          // Check mounted again after async operation
+          if (!context.mounted) return;
+          
           final newStatus = ref.read(notificationPermissionProvider).value;
 
           if (newStatus == NotificationPermissionStatus.permanentlyDenied) {
@@ -750,6 +762,14 @@ class SettingsScreen extends ConsumerWidget {
     try {
       await ref.read(prayerSettingsProvider.notifier).setEnabled(enabled);
 
+      // Refresh navigation provider to add/remove prayers from sidebar
+      CoreLoggingUtility.info(
+        'SettingsScreen',
+        '_togglePrayerSystem',
+        'Refreshing navigation provider to update sidebar',
+      );
+      await ref.read(navigationProvider.notifier).refresh();
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -760,8 +780,12 @@ class SettingsScreen extends ConsumerWidget {
                   color: Colors.white,
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  enabled ? 'Prayer tracking enabled' : 'Prayer tracking disabled',
+                Expanded(
+                  child: Text(
+                    enabled 
+                        ? 'Prayer tracking enabled - Prayers added to sidebar' 
+                        : 'Prayer tracking disabled',
+                  ),
                 ),
               ],
             ),

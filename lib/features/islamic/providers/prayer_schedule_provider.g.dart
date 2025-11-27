@@ -44,7 +44,7 @@ final class PrayerScheduleNotifierProvider
 }
 
 String _$prayerScheduleNotifierHash() =>
-    r'f479c683fc02434ed799701b7de727227f908ec4';
+    r'745dac8b0e425fb15623cf26289766c1e2516be7';
 
 /// Provider for managing today's prayer schedule and next prayer identification.
 ///

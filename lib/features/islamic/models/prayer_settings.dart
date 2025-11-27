@@ -1,5 +1,6 @@
 import 'enums/calculation_method.dart';
 import 'enums/prayer_type.dart';
+import 'city.dart';
 
 /// Model representing user preferences for the Islamic Prayer System.
 /// Includes enabled state, calculation method, time window, and reminder settings.
@@ -10,6 +11,8 @@ class PrayerSettings {
   final int timeWindowMinutes; // Default 30
   final double? lastLatitude;
   final double? lastLongitude;
+  final String? selectedCityId; // Manual city selection
+  final bool useManualLocation; // Whether to use manual city instead of GPS
   final Map<PrayerType, bool> reminderEnabled;
   final Map<PrayerType, int> reminderOffsetMinutes;
   final DateTime createdAt;
@@ -22,6 +25,8 @@ class PrayerSettings {
     this.timeWindowMinutes = 30,
     this.lastLatitude,
     this.lastLongitude,
+    this.selectedCityId,
+    this.useManualLocation = false,
     this.reminderEnabled = const {
       PrayerType.fajr: true,
       PrayerType.dhuhr: true,
@@ -39,6 +44,33 @@ class PrayerSettings {
     required this.createdAt,
     required this.updatedAt,
   });
+  
+  /// Get the selected city if one is set
+  City? get selectedCity {
+    if (selectedCityId == null) return null;
+    return MajorCities.getById(selectedCityId!);
+  }
+  
+  /// Get the effective latitude (from manual city or GPS)
+  double? get effectiveLatitude {
+    if (useManualLocation && selectedCity != null) {
+      return selectedCity!.latitude;
+    }
+    return lastLatitude;
+  }
+  
+  /// Get the effective longitude (from manual city or GPS)
+  double? get effectiveLongitude {
+    if (useManualLocation && selectedCity != null) {
+      return selectedCity!.longitude;
+    }
+    return lastLongitude;
+  }
+  
+  /// Check if location is available (either from GPS or manual selection)
+  bool get hasLocation {
+    return effectiveLatitude != null && effectiveLongitude != null;
+  }
 
   /// Create default settings
   factory PrayerSettings.defaults() {
@@ -57,6 +89,8 @@ class PrayerSettings {
       timeWindowMinutes: map['time_window_minutes'] as int,
       lastLatitude: map['last_latitude'] as double?,
       lastLongitude: map['last_longitude'] as double?,
+      selectedCityId: map['selected_city_id'] as String?,
+      useManualLocation: (map['use_manual_location'] as int?) == 1,
       reminderEnabled: {
         PrayerType.fajr: (map['reminder_fajr_enabled'] as int) == 1,
         PrayerType.dhuhr: (map['reminder_dhuhr_enabled'] as int) == 1,
@@ -84,6 +118,8 @@ class PrayerSettings {
       'time_window_minutes': timeWindowMinutes,
       'last_latitude': lastLatitude,
       'last_longitude': lastLongitude,
+      'selected_city_id': selectedCityId,
+      'use_manual_location': useManualLocation ? 1 : 0,
       'reminder_fajr_enabled': (reminderEnabled[PrayerType.fajr] ?? true) ? 1 : 0,
       'reminder_dhuhr_enabled': (reminderEnabled[PrayerType.dhuhr] ?? true) ? 1 : 0,
       'reminder_asr_enabled': (reminderEnabled[PrayerType.asr] ?? true) ? 1 : 0,
@@ -106,6 +142,8 @@ class PrayerSettings {
     int? timeWindowMinutes,
     double? lastLatitude,
     double? lastLongitude,
+    String? selectedCityId,
+    bool? useManualLocation,
     Map<PrayerType, bool>? reminderEnabled,
     Map<PrayerType, int>? reminderOffsetMinutes,
     DateTime? createdAt,
@@ -118,6 +156,8 @@ class PrayerSettings {
       timeWindowMinutes: timeWindowMinutes ?? this.timeWindowMinutes,
       lastLatitude: lastLatitude ?? this.lastLatitude,
       lastLongitude: lastLongitude ?? this.lastLongitude,
+      selectedCityId: selectedCityId ?? this.selectedCityId,
+      useManualLocation: useManualLocation ?? this.useManualLocation,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       reminderOffsetMinutes: reminderOffsetMinutes ?? this.reminderOffsetMinutes,
       createdAt: createdAt ?? this.createdAt,
@@ -155,6 +195,8 @@ class PrayerSettings {
         other.timeWindowMinutes == timeWindowMinutes &&
         other.lastLatitude == lastLatitude &&
         other.lastLongitude == lastLongitude &&
+        other.selectedCityId == selectedCityId &&
+        other.useManualLocation == useManualLocation &&
         mapsEqual(other.reminderEnabled, reminderEnabled) &&
         mapsEqual(other.reminderOffsetMinutes, reminderOffsetMinutes) &&
         other.createdAt == createdAt &&
@@ -170,6 +212,8 @@ class PrayerSettings {
       timeWindowMinutes,
       lastLatitude,
       lastLongitude,
+      selectedCityId,
+      useManualLocation,
       Object.hashAll(reminderEnabled.entries),
       Object.hashAll(reminderOffsetMinutes.entries),
       createdAt,

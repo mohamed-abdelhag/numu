@@ -13,7 +13,7 @@ part 'prayer_settings_provider.g.dart';
 /// **Validates: Requirements 8.1, 8.2, 8.3, 9.1, 9.2**
 @riverpod
 class PrayerSettingsNotifier extends _$PrayerSettingsNotifier {
-  late final PrayerSettingsRepository _repository;
+  PrayerSettingsRepository? _repository;
   
   /// Track if the notifier is still mounted/active
   bool _isMounted = true;
@@ -40,7 +40,7 @@ class PrayerSettingsNotifier extends _$PrayerSettingsNotifier {
         'Loading prayer settings',
       );
       
-      final settings = await _repository.getSettings();
+      final settings = await _getRepository().getSettings();
       
       CoreLoggingUtility.info(
         'PrayerSettingsProvider',
@@ -57,6 +57,12 @@ class PrayerSettingsNotifier extends _$PrayerSettingsNotifier {
       );
       rethrow;
     }
+  }
+
+  /// Get repository, ensuring it's initialized
+  PrayerSettingsRepository _getRepository() {
+    _repository ??= PrayerSettingsRepository();
+    return _repository!;
   }
 
 
@@ -80,7 +86,7 @@ class PrayerSettingsNotifier extends _$PrayerSettingsNotifier {
         'Setting enabled state to: $enabled',
       );
       
-      final updatedSettings = await _repository.setEnabled(enabled);
+      final updatedSettings = await _getRepository().setEnabled(enabled);
       
       if (!_isMounted) {
         CoreLoggingUtility.info(
@@ -130,7 +136,7 @@ class PrayerSettingsNotifier extends _$PrayerSettingsNotifier {
         'Setting calculation method to: ${method.displayName}',
       );
       
-      final updatedSettings = await _repository.setCalculationMethod(method);
+      final updatedSettings = await _getRepository().setCalculationMethod(method);
       
       if (!_isMounted) return;
       
@@ -173,7 +179,7 @@ class PrayerSettingsNotifier extends _$PrayerSettingsNotifier {
         'Setting time window to: $minutes minutes',
       );
       
-      final updatedSettings = await _repository.setTimeWindowMinutes(minutes);
+      final updatedSettings = await _getRepository().setTimeWindowMinutes(minutes);
       
       if (!_isMounted) return;
       
@@ -207,7 +213,7 @@ class PrayerSettingsNotifier extends _$PrayerSettingsNotifier {
         'Setting last location to: ($latitude, $longitude)',
       );
       
-      final updatedSettings = await _repository.setLastLocation(latitude, longitude);
+      final updatedSettings = await _getRepository().setLastLocation(latitude, longitude);
       
       if (!_isMounted) return;
       
@@ -235,7 +241,7 @@ class PrayerSettingsNotifier extends _$PrayerSettingsNotifier {
         'Setting reminder for ${type.englishName} to: $enabled',
       );
       
-      final updatedSettings = await _repository.setReminderEnabled(type, enabled);
+      final updatedSettings = await _getRepository().setReminderEnabled(type, enabled);
       
       if (!_isMounted) return;
       
@@ -263,7 +269,7 @@ class PrayerSettingsNotifier extends _$PrayerSettingsNotifier {
         'Setting reminder offset for ${type.englishName} to: $offsetMinutes minutes',
       );
       
-      final updatedSettings = await _repository.setReminderOffset(type, offsetMinutes);
+      final updatedSettings = await _getRepository().setReminderOffset(type, offsetMinutes);
       
       if (!_isMounted) return;
       
@@ -291,7 +297,7 @@ class PrayerSettingsNotifier extends _$PrayerSettingsNotifier {
         'Saving complete settings',
       );
       
-      final updatedSettings = await _repository.saveSettings(settings);
+      final updatedSettings = await _getRepository().saveSettings(settings);
       
       if (!_isMounted) return;
       
@@ -319,7 +325,102 @@ class PrayerSettingsNotifier extends _$PrayerSettingsNotifier {
     if (!_isMounted) return;
     
     state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() => _repository.getSettings());
+    state = await AsyncValue.guard(() => _getRepository().getSettings());
+  }
+
+  /// Set whether to use manual location selection instead of GPS.
+  Future<void> setUseManualLocation(bool useManual) async {
+    if (!_isMounted) return;
+    
+    try {
+      CoreLoggingUtility.info(
+        'PrayerSettingsProvider',
+        'setUseManualLocation',
+        'Setting use manual location to: $useManual',
+      );
+      
+      final updatedSettings = await _getRepository().setUseManualLocation(useManual);
+      
+      if (!_isMounted) return;
+      
+      state = AsyncValue.data(updatedSettings);
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'PrayerSettingsProvider',
+        'setUseManualLocation',
+        'Failed to set use manual location: $e\n$stackTrace',
+      );
+      
+      if (!_isMounted) return;
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
+  /// Set the manually selected city for prayer times.
+  Future<void> setSelectedCity(String? cityId) async {
+    if (!_isMounted) return;
+    
+    try {
+      CoreLoggingUtility.info(
+        'PrayerSettingsProvider',
+        'setSelectedCity',
+        'Setting selected city to: $cityId',
+      );
+      
+      final updatedSettings = await _getRepository().setSelectedCity(cityId);
+      
+      if (!_isMounted) return;
+      
+      state = AsyncValue.data(updatedSettings);
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'PrayerSettingsProvider',
+        'setSelectedCity',
+        'Failed to set selected city: $e\n$stackTrace',
+      );
+      
+      if (!_isMounted) return;
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
+  /// Set manual city selection with coordinates.
+  /// This enables manual location mode and sets the city.
+  Future<void> setManualCity(String cityId, double latitude, double longitude) async {
+    if (!_isMounted) return;
+    
+    try {
+      CoreLoggingUtility.info(
+        'PrayerSettingsProvider',
+        'setManualCity',
+        'Setting manual city: $cityId at ($latitude, $longitude)',
+      );
+      
+      final updatedSettings = await _getRepository().setManualCity(
+        cityId,
+        latitude,
+        longitude,
+      );
+      
+      if (!_isMounted) return;
+      
+      state = AsyncValue.data(updatedSettings);
+      
+      CoreLoggingUtility.info(
+        'PrayerSettingsProvider',
+        'setManualCity',
+        'Successfully set manual city',
+      );
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'PrayerSettingsProvider',
+        'setManualCity',
+        'Failed to set manual city: $e\n$stackTrace',
+      );
+      
+      if (!_isMounted) return;
+      state = AsyncValue.error(e, stackTrace);
+    }
   }
 }
 

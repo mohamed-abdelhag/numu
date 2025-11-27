@@ -222,7 +222,7 @@ final class OnboardingNotifierProvider
 }
 
 String _$onboardingNotifierHash() =>
-    r'6056ad79c5b0650ec75c5f4f2cd6461120e99417';
+    r'1fe37ef123fd31f213a746aa1f4c5b2ce4c8a3cc';
 
 /// Notifier for managing onboarding state changes
 

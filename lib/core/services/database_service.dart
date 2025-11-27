@@ -35,7 +35,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 12,
+      version: 13,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -86,6 +86,22 @@ class DatabaseService {
       // Add Islamic Prayer System tables
       await _createPrayerTables(db);
     }
+    if (oldVersion < 13) {
+      // Add manual city selection columns to prayer_settings
+      await _addManualCitySelection(db);
+    }
+  }
+  
+  Future<void> _addManualCitySelection(Database db) async {
+    // Add selected_city_id column
+    await db.execute('''
+      ALTER TABLE $prayerSettingsTable ADD COLUMN selected_city_id TEXT
+    ''');
+    
+    // Add use_manual_location column
+    await db.execute('''
+      ALTER TABLE $prayerSettingsTable ADD COLUMN use_manual_location INTEGER NOT NULL DEFAULT 0
+    ''');
   }
 
   Future<void> _upgradeCategorySystem(Database db) async {
@@ -519,6 +535,8 @@ class DatabaseService {
         time_window_minutes INTEGER NOT NULL DEFAULT 30,
         last_latitude REAL,
         last_longitude REAL,
+        selected_city_id TEXT,
+        use_manual_location INTEGER NOT NULL DEFAULT 0,
         reminder_fajr_enabled INTEGER NOT NULL DEFAULT 1,
         reminder_dhuhr_enabled INTEGER NOT NULL DEFAULT 1,
         reminder_asr_enabled INTEGER NOT NULL DEFAULT 1,

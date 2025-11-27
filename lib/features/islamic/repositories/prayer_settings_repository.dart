@@ -274,4 +274,65 @@ class PrayerSettingsRepository {
       rethrow;
     }
   }
+
+  /// Set the manually selected city for prayer times.
+  Future<PrayerSettings> setSelectedCity(String? cityId) async {
+    try {
+      final currentSettings = await getSettings();
+      final updatedSettings = currentSettings.copyWith(
+        selectedCityId: cityId,
+        updatedAt: DateTime.now(),
+      );
+      return await saveSettings(updatedSettings);
+    } catch (e) {
+      CoreLoggingUtility.error(
+        'PrayerSettingsRepository',
+        'setSelectedCity',
+        'Failed to set selected city: $e',
+      );
+      rethrow;
+    }
+  }
+
+  /// Set whether to use manual location selection instead of GPS.
+  Future<PrayerSettings> setUseManualLocation(bool useManual) async {
+    try {
+      final currentSettings = await getSettings();
+      final updatedSettings = currentSettings.copyWith(
+        useManualLocation: useManual,
+        updatedAt: DateTime.now(),
+      );
+      return await saveSettings(updatedSettings);
+    } catch (e) {
+      CoreLoggingUtility.error(
+        'PrayerSettingsRepository',
+        'setUseManualLocation',
+        'Failed to set use manual location: $e',
+      );
+      rethrow;
+    }
+  }
+
+  /// Set manual city with location coordinates.
+  /// This sets both the city ID and enables manual location mode.
+  Future<PrayerSettings> setManualCity(String cityId, double latitude, double longitude) async {
+    try {
+      final currentSettings = await getSettings();
+      final updatedSettings = currentSettings.copyWith(
+        selectedCityId: cityId,
+        useManualLocation: true,
+        lastLatitude: latitude,
+        lastLongitude: longitude,
+        updatedAt: DateTime.now(),
+      );
+      return await saveSettings(updatedSettings);
+    } catch (e) {
+      CoreLoggingUtility.error(
+        'PrayerSettingsRepository',
+        'setManualCity',
+        'Failed to set manual city: $e',
+      );
+      rethrow;
+    }
+  }
 }

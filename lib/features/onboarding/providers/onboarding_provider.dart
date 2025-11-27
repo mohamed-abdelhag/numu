@@ -83,20 +83,29 @@ Future<OnboardingState> onboardingState(Ref ref) async {
 /// Notifier for managing onboarding state changes
 @riverpod
 class OnboardingNotifier extends _$OnboardingNotifier {
-  late OnboardingRepository _repository;
+  OnboardingRepository? _repository;
 
   @override
   Future<OnboardingState> build() async {
     final repository = await ref.watch(onboardingRepositoryProvider.future);
     _repository = repository;
     
-    final isCompleted = await _repository.isOnboardingCompleted();
-    final completedAt = await _repository.getOnboardingCompletedAt();
+    final isCompleted = await repository.isOnboardingCompleted();
+    final completedAt = await repository.getOnboardingCompletedAt();
     
     return OnboardingState(
       isCompleted: isCompleted,
       completedAt: completedAt,
     );
+  }
+  
+  /// Get repository, ensuring it's initialized
+  Future<OnboardingRepository> _getRepository() async {
+    if (_repository != null) {
+      return _repository!;
+    }
+    // Repository not yet initialized, get it from the provider
+    return await ref.read(onboardingRepositoryProvider.future);
   }
 
   /// Mark onboarding as completed
@@ -105,8 +114,9 @@ class OnboardingNotifier extends _$OnboardingNotifier {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       try {
-        await _repository.markOnboardingCompleted();
-        final completedAt = await _repository.getOnboardingCompletedAt();
+        final repository = await _getRepository();
+        await repository.markOnboardingCompleted();
+        final completedAt = await repository.getOnboardingCompletedAt();
         
         CoreLoggingUtility.info(
           'OnboardingNotifier',
@@ -144,7 +154,8 @@ class OnboardingNotifier extends _$OnboardingNotifier {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       try {
-        await _repository.resetOnboarding();
+        final repository = await _getRepository();
+        await repository.resetOnboarding();
         
         CoreLoggingUtility.info(
           'OnboardingNotifier',

@@ -9,11 +9,13 @@ part of 'notification_permission_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 /// Provider for managing notification permission status
+/// Works on both Android (13+) and iOS
 
 @ProviderFor(NotificationPermission)
 const notificationPermissionProvider = NotificationPermissionProvider._();
 
 /// Provider for managing notification permission status
+/// Works on both Android (13+) and iOS
 final class NotificationPermissionProvider
     extends
         $AsyncNotifierProvider<
@@ -21,6 +23,7 @@ final class NotificationPermissionProvider
           NotificationPermissionStatus
         > {
   /// Provider for managing notification permission status
+  /// Works on both Android (13+) and iOS
   const NotificationPermissionProvider._()
     : super(
         from: null,
@@ -41,9 +44,10 @@ final class NotificationPermissionProvider
 }
 
 String _$notificationPermissionHash() =>
-    r'ed58ee14abb5ed555ab847dd2de65736f4437a3b';
+    r'2a3ee071cac1e8121b529157903d399611f9b662';
 
 /// Provider for managing notification permission status
+/// Works on both Android (13+) and iOS
 
 abstract class _$NotificationPermission
     extends $AsyncNotifier<NotificationPermissionStatus> {

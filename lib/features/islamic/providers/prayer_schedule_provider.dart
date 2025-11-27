@@ -50,9 +50,9 @@ class PrayerScheduleState {
 /// **Validates: Requirements 6.2, 6.3**
 @riverpod
 class PrayerScheduleNotifier extends _$PrayerScheduleNotifier {
-  late final PrayerTimeService _timeService;
-  late final PrayerLocationService _locationService;
-  late final PrayerRepository _repository;
+  PrayerTimeService? _timeService;
+  PrayerLocationService? _locationService;
+  PrayerRepository? _repository;
   
   bool _isMounted = true;
 
@@ -96,7 +96,7 @@ class PrayerScheduleNotifier extends _$PrayerScheduleNotifier {
 
       // Get today's events to determine next prayer
       final today = DateTime.now();
-      final events = await _repository.getEventsForDate(today);
+      final events = await _getRepository().getEventsForDate(today);
       
       // Calculate next prayer
       final nextPrayer = PrayerStatusService.getNextPendingPrayer(
@@ -138,11 +138,46 @@ class PrayerScheduleNotifier extends _$PrayerScheduleNotifier {
     }
   }
 
+  /// Get repository, ensuring it's initialized
+  PrayerRepository _getRepository() {
+    _repository ??= PrayerRepository();
+    return _repository!;
+  }
+  
+  /// Get time service, ensuring it's initialized
+  PrayerTimeService _getTimeService() {
+    _timeService ??= PrayerTimeService();
+    return _timeService!;
+  }
+  
+  /// Get location service, ensuring it's initialized
+  PrayerLocationService _getLocationService() {
+    _locationService ??= PrayerLocationService();
+    return _locationService!;
+  }
+
   /// Fetch today's prayer schedule using location and settings
   Future<PrayerSchedule?> _fetchTodaySchedule(PrayerSettings settings) async {
     try {
+      final locationService = _getLocationService();
+      final timeService = _getTimeService();
+      
+      // If using manual location (city selection), use that first
+      if (settings.useManualLocation && settings.selectedCity != null) {
+        CoreLoggingUtility.info(
+          'PrayerScheduleProvider',
+          '_fetchTodaySchedule',
+          'Using manual city: ${settings.selectedCity!.displayName}',
+        );
+        return await timeService.getPrayerTimesForToday(
+          latitude: settings.selectedCity!.latitude,
+          longitude: settings.selectedCity!.longitude,
+          method: settings.calculationMethod,
+        );
+      }
+      
       // Check for location permission
-      final hasPermission = await _locationService.hasLocationPermission();
+      final hasPermission = await locationService.hasLocationPermission();
       if (!hasPermission) {
         CoreLoggingUtility.warning(
           'PrayerScheduleProvider',
@@ -150,11 +185,11 @@ class PrayerScheduleNotifier extends _$PrayerScheduleNotifier {
           'Location permission not granted',
         );
         
-        // Try to use last known location from settings
-        if (settings.lastLatitude != null && settings.lastLongitude != null) {
-          return await _timeService.getPrayerTimesForToday(
-            latitude: settings.lastLatitude!,
-            longitude: settings.lastLongitude!,
+        // Try to use last known location from settings or manual city selection
+        if (settings.effectiveLatitude != null && settings.effectiveLongitude != null) {
+          return await timeService.getPrayerTimesForToday(
+            latitude: settings.effectiveLatitude!,
+            longitude: settings.effectiveLongitude!,
             method: settings.calculationMethod,
           );
         }
@@ -162,7 +197,7 @@ class PrayerScheduleNotifier extends _$PrayerScheduleNotifier {
       }
 
       // Get current location
-      final location = await _locationService.getCurrentLocation();
+      final location = await locationService.getCurrentLocation();
       if (location == null) {
         CoreLoggingUtility.warning(
           'PrayerScheduleProvider',
@@ -170,11 +205,11 @@ class PrayerScheduleNotifier extends _$PrayerScheduleNotifier {
           'Could not get current location',
         );
         
-        // Fall back to last known location
-        if (settings.lastLatitude != null && settings.lastLongitude != null) {
-          return await _timeService.getPrayerTimesForToday(
-            latitude: settings.lastLatitude!,
-            longitude: settings.lastLongitude!,
+        // Fall back to last known location or manual selection
+        if (settings.effectiveLatitude != null && settings.effectiveLongitude != null) {
+          return await timeService.getPrayerTimesForToday(
+            latitude: settings.effectiveLatitude!,
+            longitude: settings.effectiveLongitude!,
             method: settings.calculationMethod,
           );
         }
@@ -182,7 +217,7 @@ class PrayerScheduleNotifier extends _$PrayerScheduleNotifier {
       }
 
       // Fetch prayer times
-      return await _timeService.getPrayerTimesForToday(
+      return await timeService.getPrayerTimesForToday(
         latitude: location.latitude,
         longitude: location.longitude,
         method: settings.calculationMethod,
@@ -196,7 +231,7 @@ class PrayerScheduleNotifier extends _$PrayerScheduleNotifier {
       
       if (e.isNetworkError) {
         // Return cached schedule if available
-        final cached = await _timeService.getCachedSchedule(DateTime.now());
+        final cached = await _getTimeService().getCachedSchedule(DateTime.now());
         if (cached != null) {
           return cached;
         }

@@ -53,8 +53,8 @@ class PrayerState {
 /// **Validates: Requirements 2.1, 6.1, 6.5**
 @riverpod
 class PrayerNotifier extends _$PrayerNotifier {
-  late final PrayerRepository _repository;
-  late final PrayerScoreService _scoreService;
+  PrayerRepository? _repository;
+  PrayerScoreService? _scoreService;
   
   bool _isMounted = true;
 
@@ -90,7 +90,7 @@ class PrayerNotifier extends _$PrayerNotifier {
 
       // Get today's events
       final today = DateTime.now();
-      final events = await _repository.getEventsForDate(today);
+      final events = await _getRepository().getEventsForDate(today);
 
       // Calculate statuses for all prayers
       final statuses = PrayerStatusService.calculateAllStatuses(
@@ -123,6 +123,18 @@ class PrayerNotifier extends _$PrayerNotifier {
       );
       rethrow;
     }
+  }
+
+  /// Get repository, ensuring it's initialized
+  PrayerRepository _getRepository() {
+    _repository ??= PrayerRepository();
+    return _repository!;
+  }
+  
+  /// Get score service, ensuring it's initialized
+  PrayerScoreService _getScoreService() {
+    _scoreService ??= PrayerScoreService();
+    return _scoreService!;
   }
 
   /// Log a prayer as completed.
@@ -183,10 +195,10 @@ class PrayerNotifier extends _$PrayerNotifier {
       );
 
       // Save to repository
-      await _repository.logPrayerEvent(event);
+      await _getRepository().logPrayerEvent(event);
 
       // Recalculate score for this prayer type
-      await _scoreService.recalculateScore(prayerType);
+      await _getScoreService().recalculateScore(prayerType);
 
       CoreLoggingUtility.info(
         'PrayerProvider',
@@ -219,7 +231,7 @@ class PrayerNotifier extends _$PrayerNotifier {
         'Deleting prayer event ID $eventId',
       );
 
-      await _repository.deletePrayerEvent(eventId);
+      await _getRepository().deletePrayerEvent(eventId);
 
       // Refresh state
       if (_isMounted) {
