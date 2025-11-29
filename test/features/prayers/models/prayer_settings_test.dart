@@ -29,21 +29,23 @@ extension PrayerSettingsGenerators on Any {
                 choose([true, false]).bind((hasLocation) =>
                     (hasLocation ? latitude : always<double?>(null)).bind((lat) =>
                         (hasLocation ? longitude : always<double?>(null)).bind((lng) =>
-                            _reminderEnabledMap.bind((reminderEnabled) =>
-                                _reminderOffsetMap.bind((reminderOffsets) =>
-                                    always(DateTime.now()).bind((createdAt) =>
-                                        always(DateTime.now()).map((updatedAt) =>
-                                            PrayerSettings(
-                                              isEnabled: isEnabled,
-                                              calculationMethod: method,
-                                              timeWindowMinutes: windowMinutes,
-                                              lastLatitude: lat,
-                                              lastLongitude: lng,
-                                              reminderEnabled: reminderEnabled,
-                                              reminderOffsetMinutes: reminderOffsets,
-                                              createdAt: createdAt,
-                                              updatedAt: updatedAt,
-                                            )))))))))));
+                            choose([true, false]).bind((showNafilaAtHome) =>
+                                _reminderEnabledMap.bind((reminderEnabled) =>
+                                    _reminderOffsetMap.bind((reminderOffsets) =>
+                                        always(DateTime.now()).bind((createdAt) =>
+                                            always(DateTime.now()).map((updatedAt) =>
+                                                PrayerSettings(
+                                                  isEnabled: isEnabled,
+                                                  calculationMethod: method,
+                                                  timeWindowMinutes: windowMinutes,
+                                                  lastLatitude: lat,
+                                                  lastLongitude: lng,
+                                                  showNafilaAtHome: showNafilaAtHome,
+                                                  reminderEnabled: reminderEnabled,
+                                                  reminderOffsetMinutes: reminderOffsets,
+                                                  createdAt: createdAt,
+                                                  updatedAt: updatedAt,
+                                                ))))))))))));
   }
 
   /// Generator for reminder enabled map
@@ -120,6 +122,7 @@ void main() {
         expect(restored.timeWindowMinutes, equals(settings.timeWindowMinutes));
         expect(restored.lastLatitude, equals(settings.lastLatitude));
         expect(restored.lastLongitude, equals(settings.lastLongitude));
+        expect(restored.showNafilaAtHome, equals(settings.showNafilaAtHome));
         expect(restored.createdAt, equals(settings.createdAt));
         expect(restored.updatedAt, equals(settings.updatedAt));
 
@@ -134,6 +137,31 @@ void main() {
             equals(settings.reminderOffsetMinutes[type]),
           );
         }
+      },
+    );
+
+    /// **Feature: nafila-prayer-system, Property 9: Settings Persistence Round-Trip**
+    /// **Validates: Requirements 6.2**
+    ///
+    /// *For any* boolean value for the "Show Nafila at Home" setting,
+    /// saving and then loading the setting should return the same boolean value.
+    Glados(any.choose([true, false])).test(
+      'Property 9: Settings Persistence Round-Trip - showNafilaAtHome is preserved',
+      (showNafilaAtHome) {
+        final settings = PrayerSettings(
+          showNafilaAtHome: showNafilaAtHome,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        // Serialize to map (simulating database storage)
+        final map = settings.toMap();
+
+        // Deserialize from map (simulating database retrieval)
+        final restored = PrayerSettings.fromMap(map);
+
+        // Verify showNafilaAtHome is preserved
+        expect(restored.showNafilaAtHome, equals(showNafilaAtHome));
       },
     );
   });

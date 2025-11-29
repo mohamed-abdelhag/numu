@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../islamic/models/enums/prayer_type.dart';
 import '../../islamic/models/enums/prayer_status.dart';
+import '../../islamic/models/enums/nafila_type.dart';
 
-enum DailyItemType { habit, task, prayer }
+enum DailyItemType { habit, task, prayer, nafila }
 
 class DailyItem {
   final String id;
@@ -22,6 +23,9 @@ class DailyItem {
   final PrayerType? prayerType;
   final PrayerStatus? prayerStatus;
   final String? arabicName;
+  
+  // Nafila-specific fields
+  final NafilaType? nafilaType;
 
   DailyItem({
     required this.id,
@@ -39,10 +43,14 @@ class DailyItem {
     this.prayerType,
     this.prayerStatus,
     this.arabicName,
+    this.nafilaType,
   });
   
   /// Check if this item is a prayer
   bool get isPrayer => type == DailyItemType.prayer;
+  
+  /// Check if this item is a Nafila prayer
+  bool get isNafila => type == DailyItemType.nafila;
   
   /// Check if this prayer is missed
   bool get isMissed => prayerStatus == PrayerStatus.missed;

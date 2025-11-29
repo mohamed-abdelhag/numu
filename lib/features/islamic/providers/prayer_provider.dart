@@ -1,6 +1,7 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../../core/utils/core_logging_utility.dart';
 import '../models/prayer_event.dart';
+import '../models/prayer_settings.dart';
 import '../models/enums/prayer_type.dart';
 import '../models/enums/prayer_status.dart';
 import '../repositories/prayer_repository.dart';
@@ -78,14 +79,34 @@ class PrayerNotifier extends _$PrayerNotifier {
     });
     
     try {
-      // Check if prayer system is enabled
-      final settings = await ref.watch(prayerSettingsProvider.future);
+      // Check if prayer system is enabled - use read for initial load to avoid watch after async gaps
+      final settingsFuture = ref.watch(prayerSettingsProvider.future);
+      final scheduleFuture = ref.watch(prayerScheduleProvider.future);
+      
+      // Await both futures together to minimize async gaps
+      final results = await Future.wait([
+        settingsFuture,
+        scheduleFuture,
+      ]);
+      
+      // Check if still mounted after async operation
+      if (!_isMounted) {
+        CoreLoggingUtility.info(
+          'PrayerProvider',
+          'build',
+          'Provider disposed during build, returning empty state',
+        );
+        return const PrayerState(isEnabled: false);
+      }
+      
+      final settings = results[0] as PrayerSettings;
+      final scheduleState = results[1] as PrayerScheduleState;
+      
       if (!settings.isEnabled) {
         return const PrayerState(isEnabled: false);
       }
 
       // Get today's schedule
-      final scheduleState = await ref.watch(prayerScheduleProvider.future);
       final schedule = scheduleState.schedule;
       
       if (schedule == null) {
@@ -95,6 +116,11 @@ class PrayerNotifier extends _$PrayerNotifier {
       // Get today's events
       final today = DateTime.now();
       final events = await _getRepository().getEventsForDate(today);
+      
+      // Check mounted state again after repository call
+      if (!_isMounted) {
+        return const PrayerState(isEnabled: false);
+      }
 
       // Calculate statuses for all prayers
       final statuses = PrayerStatusService.calculateAllStatuses(

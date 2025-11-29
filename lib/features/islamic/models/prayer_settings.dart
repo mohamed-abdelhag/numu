@@ -13,6 +13,7 @@ class PrayerSettings {
   final double? lastLongitude;
   final String? selectedCityId; // Manual city selection
   final bool useManualLocation; // Whether to use manual city instead of GPS
+  final bool showNafilaAtHome; // Whether to show Nafila prayers on home screen
   final Map<PrayerType, bool> reminderEnabled;
   final Map<PrayerType, int> reminderOffsetMinutes;
   final DateTime createdAt;
@@ -27,6 +28,7 @@ class PrayerSettings {
     this.lastLongitude,
     this.selectedCityId,
     this.useManualLocation = false,
+    this.showNafilaAtHome = true,
     this.reminderEnabled = const {
       PrayerType.fajr: true,
       PrayerType.dhuhr: true,
@@ -91,6 +93,7 @@ class PrayerSettings {
       lastLongitude: map['last_longitude'] as double?,
       selectedCityId: map['selected_city_id'] as String?,
       useManualLocation: (map['use_manual_location'] as int?) == 1,
+      showNafilaAtHome: (map['show_nafila_at_home'] as int?) == 1,
       reminderEnabled: {
         PrayerType.fajr: (map['reminder_fajr_enabled'] as int) == 1,
         PrayerType.dhuhr: (map['reminder_dhuhr_enabled'] as int) == 1,
@@ -120,6 +123,7 @@ class PrayerSettings {
       'last_longitude': lastLongitude,
       'selected_city_id': selectedCityId,
       'use_manual_location': useManualLocation ? 1 : 0,
+      'show_nafila_at_home': showNafilaAtHome ? 1 : 0,
       'reminder_fajr_enabled': (reminderEnabled[PrayerType.fajr] ?? true) ? 1 : 0,
       'reminder_dhuhr_enabled': (reminderEnabled[PrayerType.dhuhr] ?? true) ? 1 : 0,
       'reminder_asr_enabled': (reminderEnabled[PrayerType.asr] ?? true) ? 1 : 0,
@@ -144,6 +148,7 @@ class PrayerSettings {
     double? lastLongitude,
     String? selectedCityId,
     bool? useManualLocation,
+    bool? showNafilaAtHome,
     Map<PrayerType, bool>? reminderEnabled,
     Map<PrayerType, int>? reminderOffsetMinutes,
     DateTime? createdAt,
@@ -158,6 +163,7 @@ class PrayerSettings {
       lastLongitude: lastLongitude ?? this.lastLongitude,
       selectedCityId: selectedCityId ?? this.selectedCityId,
       useManualLocation: useManualLocation ?? this.useManualLocation,
+      showNafilaAtHome: showNafilaAtHome ?? this.showNafilaAtHome,
       reminderEnabled: reminderEnabled ?? this.reminderEnabled,
       reminderOffsetMinutes: reminderOffsetMinutes ?? this.reminderOffsetMinutes,
       createdAt: createdAt ?? this.createdAt,
@@ -197,6 +203,7 @@ class PrayerSettings {
         other.lastLongitude == lastLongitude &&
         other.selectedCityId == selectedCityId &&
         other.useManualLocation == useManualLocation &&
+        other.showNafilaAtHome == showNafilaAtHome &&
         mapsEqual(other.reminderEnabled, reminderEnabled) &&
         mapsEqual(other.reminderOffsetMinutes, reminderOffsetMinutes) &&
         other.createdAt == createdAt &&
@@ -214,6 +221,7 @@ class PrayerSettings {
       lastLongitude,
       selectedCityId,
       useManualLocation,
+      showNafilaAtHome,
       Object.hashAll(reminderEnabled.entries),
       Object.hashAll(reminderOffsetMinutes.entries),
       createdAt,

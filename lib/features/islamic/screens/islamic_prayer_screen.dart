@@ -5,15 +5,22 @@ import '../../../core/utils/core_logging_utility.dart';
 import '../../../core/widgets/shell/numu_app_bar.dart';
 import '../models/enums/prayer_type.dart';
 import '../models/enums/prayer_status.dart';
+import '../models/enums/nafila_type.dart';
+import '../models/nafila_event.dart';
 import '../providers/prayer_provider.dart';
 import '../providers/prayer_schedule_provider.dart';
 import '../providers/prayer_score_provider.dart';
+import '../providers/nafila_provider.dart';
+import '../services/nafila_time_service.dart';
 import '../widgets/prayer_card.dart';
 import '../widgets/prayer_progress_header.dart';
 import '../widgets/prayer_log_dialog.dart';
 import '../widgets/prayer_edit_dialog.dart';
 import '../widgets/next_prayer_countdown.dart';
 import '../widgets/prayer_score_display.dart';
+import '../widgets/nafila_indicator_card.dart';
+import '../widgets/nafila_log_dialog.dart';
+import '../widgets/nafila_edit_dialog.dart';
 
 /// Main screen displaying all five prayers with status, progress header, and statistics.
 /// Handles prayer logging via dialog.
@@ -36,16 +43,34 @@ class _IslamicPrayerScreenState extends ConsumerState<IslamicPrayerScreen> {
     final prayerAsync = ref.watch(prayerProvider);
     final scheduleAsync = ref.watch(prayerScheduleProvider);
     final scoreAsync = ref.watch(prayerScoreProvider);
+    final nafilaAsync = ref.watch(nafilaProvider);
 
     return Column(
       children: [
         NumuAppBar(
           title: 'Prayers',
           actions: [
-            // Toggle statistics view
+            // Add custom Nafila button
             IconButton(
-              icon: Icon(_showStatistics ? Icons.list : Icons.bar_chart),
-              tooltip: _showStatistics ? 'Show prayers' : 'Show statistics',
+              icon: const Icon(Icons.add_circle_outline),
+              tooltip: 'Add custom Nafila',
+              onPressed: () => _showNafilaLogDialog(
+                NafilaType.custom,
+                null,
+                null,
+              ),
+            ),
+            // Statistics screen navigation button
+            // **Validates: Requirements 8.1, 8.2**
+            IconButton(
+              icon: const Icon(Icons.bar_chart),
+              tooltip: 'Prayer statistics',
+              onPressed: () => context.push('/prayers/statistics'),
+            ),
+            // Toggle inline statistics view
+            IconButton(
+              icon: Icon(_showStatistics ? Icons.list : Icons.analytics_outlined),
+              tooltip: _showStatistics ? 'Show prayers' : 'Show quick stats',
               onPressed: () {
                 setState(() {
                   _showStatistics = !_showStatistics;
@@ -75,24 +100,34 @@ class _IslamicPrayerScreenState extends ConsumerState<IslamicPrayerScreen> {
                   loading: () => const Center(child: CircularProgressIndicator()),
                   error: (error, _) => _buildErrorState(context, error),
                   data: (scheduleState) {
+                    // Get Nafila state (default to empty if loading/error)
+                    final nafilaState = nafilaAsync.when(
+                      data: (state) => state,
+                      loading: () => const NafilaState(),
+                      error: (_, __) => const NafilaState(),
+                    );
+                    
                     return scoreAsync.when(
                       loading: () => _buildPrayerContent(
                         context,
                         prayerState,
                         scheduleState,
                         null,
+                        nafilaState,
                       ),
                       error: (_, __) => _buildPrayerContent(
                         context,
                         prayerState,
                         scheduleState,
                         null,
+                        nafilaState,
                       ),
                       data: (scoreState) => _buildPrayerContent(
                         context,
                         prayerState,
                         scheduleState,
                         scoreState,
+                        nafilaState,
                       ),
                     );
                   },
@@ -111,6 +146,7 @@ class _IslamicPrayerScreenState extends ConsumerState<IslamicPrayerScreen> {
     PrayerState prayerState,
     PrayerScheduleState scheduleState,
     PrayerScoreState? scoreState,
+    NafilaState nafilaState,
   ) {
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -143,7 +179,7 @@ class _IslamicPrayerScreenState extends ConsumerState<IslamicPrayerScreen> {
           if (_showStatistics && scoreState != null)
             _buildStatisticsView(scoreState)
           else
-            _buildPrayerList(context, prayerState, scheduleState),
+            _buildPrayerList(context, prayerState, scheduleState, nafilaState),
 
           // Offline mode indicator
           if (scheduleState.isOfflineMode) ...[
@@ -165,8 +201,14 @@ class _IslamicPrayerScreenState extends ConsumerState<IslamicPrayerScreen> {
     BuildContext context,
     PrayerState prayerState,
     PrayerScheduleState scheduleState,
+    NafilaState nafilaState,
   ) {
     final theme = Theme.of(context);
+    final timeService = NafilaTimeService();
+
+    // Get custom Nafila events sorted by timestamp for chronological display
+    final customNafilaEvents = List<NafilaEvent>.from(nafilaState.customNafilaEvents)
+      ..sort((a, b) => a.eventTimestamp.compareTo(b.eventTimestamp));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,26 +220,199 @@ class _IslamicPrayerScreenState extends ConsumerState<IslamicPrayerScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        ...PrayerType.values.map((type) {
-          final status = prayerState.statuses[type] ?? PrayerStatus.pending;
-          final prayerTime = scheduleState.schedule?.getTimeForPrayer(type);
-          final event = prayerState.todayEvents
-              .where((e) => e.prayerType == type)
-              .firstOrNull;
-
-          return PrayerCard(
-            prayerType: type,
-            prayerTime: prayerTime,
-            status: status,
-            onTap: !status.isCompleted
-                ? () => _showLogDialog(type, prayerTime)
-                : null,
-            onEditTap: status.isCompleted && event != null
-                ? () => _showEditDialog(type, event, prayerTime)
-                : null,
-          );
-        }),
+        
+        // Build prayer list with Nafila indicators interspersed
+        ..._buildPrayerListWithNafila(
+          context,
+          prayerState,
+          scheduleState,
+          nafilaState,
+          timeService,
+          customNafilaEvents,
+        ),
       ],
+    );
+  }
+
+  /// Build the prayer list with Nafila indicators positioned between appropriate prayers.
+  ///
+  /// **Validates: Requirements 1.1, 3.1, 3.3**
+  List<Widget> _buildPrayerListWithNafila(
+    BuildContext context,
+    PrayerState prayerState,
+    PrayerScheduleState scheduleState,
+    NafilaState nafilaState,
+    NafilaTimeService timeService,
+    List<NafilaEvent> customNafilaEvents,
+  ) {
+    final widgets = <Widget>[];
+    final schedule = scheduleState.schedule;
+
+    for (final prayerType in PrayerType.values) {
+      final status = prayerState.statuses[prayerType] ?? PrayerStatus.pending;
+      final prayerTime = schedule?.getTimeForPrayer(prayerType);
+      final event = prayerState.todayEvents
+          .where((e) => e.prayerType == prayerType)
+          .firstOrNull;
+
+      // Add Sunnah Fajr indicator AFTER Fajr card (between Fajr and sunrise)
+      if (prayerType == PrayerType.fajr) {
+        // First add the Fajr prayer card
+        widgets.add(PrayerCard(
+          prayerType: prayerType,
+          prayerTime: prayerTime,
+          status: status,
+          onTap: !status.isCompleted
+              ? () => _showLogDialog(prayerType, prayerTime)
+              : null,
+          onEditTap: status.isCompleted && event != null
+              ? () => _showEditDialog(prayerType, event, prayerTime)
+              : null,
+        ));
+
+        // Then add Sunnah Fajr indicator
+        widgets.add(_buildNafilaIndicator(
+          NafilaType.sunnahFajr,
+          nafilaState,
+          schedule != null ? timeService.getSunnahFajrWindow(schedule) : null,
+        ));
+
+        // Add any custom Nafila events that fall in the Sunnah Fajr window
+        if (schedule != null) {
+          final (fajrStart, fajrEnd) = timeService.getSunnahFajrWindow(schedule);
+          widgets.addAll(_buildCustomNafilaInWindow(
+            customNafilaEvents,
+            fajrStart,
+            fajrEnd,
+          ));
+        }
+
+        continue; // Skip the default card addition below
+      }
+
+      // Add Duha indicator BEFORE Dhuhr card (between sunrise and Dhuhr)
+      if (prayerType == PrayerType.dhuhr) {
+        // Add Duha indicator before Dhuhr
+        widgets.add(_buildNafilaIndicator(
+          NafilaType.duha,
+          nafilaState,
+          schedule != null ? timeService.getDuhaWindow(schedule) : null,
+        ));
+
+        // Add any custom Nafila events that fall in the Duha window
+        if (schedule != null) {
+          final (duhaStart, duhaEnd) = timeService.getDuhaWindow(schedule);
+          widgets.addAll(_buildCustomNafilaInWindow(
+            customNafilaEvents,
+            duhaStart,
+            duhaEnd,
+          ));
+        }
+      }
+
+      // Add the prayer card
+      widgets.add(PrayerCard(
+        prayerType: prayerType,
+        prayerTime: prayerTime,
+        status: status,
+        onTap: !status.isCompleted
+            ? () => _showLogDialog(prayerType, prayerTime)
+            : null,
+        onEditTap: status.isCompleted && event != null
+            ? () => _showEditDialog(prayerType, event, prayerTime)
+            : null,
+      ));
+
+      // Add Shaf'i/Witr indicator AFTER Isha card
+      if (prayerType == PrayerType.isha) {
+        widgets.add(_buildNafilaIndicator(
+          NafilaType.shafiWitr,
+          nafilaState,
+          schedule != null ? timeService.getShafiWitrWindow(schedule, null) : null,
+        ));
+
+        // Add any custom Nafila events that fall in the Shaf'i/Witr window
+        if (schedule != null) {
+          final (witrStart, witrEnd) = timeService.getShafiWitrWindow(schedule, null);
+          widgets.addAll(_buildCustomNafilaInWindow(
+            customNafilaEvents,
+            witrStart,
+            witrEnd,
+          ));
+        }
+      }
+    }
+
+    return widgets;
+  }
+
+  /// Build a Nafila indicator card for a defined Sunnah prayer type.
+  Widget _buildNafilaIndicator(
+    NafilaType type,
+    NafilaState nafilaState,
+    (DateTime, DateTime)? timeWindow,
+  ) {
+    final isCompleted = nafilaState.isCompleted(type);
+    final rakats = nafilaState.getRakatsForType(type);
+    final events = nafilaState.getEventsForType(type);
+    final existingEvent = events.isNotEmpty ? events.first : null;
+
+    return NafilaIndicatorCard(
+      type: type,
+      isCompleted: isCompleted,
+      rakatCount: isCompleted ? rakats : null,
+      onTap: () => _showNafilaLogDialog(
+        type,
+        timeWindow?.$1,
+        timeWindow?.$2,
+      ),
+      onEditTap: isCompleted && existingEvent != null
+          ? () => _showNafilaEditDialog(
+              existingEvent,
+              timeWindow?.$1,
+              timeWindow?.$2,
+            )
+          : null,
+    );
+  }
+
+  /// Build custom Nafila cards for events that fall within a specific time window.
+  List<Widget> _buildCustomNafilaInWindow(
+    List<NafilaEvent> customEvents,
+    DateTime windowStart,
+    DateTime windowEnd,
+  ) {
+    final widgets = <Widget>[];
+
+    for (final event in customEvents) {
+      final eventTime = event.actualPrayerTime ?? event.eventTimestamp;
+      
+      // Only show custom events in their appropriate time slot
+      if (_isTimeInWindow(eventTime, windowStart, windowEnd)) {
+        widgets.add(_buildCustomNafilaCard(event));
+      }
+    }
+
+    return widgets;
+  }
+
+  /// Check if a time falls within a window (handles midnight crossing).
+  bool _isTimeInWindow(DateTime time, DateTime start, DateTime end) {
+    // Handle window crossing midnight
+    if (end.isBefore(start)) {
+      return !time.isBefore(start) || time.isBefore(end);
+    }
+    return !time.isBefore(start) && time.isBefore(end);
+  }
+
+  /// Build a card for a custom Nafila event.
+  Widget _buildCustomNafilaCard(NafilaEvent event) {
+    return NafilaIndicatorCard(
+      type: NafilaType.custom,
+      isCompleted: true,
+      rakatCount: event.rakatCount,
+      onTap: null,
+      onEditTap: () => _showNafilaEditDialog(event, null, null),
     );
   }
 
@@ -462,6 +677,54 @@ class _IslamicPrayerScreenState extends ConsumerState<IslamicPrayerScreen> {
         prayerType: prayerType,
         existingEvent: existingEvent,
         scheduledTime: scheduledTime,
+      ),
+    );
+  }
+
+  /// Show dialog for logging a Nafila prayer.
+  ///
+  /// **Validates: Requirements 1.2, 2.1**
+  void _showNafilaLogDialog(
+    NafilaType nafilaType,
+    DateTime? windowStart,
+    DateTime? windowEnd,
+  ) {
+    CoreLoggingUtility.info(
+      'IslamicPrayerScreen',
+      '_showNafilaLogDialog',
+      'Opening Nafila log dialog for ${nafilaType.englishName}',
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => NafilaLogDialog(
+        type: nafilaType,
+        scheduledWindowStart: windowStart,
+        scheduledWindowEnd: windowEnd,
+      ),
+    );
+  }
+
+  /// Show dialog for editing an existing Nafila event.
+  ///
+  /// **Validates: Requirements 2.2**
+  void _showNafilaEditDialog(
+    NafilaEvent existingEvent,
+    DateTime? windowStart,
+    DateTime? windowEnd,
+  ) {
+    CoreLoggingUtility.info(
+      'IslamicPrayerScreen',
+      '_showNafilaEditDialog',
+      'Opening Nafila edit dialog for ${existingEvent.nafilaType.englishName}',
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => NafilaEditDialog(
+        existingEvent: existingEvent,
+        scheduledWindowStart: windowStart,
+        scheduledWindowEnd: windowEnd,
       ),
     );
   }

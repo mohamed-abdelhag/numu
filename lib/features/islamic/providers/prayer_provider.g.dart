@@ -42,7 +42,7 @@ final class PrayerNotifierProvider
   PrayerNotifier create() => PrayerNotifier();
 }
 
-String _$prayerNotifierHash() => r'8448d7e83e8d09147b3405785da9a31207316144';
+String _$prayerNotifierHash() => r'1eb73f9f13ebf96fd184a8b58bdf707be19fc363';
 
 /// Provider for managing prayer events and status for today.
 ///

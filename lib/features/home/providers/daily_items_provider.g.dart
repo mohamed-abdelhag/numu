@@ -34,7 +34,7 @@ final class DailyItemsNotifierProvider
 }
 
 String _$dailyItemsNotifierHash() =>
-    r'd7cf74f1972d047d40a49be952a4a2fcb488aa87';
+    r'e53d5d9a991c7af04b4e68936bbfef8ad476498c';
 
 abstract class _$DailyItemsNotifier extends $AsyncNotifier<DailyItemsState> {
   FutureOr<DailyItemsState> build();
@@ -54,3 +54,48 @@ abstract class _$DailyItemsNotifier extends $AsyncNotifier<DailyItemsState> {
     element.handleValue(ref, created);
   }
 }
+
+/// Provider for filtered and sorted daily items based on user preferences
+
+@ProviderFor(filteredDailyItems)
+const filteredDailyItemsProvider = FilteredDailyItemsProvider._();
+
+/// Provider for filtered and sorted daily items based on user preferences
+
+final class FilteredDailyItemsProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<DailyItemsState>,
+          DailyItemsState,
+          FutureOr<DailyItemsState>
+        >
+    with $FutureModifier<DailyItemsState>, $FutureProvider<DailyItemsState> {
+  /// Provider for filtered and sorted daily items based on user preferences
+  const FilteredDailyItemsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'filteredDailyItemsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$filteredDailyItemsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<DailyItemsState> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<DailyItemsState> create(Ref ref) {
+    return filteredDailyItems(ref);
+  }
+}
+
+String _$filteredDailyItemsHash() =>
+    r'c708cfc6c9ca005a461a677a0df3f7f180337872';

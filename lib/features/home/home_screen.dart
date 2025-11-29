@@ -6,6 +6,7 @@ import 'package:numu/core/widgets/shell/numu_app_bar.dart';
 import 'providers/daily_items_provider.dart';
 import 'widgets/daily_progress_header.dart';
 import 'widgets/daily_item_card.dart';
+import 'widgets/home_filter_sort_bar.dart';
 import '../settings/providers/user_profile_provider.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -15,7 +16,8 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     CoreLoggingUtility.info('HomeScreen', 'build', 'Building home screen');
     
-    final dailyItemsAsync = ref.watch(dailyItemsProvider);
+    // Use the filtered daily items provider
+    final filteredItemsAsync = ref.watch(filteredDailyItemsProvider);
     final userProfileAsync = ref.watch(userProfileProvider);
 
     return Column(
@@ -31,8 +33,10 @@ class HomeScreen extends ConsumerWidget {
             ),
           ],
         ),
+        // Filter and sort bar
+        const HomeFilterSortBar(),
         Expanded(
-          child: dailyItemsAsync.when(
+          child: filteredItemsAsync.when(
             data: (dailyState) {
               return userProfileAsync.when(
                 data: (profile) {

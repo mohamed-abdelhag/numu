@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/daily_item.dart';
+import '../providers/daily_items_provider.dart';
 import '../../habits/models/habit.dart';
 import '../../habits/models/enums/tracking_type.dart';
 import '../../habits/models/enums/streak_type.dart';
@@ -43,6 +44,12 @@ class DailyItemCard extends ConsumerWidget {
     // **Validates: Requirements 7.2, 7.3**
     if (item.type == DailyItemType.prayer && item.prayerType != null) {
       return _buildPrayerCard(context, ref, theme);
+    }
+    
+    // For Nafila prayers, build Nafila-specific card
+    // **Validates: Requirements 5.2, 5.4**
+    if (item.type == DailyItemType.nafila && item.nafilaType != null) {
+      return _buildNafilaCard(context, ref, theme);
     }
     
     // For tasks, use the existing item data
@@ -453,6 +460,8 @@ class DailyItemCard extends ConsumerWidget {
     if (result == true) {
       // Refresh the prayer provider to update the UI
       ref.invalidate(prayerProvider);
+      // Also refresh daily items provider to update the home screen cards
+      ref.invalidate(dailyItemsProvider);
       onActionComplete?.call();
     }
   }
@@ -460,6 +469,149 @@ class DailyItemCard extends ConsumerWidget {
   /// Navigate to the Islamic Prayer Screen.
   void _navigateToPrayerScreen(BuildContext context) {
     context.push('/islamic-prayer');
+  }
+
+  /// Build a Nafila-specific card with appropriate styling.
+  /// Shows only completion status (done/not done) without detailed rakat information.
+  ///
+  /// **Validates: Requirements 5.2, 5.4**
+  Widget _buildNafilaCard(BuildContext context, WidgetRef ref, ThemeData theme) {
+    final nafilaType = item.nafilaType!;
+    final isCompleted = item.isCompleted;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: InkWell(
+        onTap: () => _navigateToPrayerScreen(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              // Nafila icon with completion-based styling
+              _buildNafilaIcon(theme, isCompleted),
+              const SizedBox(width: 16),
+              
+              // Nafila name and details
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // English name with completion styling
+                    Text(
+                      nafilaType.englishName,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        decoration: isCompleted 
+                            ? TextDecoration.lineThrough 
+                            : null,
+                        color: isCompleted
+                            ? theme.colorScheme.onSurface.withValues(alpha: 0.5)
+                            : null,
+                      ),
+                    ),
+                    // Arabic name
+                    const SizedBox(height: 2),
+                    Text(
+                      nafilaType.arabicName,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontFamily: 'Arial', // Better Arabic rendering
+                      ),
+                    ),
+                    // Sunnah label
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.star_outline,
+                          size: 14,
+                          color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Sunnah Prayer',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.7),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Completion indicator (done/not done only)
+              _buildNafilaCompletionIndicator(theme, isCompleted),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Build Nafila icon with completion-based styling
+  Widget _buildNafilaIcon(ThemeData theme, bool isCompleted) {
+    final iconColor = isCompleted 
+        ? const Color(0xFF4CAF50) // Green for completed
+        : theme.colorScheme.primary;
+    final backgroundColor = isCompleted
+        ? const Color(0xFF4CAF50).withValues(alpha: 0.1)
+        : theme.colorScheme.primary.withValues(alpha: 0.1);
+
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(
+        Icons.mosque,
+        color: iconColor,
+        size: 24,
+      ),
+    );
+  }
+
+  /// Build completion indicator for Nafila (done/not done only).
+  ///
+  /// **Validates: Requirements 5.2**
+  Widget _buildNafilaCompletionIndicator(ThemeData theme, bool isCompleted) {
+    if (isCompleted) {
+      return Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: const Color(0xFF4CAF50).withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.check,
+          color: Color(0xFF4CAF50),
+          size: 24,
+        ),
+      );
+    }
+
+    // Not completed - show empty circle indicator
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.3),
+          width: 2,
+        ),
+      ),
+      child: Icon(
+        Icons.radio_button_unchecked,
+        color: theme.colorScheme.outline.withValues(alpha: 0.5),
+        size: 24,
+      ),
+    );
   }
 
   Widget _buildLoadingCard(ThemeData theme) {

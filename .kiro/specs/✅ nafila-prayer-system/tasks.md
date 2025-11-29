@@ -1,0 +1,203 @@
+# Implementation Plan
+
+- [x] 1. Set up database schema and models
+  - [x] 1.1 Add nafila_events and nafila_scores tables to DatabaseService
+    - Add migration version 14 with CREATE TABLE statements for nafila_events and nafila_scores
+    - Add ALTER TABLE for prayer_settings to add show_nafila_at_home column
+    - Create indexes for nafila_events (event_date, nafila_type)
+    - _Requirements: 7.1, 7.2_
+  - [x] 1.2 Create NafilaType enum
+    - Define enum values: sunnahFajr, duha, shafiWitr, custom
+    - Implement arabicName, englishName, minRakats, maxRakats, defaultRakats getters
+    - Add toJson/fromJson methods for database serialization
+    - _Requirements: 1.1_
+  - [x] 1.3 Create NafilaEvent model
+    - Define all fields: id, nafilaType, eventDate, eventTimestamp, rakatCount, actualPrayerTime, notes, createdAt, updatedAt
+    - Implement toMap() and fromMap() factory constructor
+    - Implement copyWith() method
+    - Implement equality and hashCode
+    - _Requirements: 2.2, 7.4, 7.5_
+  - [x] 1.4 Write property test for NafilaEvent serialization round-trip
+    - **Property 4: NafilaEvent Serialization Round-Trip**
+    - **Validates: Requirements 7.4, 7.5**
+  - [x] 1.5 Create NafilaScore model
+    - Define all fields: nafilaType, score, currentStreak, longestStreak, totalRakats, totalCompletions, calculatedAt, lastEventDate
+    - Implement toMap() and fromMap() factory constructor
+    - _Requirements: 4.4, 4.5_
+  - [x] 1.6 Create PrayerDayStats model
+    - Define fields: date, obligatoryCompleted map, nafilaCompleted map, totalRakatsNafila
+    - _Requirements: 4.2_
+
+- [x] 2. Implement repository layer
+  - [x] 2.1 Create NafilaRepository class
+    - Implement logNafilaEvent() - insert or update event
+    - Implement updateNafilaEvent() - update existing event
+    - Implement deleteNafilaEvent() - delete by ID
+    - Implement getEventsForDate() - get all Nafila events for a date
+    - Implement getEventsForTypeOnDate() - get events for specific type on date
+    - Implement getEventsInRange() - get events between two dates
+    - _Requirements: 2.2, 7.3_
+  - [x] 2.2 Write property test for data isolation
+    - **Property 10: Data Isolation**
+    - **Validates: Requirements 7.3**
+  - [x] 2.3 Implement NafilaScore repository methods
+    - Implement saveNafilaScore() - insert or replace score
+    - Implement getNafilaScore() - get score for specific type
+    - Implement getAllNafilaScores() - get all scores
+    - _Requirements: 4.4_
+  - [x] 2.4 Update PrayerSettingsRepository for show_nafila_at_home
+    - Add showNafilaAtHome field to PrayerSettings model
+    - Update toMap/fromMap for the new field
+    - _Requirements: 6.2_
+  - [x] 2.5 Write property test for settings persistence round-trip
+    - **Property 9: Settings Persistence Round-Trip**
+    - **Validates: Requirements 6.2**
+
+- [x] 3. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 4. Implement service layer
+  - [x] 4.1 Create NafilaTimeService
+    - Implement getSunnahFajrWindow() - returns (fajrAzan, fajrPrayer) times
+    - Implement getDuhaWindow() - returns (sunrise+15min, dhuhr-15min) times
+    - Implement getShafiWitrWindow() - returns (isha, nextFajr) times
+    - Implement isValidTimeForSunnahFajr() - validate time in window
+    - Implement isValidTimeForDuha() - validate time in window
+    - Implement isValidTimeForShafiWitr() - validate time in window
+    - Implement getNafilaTypeForTime() - determine which slot a time belongs to
+    - _Requirements: 1.3, 1.4, 1.5_
+  - [x] 4.2 Write property test for Sunnah Fajr time validation
+    - **Property 1: Sunnah Fajr Time Validation**
+    - **Validates: Requirements 1.3**
+  - [x] 4.3 Write property test for Duha time validation
+    - **Property 2: Duha Time Validation**
+    - **Validates: Requirements 1.4**
+  - [x] 4.4 Write property test for Shaf'i/Witr time validation
+    - **Property 3: Shaf'i/Witr Time Validation**
+    - **Validates: Requirements 1.5**
+  - [x] 4.5 Create NafilaScoreService
+    - Implement calculateScore() - calculate score for a Nafila type from events
+    - Implement calculateStreak() - calculate current and longest streak
+    - Implement calculateTotalRakats() - sum all rakats for a type
+    - Implement calculateAllScores() - calculate scores for all types
+    - _Requirements: 4.4, 4.5, 4.6_
+  - [x] 4.6 Write property test for streak calculation
+    - **Property 7: Streak Calculation Consistency**
+    - **Validates: Requirements 4.4**
+  - [x] 4.7 Write property test for rakat aggregation
+    - **Property 8: Rakat Aggregation Accuracy**
+    - **Validates: Requirements 4.5, 4.6**
+
+- [x] 5. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 6. Implement provider layer
+  - [x] 6.1 Create NafilaProvider with Riverpod code generation
+    - Define NafilaState class with todayEvents, definedNafilaCompleted map, isLoading, errorMessage
+    - Implement build() to load today's Nafila events
+    - Implement logNafila() to create new event with time validation
+    - Implement updateNafila() to update existing event
+    - Implement deleteNafila() to remove event
+    - Run build_runner to generate provider code
+    - _Requirements: 1.2, 2.1, 2.2_
+  - [x] 6.2 Create NafilaScoreProvider with Riverpod code generation
+    - Define NafilaScoreState class with scores map, overallPercentage, totalRakatsAllTime
+    - Implement build() to load all Nafila scores
+    - Implement recalculateScores() to refresh scores after events change
+    - Run build_runner to generate provider code
+    - _Requirements: 4.4, 4.5_
+  - [x] 6.3 Create PrayerStatsProvider with Riverpod code generation
+    - Define PrayerStatsState class with dailyStats list, obligatoryScores, nafilaScores, selectedMonth
+    - Implement build() to load current month stats
+    - Implement loadStatsForMonth() to load stats for a specific month
+    - Aggregate prayer events and Nafila events into PrayerDayStats
+    - Run build_runner to generate provider code
+    - _Requirements: 4.1, 4.2, 4.3_
+  - [x] 6.4 Write property test for calendar day stats aggregation
+    - **Property 6: Calendar Day Stats Aggregation**
+    - **Validates: Requirements 4.2**
+
+- [x] 7. Implement UI components
+  - [x] 7.1 Create NafilaIndicatorCard widget
+    - Display thin green card with Nafila type name
+    - Show checkmark and rakat count when completed
+    - Show muted/inactive state when not completed
+    - Handle onTap for logging and onEditTap for editing
+    - _Requirements: 3.1, 3.2, 3.4_
+  - [x] 7.2 Create NafilaLogDialog widget
+    - Display Nafila type name and valid time window
+    - Provide rakat count selector (respecting min/max for type)
+    - Optional time picker for actual prayer time
+    - Optional notes field
+    - Validate time is within window before saving
+    - _Requirements: 1.2, 2.1_
+  - [x] 7.3 Create NafilaEditDialog widget
+    - Pre-populate with existing event data
+    - Allow editing rakat count, time, and notes
+    - Provide delete option
+    - _Requirements: 2.2_
+  - [x] 7.4 Write property test for Nafila chronological ordering
+    - **Property 5: Nafila Chronological Ordering**
+    - **Validates: Requirements 2.3, 3.3**
+
+- [x] 8. Integrate Nafila into Prayer Screen
+  - [x] 8.1 Update IslamicPrayerScreen to display Nafila indicators
+    - Add NafilaIndicatorCard between Fajr card and Dhuhr card (for Sunnah Fajr)
+    - Add NafilaIndicatorCard between sunrise indicator and Dhuhr card (for Duha)
+    - Add NafilaIndicatorCard after Isha card (for Shaf'i/Witr)
+    - Display custom Nafila cards in chronological order between appropriate prayers
+    - Watch nafilaProvider for state updates
+    - _Requirements: 1.1, 3.1, 3.3_
+  - [x] 8.2 Add "Add Nafila" button to prayer screen
+    - Add floating action button or icon button in app bar
+    - Open NafilaLogDialog with custom type when tapped
+    - _Requirements: 2.1_
+  - [x] 8.3 Add navigation to statistics screen
+    - Add statistics icon button to prayer screen app bar
+    - Navigate to PrayerStatisticsScreen when tapped
+    - _Requirements: 8.1, 8.2_
+
+- [x] 9. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+- [x] 10. Implement Prayer Statistics Screen
+  - [x] 10.1 Create PrayerCalendarView widget
+    - Display month calendar with navigation arrows
+    - Show colored indicators for each day based on prayer completion
+    - Use different colors/icons for obligatory vs Nafila completion
+    - Handle day tap to show details
+    - Handle month change to load new data
+    - _Requirements: 4.1, 4.2_
+  - [x] 10.2 Create PrayerStatisticsScreen
+    - Display PrayerCalendarView at top
+    - Display statistics sections below calendar
+    - Show obligatory prayer stats (completion rate, streaks per prayer)
+    - Show Nafila stats (completion rate, total rakats, streaks per type)
+    - Show custom Nafila count
+    - _Requirements: 4.1, 4.3, 4.4, 4.5, 4.6_
+  - [x] 10.3 Add route for statistics screen
+    - Add /prayers/statistics route to GoRouter configuration
+    - _Requirements: 8.2, 8.3_
+
+- [x] 11. Implement Home Screen Integration
+  - [x] 11.1 Update DailyItemsProvider to include Nafila items
+    - Check showNafilaAtHome setting before including Nafila items
+    - Create DailyItem entries for defined Sunnah prayers
+    - Show completion status (done/not done) only
+    - _Requirements: 5.1, 5.2, 5.3_
+  - [x] 11.2 Update DailyItemCard for Nafila display
+    - Handle Nafila item type with appropriate styling
+    - Navigate to prayer screen on tap
+    - _Requirements: 5.2, 5.4_
+
+- [x] 12. Implement Settings Integration
+  - [x] 12.1 Update PrayerSettingsScreen with Nafila toggle
+    - Add "Show Nafila at Home" switch
+    - Save setting when toggled
+    - _Requirements: 6.1, 6.2_
+  - [x] 12.2 Ensure setting is loaded on app launch
+    - Verify PrayerSettingsProvider loads showNafilaAtHome on init
+    - _Requirements: 6.3_
+
+- [x] 13. Final Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.

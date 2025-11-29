@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../models/daily_item.dart';
+import 'home_filter_provider.dart';
 import '../../habits/models/habit.dart';
 import '../../habits/models/enums/active_days_mode.dart';
 import '../../habits/models/enums/goal_type.dart';
@@ -9,8 +10,10 @@ import '../../tasks/tasks_repository.dart';
 import '../../tasks/task.dart';
 import '../../islamic/models/enums/prayer_type.dart';
 import '../../islamic/models/enums/prayer_status.dart';
+import '../../islamic/models/enums/nafila_type.dart';
 import '../../islamic/repositories/prayer_repository.dart';
 import '../../islamic/repositories/prayer_settings_repository.dart';
+import '../../islamic/repositories/nafila_repository.dart';
 import '../../islamic/services/prayer_time_service.dart';
 import '../../islamic/services/prayer_location_service.dart';
 import '../../islamic/services/prayer_status_service.dart';
@@ -25,6 +28,8 @@ class DailyItemsState {
   final int taskCount;
   final int prayerCount;
   final int completedPrayerCount;
+  final int nafilaCount;
+  final int completedNafilaCount;
 
   const DailyItemsState({
     required this.items,
@@ -33,6 +38,8 @@ class DailyItemsState {
     required this.taskCount,
     this.prayerCount = 0,
     this.completedPrayerCount = 0,
+    this.nafilaCount = 0,
+    this.completedNafilaCount = 0,
   });
 }
 
@@ -76,6 +83,11 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
       List<DailyItem> prayerItems = [];
       int completedPrayerCount = 0;
       
+      // Fetch Nafila items if enabled in settings
+      // **Validates: Requirements 5.1, 5.2, 5.3**
+      List<DailyItem> nafilaItems = [];
+      int completedNafilaCount = 0;
+      
       final prayerSettings = await prayerSettingsRepository.getSettings();
       if (prayerSettings.isEnabled) {
         final prayerResult = await _fetchPrayerItems(
@@ -85,13 +97,21 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
         );
         prayerItems = prayerResult.items;
         completedPrayerCount = prayerResult.completedCount;
+        
+        // Fetch Nafila items only if showNafilaAtHome is enabled
+        // **Validates: Requirements 5.1, 5.3**
+        if (prayerSettings.showNafilaAtHome) {
+          final nafilaResult = await _fetchNafilaItems(now: now);
+          nafilaItems = nafilaResult.items;
+          completedNafilaCount = nafilaResult.completedCount;
+        }
       }
       
       // Combine and sort items
-      final allItems = [...habitItems, ...taskItems, ...prayerItems];
+      final allItems = [...habitItems, ...taskItems, ...prayerItems, ...nafilaItems];
       allItems.sort(_compareItems);
       
-      // Calculate completion percentage including prayers
+      // Calculate completion percentage including prayers and Nafila
       // **Validates: Requirements 7.5**
       final completedCount = allItems.where((item) => item.isCompleted).length;
       final totalCount = allItems.length;
@@ -100,7 +120,7 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
       CoreLoggingUtility.info(
         'DailyItemsProvider',
         'build',
-        'Loaded ${habitItems.length} habits, ${taskItems.length} tasks, and ${prayerItems.length} prayers for today',
+        'Loaded ${habitItems.length} habits, ${taskItems.length} tasks, ${prayerItems.length} prayers, and ${nafilaItems.length} Nafila for today',
       );
       
       return DailyItemsState(
@@ -110,6 +130,8 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
         taskCount: taskItems.length,
         prayerCount: prayerItems.length,
         completedPrayerCount: completedPrayerCount,
+        nafilaCount: nafilaItems.length,
+        completedNafilaCount: completedNafilaCount,
       );
     } catch (e, stackTrace) {
       CoreLoggingUtility.error(
@@ -224,6 +246,67 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
     }
   }
 
+  /// Fetch Nafila items when showNafilaAtHome setting is enabled.
+  /// Shows only defined Sunnah prayers (Sunnah Fajr, Duha, Shaf'i/Witr) with
+  /// completion status (done/not done) only.
+  ///
+  /// **Validates: Requirements 5.1, 5.2, 5.3**
+  Future<_NafilaItemsResult> _fetchNafilaItems({
+    required DateTime now,
+  }) async {
+    try {
+      final nafilaRepository = NafilaRepository();
+      
+      // Get today's Nafila events
+      final events = await nafilaRepository.getEventsForDate(now);
+      
+      // Create DailyItem entries for defined Sunnah prayers only
+      // **Validates: Requirements 5.2**
+      final nafilaItems = <DailyItem>[];
+      int completedCount = 0;
+      
+      // Only include defined Nafila types (not custom)
+      final definedTypes = NafilaType.values.where((t) => t.isDefined).toList();
+      
+      for (final type in definedTypes) {
+        // Check if this Nafila type is completed today
+        final isCompleted = events.any((e) => e.nafilaType == type);
+        
+        if (isCompleted) {
+          completedCount++;
+        }
+        
+        nafilaItems.add(DailyItem(
+          id: 'nafila_${type.name}',
+          title: type.englishName,
+          type: DailyItemType.nafila,
+          isCompleted: isCompleted,
+          icon: 'mosque',
+          color: isCompleted 
+              ? const Color(0xFF4CAF50) // Green for completed
+              : const Color(0xFF9E9E9E), // Grey for not completed
+          nafilaType: type,
+          arabicName: type.arabicName,
+        ));
+      }
+      
+      CoreLoggingUtility.info(
+        'DailyItemsProvider',
+        '_fetchNafilaItems',
+        'Loaded ${nafilaItems.length} Nafila items, $completedCount completed',
+      );
+      
+      return _NafilaItemsResult(items: nafilaItems, completedCount: completedCount);
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'DailyItemsProvider',
+        '_fetchNafilaItems',
+        'Failed to fetch Nafila items: $e\n$stackTrace',
+      );
+      return const _NafilaItemsResult(items: [], completedCount: 0);
+    }
+  }
+
   /// Check if a habit is active on a specific date
   bool _isHabitActiveToday(Habit habit, DateTime date) {
     // Check active days mode
@@ -329,11 +412,12 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
       return 1;
     }
     
-    // Neither has scheduled time - maintain order (habits before tasks before prayers)
+    // Neither has scheduled time - maintain order (habits before tasks before prayers before nafila)
     final typeOrder = {
       DailyItemType.habit: 0,
       DailyItemType.task: 1,
       DailyItemType.prayer: 2,
+      DailyItemType.nafila: 3,
     };
     
     return typeOrder[a.type]!.compareTo(typeOrder[b.type]!);
@@ -371,4 +455,115 @@ class _PrayerItemsResult {
     required this.items,
     required this.completedCount,
   });
+}
+
+/// Helper class to return Nafila items and completed count
+class _NafilaItemsResult {
+  final List<DailyItem> items;
+  final int completedCount;
+
+  const _NafilaItemsResult({
+    required this.items,
+    required this.completedCount,
+  });
+}
+
+/// Provider for filtered and sorted daily items based on user preferences
+@riverpod
+Future<DailyItemsState> filteredDailyItems(Ref ref) async {
+  final dailyState = await ref.watch(dailyItemsProvider.future);
+  final filterState = ref.watch(homeFilterProvider);
+  
+  // Filter items based on visible types
+  final filteredItems = dailyState.items.where((item) {
+    switch (item.type) {
+      case DailyItemType.habit:
+        return filterState.isVisible(HomeFilterType.habits);
+      case DailyItemType.task:
+        return filterState.isVisible(HomeFilterType.tasks);
+      case DailyItemType.prayer:
+        return filterState.isVisible(HomeFilterType.prayers);
+      case DailyItemType.nafila:
+        return filterState.isVisible(HomeFilterType.sunnah);
+    }
+  }).toList();
+  
+  // Sort items based on sort preference
+  filteredItems.sort((a, b) => _compareItemsWithSort(a, b, filterState.sortType));
+  
+  // Recalculate stats for filtered items
+  final completedCount = filteredItems.where((item) => item.isCompleted).length;
+  final totalCount = filteredItems.length;
+  final percentage = totalCount > 0 ? ((completedCount / totalCount) * 100).round() : 0;
+  
+  return DailyItemsState(
+    items: filteredItems,
+    completionPercentage: percentage,
+    habitCount: filteredItems.where((i) => i.type == DailyItemType.habit).length,
+    taskCount: filteredItems.where((i) => i.type == DailyItemType.task).length,
+    prayerCount: filteredItems.where((i) => i.type == DailyItemType.prayer).length,
+    completedPrayerCount: filteredItems.where((i) => i.type == DailyItemType.prayer && i.isCompleted).length,
+    nafilaCount: filteredItems.where((i) => i.type == DailyItemType.nafila).length,
+    completedNafilaCount: filteredItems.where((i) => i.type == DailyItemType.nafila && i.isCompleted).length,
+  );
+}
+
+/// Compare items for sorting with specified sort type
+int _compareItemsWithSort(DailyItem a, DailyItem b, HomeSortType sortType) {
+  switch (sortType) {
+    case HomeSortType.time:
+      // Sort by scheduled time
+      if (a.scheduledTime != null && b.scheduledTime != null) {
+        return a.scheduledTime!.compareTo(b.scheduledTime!);
+      }
+      if (a.scheduledTime != null) return -1;
+      if (b.scheduledTime != null) return 1;
+      // Fall back to type order for items without time
+      return _getTypeOrder(a.type).compareTo(_getTypeOrder(b.type));
+      
+    case HomeSortType.type:
+      // Group by type, then by time within type
+      final typeComparison = _getTypeOrder(a.type).compareTo(_getTypeOrder(b.type));
+      if (typeComparison != 0) return typeComparison;
+      
+      // Within same type, sort by time
+      if (a.scheduledTime != null && b.scheduledTime != null) {
+        return a.scheduledTime!.compareTo(b.scheduledTime!);
+      }
+      if (a.scheduledTime != null) return -1;
+      if (b.scheduledTime != null) return 1;
+      return 0;
+      
+    case HomeSortType.category:
+      // Group Islamic items (prayers, nafila) together, then regular items
+      final aIsIslamic = a.type == DailyItemType.prayer || a.type == DailyItemType.nafila;
+      final bIsIslamic = b.type == DailyItemType.prayer || b.type == DailyItemType.nafila;
+      
+      if (aIsIslamic && !bIsIslamic) return -1; // Islamic items first
+      if (!aIsIslamic && bIsIslamic) return 1;
+      
+      // Within same category, sort by time
+      if (a.scheduledTime != null && b.scheduledTime != null) {
+        return a.scheduledTime!.compareTo(b.scheduledTime!);
+      }
+      if (a.scheduledTime != null) return -1;
+      if (b.scheduledTime != null) return 1;
+      
+      // Fall back to type order
+      return _getTypeOrder(a.type).compareTo(_getTypeOrder(b.type));
+  }
+}
+
+/// Get sort order for item types
+int _getTypeOrder(DailyItemType type) {
+  switch (type) {
+    case DailyItemType.prayer:
+      return 0;
+    case DailyItemType.nafila:
+      return 1;
+    case DailyItemType.habit:
+      return 2;
+    case DailyItemType.task:
+      return 3;
+  }
 }

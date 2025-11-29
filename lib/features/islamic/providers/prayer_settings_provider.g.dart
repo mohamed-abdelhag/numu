@@ -46,7 +46,7 @@ final class PrayerSettingsNotifierProvider
 }
 
 String _$prayerSettingsNotifierHash() =>
-    r'2ed4218187c14ff4f9fe52bec1f6fcd986a84704';
+    r'9ed248242564695a2b7fe8f94835e3b8c989a0e8';
 
 /// Provider for managing Islamic Prayer System settings.
 /// Handles enabled state, calculation method, time window, and reminder configuration.

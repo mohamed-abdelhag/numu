@@ -22,6 +22,10 @@ class DatabaseService {
   static const String prayerEventsTable = 'prayer_events';
   static const String prayerScoresTable = 'prayer_scores';
   static const String prayerSettingsTable = 'prayer_settings';
+  
+  // Nafila (voluntary prayer) tables
+  static const String nafilaEventsTable = 'nafila_events';
+  static const String nafilaScoresTable = 'nafila_scores';
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -35,7 +39,7 @@ class DatabaseService {
 
     return await openDatabase(
       path,
-      version: 13,
+      version: 14,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -89,6 +93,12 @@ class DatabaseService {
     if (oldVersion < 13) {
       // Add manual city selection columns to prayer_settings
       await _addManualCitySelection(db);
+    }
+    if (oldVersion < 14) {
+      // Add Nafila (voluntary prayer) tables
+      await _createNafilaTables(db);
+      // Add show_nafila_at_home column to prayer_settings
+      await _addShowNafilaAtHome(db);
     }
   }
   
@@ -254,6 +264,9 @@ class DatabaseService {
     
     // Create prayer tables
     await _createPrayerTables(db);
+    
+    // Create Nafila (voluntary prayer) tables
+    await _createNafilaTables(db);
     
     // Create indexes for category relationships
     await _createCategoryIndexes(db);
@@ -537,6 +550,7 @@ class DatabaseService {
         last_longitude REAL,
         selected_city_id TEXT,
         use_manual_location INTEGER NOT NULL DEFAULT 0,
+        show_nafila_at_home INTEGER NOT NULL DEFAULT 1,
         reminder_fajr_enabled INTEGER NOT NULL DEFAULT 1,
         reminder_dhuhr_enabled INTEGER NOT NULL DEFAULT 1,
         reminder_asr_enabled INTEGER NOT NULL DEFAULT 1,
@@ -564,6 +578,58 @@ class DatabaseService {
     await db.execute('''
       CREATE INDEX idx_prayer_schedules_date ON $prayerSchedulesTable (date)
     ''');
+  }
+
+  Future<void> _createNafilaTables(Database db) async {
+    // Create nafila_events table (voluntary prayer completion logs)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $nafilaEventsTable (
+        event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nafila_type TEXT NOT NULL,
+        event_date TEXT NOT NULL,
+        event_timestamp TEXT NOT NULL,
+        rakat_count INTEGER NOT NULL,
+        actual_prayer_time TEXT,
+        notes TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    // Create nafila_scores table (cached scores per Nafila type)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $nafilaScoresTable (
+        nafila_type TEXT PRIMARY KEY,
+        score REAL NOT NULL DEFAULT 0.0,
+        current_streak INTEGER NOT NULL DEFAULT 0,
+        longest_streak INTEGER NOT NULL DEFAULT 0,
+        total_rakats INTEGER NOT NULL DEFAULT 0,
+        total_completions INTEGER NOT NULL DEFAULT 0,
+        calculated_at TEXT NOT NULL,
+        last_event_date TEXT
+      )
+    ''');
+
+    // Create indexes for performance (use IF NOT EXISTS)
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_nafila_events_date ON $nafilaEventsTable (event_date)
+    ''');
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_nafila_events_type_date ON $nafilaEventsTable (nafila_type, event_date)
+    ''');
+  }
+
+  Future<void> _addShowNafilaAtHome(Database db) async {
+    // Add show_nafila_at_home column to prayer_settings table
+    // Wrapped in try-catch to handle case where column already exists
+    try {
+      await db.execute('''
+        ALTER TABLE $prayerSettingsTable ADD COLUMN show_nafila_at_home INTEGER NOT NULL DEFAULT 1
+      ''');
+    } catch (e) {
+      // Column may already exist, ignore the error
+    }
   }
 
   Future<void> close() async {

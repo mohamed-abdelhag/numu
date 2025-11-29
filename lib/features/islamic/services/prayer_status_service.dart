@@ -125,6 +125,8 @@ class PrayerStatusService {
   /// [timeWindowMinutes] - Duration of the time window in minutes
   ///
   /// Returns true if the prayer was performed within the time window.
+  /// Note: If the prayer was performed BEFORE the scheduled time, 
+  /// it's still considered "on time" (early is fine).
   static bool isWithinTimeWindow({
     required DateTime actualPrayerTime,
     required DateTime scheduledPrayerTime,
@@ -134,10 +136,9 @@ class PrayerStatusService {
       Duration(minutes: timeWindowMinutes),
     );
 
-    // Prayer is within window if it's at or after the scheduled time
-    // and before or at the window end
-    return !actualPrayerTime.isBefore(scheduledPrayerTime) &&
-        !actualPrayerTime.isAfter(windowEnd);
+    // Prayer is within window if it's before or at the window end
+    // Note: Praying BEFORE the scheduled time is considered on time (early bird)
+    return !actualPrayerTime.isAfter(windowEnd);
   }
 
   /// Gets the next pending prayer from the schedule.

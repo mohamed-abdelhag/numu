@@ -335,4 +335,25 @@ class PrayerSettingsRepository {
       rethrow;
     }
   }
+
+  /// Set whether to show Nafila prayers on the home screen.
+  ///
+  /// **Validates: Requirements 6.2**
+  Future<PrayerSettings> setShowNafilaAtHome(bool show) async {
+    try {
+      final currentSettings = await getSettings();
+      final updatedSettings = currentSettings.copyWith(
+        showNafilaAtHome: show,
+        updatedAt: DateTime.now(),
+      );
+      return await saveSettings(updatedSettings);
+    } catch (e) {
+      CoreLoggingUtility.error(
+        'PrayerSettingsRepository',
+        'setShowNafilaAtHome',
+        'Failed to set show Nafila at home: $e',
+      );
+      rethrow;
+    }
+  }
 }

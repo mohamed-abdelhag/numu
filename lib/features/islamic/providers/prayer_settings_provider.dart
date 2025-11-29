@@ -422,6 +422,42 @@ class PrayerSettingsNotifier extends _$PrayerSettingsNotifier {
       state = AsyncValue.error(e, stackTrace);
     }
   }
+
+  /// Set whether to show Nafila prayers on the home screen.
+  ///
+  /// **Validates: Requirements 6.2**
+  Future<void> setShowNafilaAtHome(bool show) async {
+    if (!_isMounted) return;
+    
+    try {
+      CoreLoggingUtility.info(
+        'PrayerSettingsProvider',
+        'setShowNafilaAtHome',
+        'Setting show Nafila at home to: $show',
+      );
+      
+      final updatedSettings = await _getRepository().setShowNafilaAtHome(show);
+      
+      if (!_isMounted) return;
+      
+      state = AsyncValue.data(updatedSettings);
+      
+      CoreLoggingUtility.info(
+        'PrayerSettingsProvider',
+        'setShowNafilaAtHome',
+        'Successfully set show Nafila at home',
+      );
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'PrayerSettingsProvider',
+        'setShowNafilaAtHome',
+        'Failed to set show Nafila at home: $e\n$stackTrace',
+      );
+      
+      if (!_isMounted) return;
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
 }
 
 /// Convenience provider for checking if the Islamic Prayer System is enabled.

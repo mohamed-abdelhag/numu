@@ -24,6 +24,7 @@ import 'package:numu/features/reminders/screens/edit_reminder_screen.dart';
 import 'package:numu/features/reminders/models/reminder.dart';
 import 'package:numu/features/islamic/screens/islamic_prayer_screen.dart';
 import 'package:numu/features/islamic/screens/prayer_settings_screen.dart';
+import 'package:numu/features/islamic/screens/prayer_statistics_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:numu/core/widgets/shell/numu_app_shell.dart';
 
@@ -306,7 +307,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           
           // Islamic Prayer System routes
-          // **Validates: Requirements 12.1, 12.2**
+          // **Validates: Requirements 12.1, 12.2, 8.2, 8.3**
           GoRoute(
             path: '/prayers',
             name: 'prayers',
@@ -319,6 +320,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                 name: 'prayer-settings',
                 pageBuilder: (context, state) => const MaterialPage(
                   child: PrayerSettingsScreen(),
+                ),
+              ),
+              GoRoute(
+                path: 'statistics',
+                name: 'prayer-statistics',
+                pageBuilder: (context, state) => const MaterialPage(
+                  child: PrayerStatisticsScreen(),
                 ),
               ),
             ],

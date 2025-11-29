@@ -81,6 +81,10 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
 
             // Reminders
             _buildRemindersSection(context, settings),
+            const SizedBox(height: 24),
+
+            // Nafila Settings
+            _buildNafilaSection(context, settings),
           ],
         ],
       ),
@@ -465,6 +469,48 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
                 ],
               );
             }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNafilaSection(BuildContext context, dynamic settings) {
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Nafila Prayers',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Configure how voluntary prayers appear in the app',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: SwitchListTile(
+            title: const Text('Show Nafila at Home'),
+            subtitle: Text(
+              settings.showNafilaAtHome
+                  ? 'Nafila prayers are shown on the home screen'
+                  : 'Nafila prayers are hidden from the home screen',
+            ),
+            value: settings.showNafilaAtHome,
+            onChanged: (value) => _toggleShowNafilaAtHome(value),
+            secondary: Icon(
+              Icons.home,
+              color: settings.showNafilaAtHome
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
           ),
         ),
       ],
@@ -910,6 +956,46 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
         'PrayerSettingsScreen',
         '_setReminderOffset',
         'Failed to set reminder offset: $e',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update setting: $e'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _toggleShowNafilaAtHome(bool show) async {
+    CoreLoggingUtility.info(
+      'PrayerSettingsScreen',
+      '_toggleShowNafilaAtHome',
+      'Setting show Nafila at home to: $show',
+    );
+
+    try {
+      await ref.read(prayerSettingsProvider.notifier).setShowNafilaAtHome(show);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              show
+                  ? 'Nafila prayers will appear on home screen'
+                  : 'Nafila prayers hidden from home screen',
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      CoreLoggingUtility.error(
+        'PrayerSettingsScreen',
+        '_toggleShowNafilaAtHome',
+        'Failed to toggle show Nafila at home: $e',
       );
 
       if (mounted) {
