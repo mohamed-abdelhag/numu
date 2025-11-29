@@ -179,7 +179,7 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
       
       for (final type in PrayerType.values) {
         final status = statuses[type] ?? PrayerStatus.pending;
-        final isCompleted = status == PrayerStatus.completed;
+        final isCompleted = status.isCompleted;
         
         if (isCompleted) {
           completedCount++;
@@ -215,6 +215,8 @@ class DailyItemsNotifier extends _$DailyItemsNotifier {
     switch (status) {
       case PrayerStatus.completed:
         return const Color(0xFF4CAF50); // Green
+      case PrayerStatus.completedLate:
+        return const Color(0xFFFF9800); // Orange
       case PrayerStatus.pending:
         return const Color(0xFF2196F3); // Blue
       case PrayerStatus.missed:

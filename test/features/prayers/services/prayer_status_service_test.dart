@@ -192,15 +192,16 @@ void main() {
           currentTime: afterWindowEnd,
           timeWindowMinutes: windowMinutes,
         );
-        expect(statusWithEvent, equals(PrayerStatus.completed),
+        expect(statusWithEvent.isCompleted, isTrue,
             reason: 'Should be completed when event exists');
 
-        // Verify status is always one of the three valid values
+        // Verify status is always one of the four valid values
         expect(
           [statusBeforeEnd, statusAfterEnd, statusWithEvent],
           everyElement(isIn([
             PrayerStatus.pending,
             PrayerStatus.completed,
+            PrayerStatus.completedLate,
             PrayerStatus.missed,
           ])),
         );
@@ -222,13 +223,14 @@ void main() {
           currentTime: now,
         );
 
-        // Status must be exactly one of the three values
+        // Status must be exactly one of the four values
         final isPending = status == PrayerStatus.pending;
         final isCompleted = status == PrayerStatus.completed;
+        final isCompletedLate = status == PrayerStatus.completedLate;
         final isMissed = status == PrayerStatus.missed;
 
         // Exactly one must be true
-        final trueCount = [isPending, isCompleted, isMissed]
+        final trueCount = [isPending, isCompleted, isCompletedLate, isMissed]
             .where((b) => b)
             .length;
         expect(trueCount, equals(1),
@@ -268,7 +270,7 @@ void main() {
             events: [event],
             currentTime: time,
           );
-          expect(status, equals(PrayerStatus.completed),
+          expect(status.isCompleted, isTrue,
               reason: 'Should be completed at time $time when event exists');
         }
       },
@@ -393,7 +395,7 @@ void main() {
         events: [event],
         currentTime: DateTime(2024, 1, 15, 12, 0),
       );
-      expect(status, equals(PrayerStatus.completed));
+      expect(status.isCompleted, isTrue);
     });
 
     test('calculateAllStatuses returns status for all five prayers', () {

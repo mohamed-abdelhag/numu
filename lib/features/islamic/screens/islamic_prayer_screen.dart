@@ -11,6 +11,7 @@ import '../providers/prayer_score_provider.dart';
 import '../widgets/prayer_card.dart';
 import '../widgets/prayer_progress_header.dart';
 import '../widgets/prayer_log_dialog.dart';
+import '../widgets/prayer_edit_dialog.dart';
 import '../widgets/next_prayer_countdown.dart';
 import '../widgets/prayer_score_display.dart';
 
@@ -131,7 +132,12 @@ class _IslamicPrayerScreenState extends ConsumerState<IslamicPrayerScreen> {
                 ? scheduleState.schedule!.getTimeForPrayer(scheduleState.nextPrayer!)
                 : null,
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+
+          // Compact stats summary for honest self-improvement
+          if (scoreState != null && !_showStatistics)
+            _buildCompactStatsSummary(context, scoreState),
+          const SizedBox(height: 16),
 
           // Show either prayer list or statistics
           if (_showStatistics && scoreState != null)
@@ -175,16 +181,105 @@ class _IslamicPrayerScreenState extends ConsumerState<IslamicPrayerScreen> {
         ...PrayerType.values.map((type) {
           final status = prayerState.statuses[type] ?? PrayerStatus.pending;
           final prayerTime = scheduleState.schedule?.getTimeForPrayer(type);
+          final event = prayerState.todayEvents
+              .where((e) => e.prayerType == type)
+              .firstOrNull;
 
           return PrayerCard(
             prayerType: type,
             prayerTime: prayerTime,
             status: status,
-            onTap: status != PrayerStatus.completed
+            onTap: !status.isCompleted
                 ? () => _showLogDialog(type, prayerTime)
+                : null,
+            onEditTap: status.isCompleted && event != null
+                ? () => _showEditDialog(type, event, prayerTime)
                 : null,
           );
         }),
+      ],
+    );
+  }
+
+  /// Compact stats summary for the prayer screen
+  /// Shows quick stats for honest self-improvement tracking
+  Widget _buildCompactStatsSummary(BuildContext context, PrayerScoreState scoreState) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.primaryContainer.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItem(
+                context,
+                Icons.trending_up,
+                '${scoreState.overallPercentage}%',
+                'Score',
+              ),
+              _buildStatItem(
+                context,
+                Icons.local_fire_department,
+                scoreState.averageCurrentStreak.toStringAsFixed(1),
+                'Avg Streak',
+              ),
+              _buildStatItem(
+                context,
+                Icons.groups,
+                '${scoreState.averageJamaahPercentage}%',
+                'Jamaah',
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Track honestly — this is for your improvement, not to impress',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
+              fontStyle: FontStyle.italic,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Single stat item widget
+  Widget _buildStatItem(
+    BuildContext context,
+    IconData icon,
+    String value,
+    String label,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 20, color: colorScheme.primary),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: colorScheme.primary,
+          ),
+        ),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+        ),
       ],
     );
   }
@@ -349,6 +444,23 @@ class _IslamicPrayerScreenState extends ConsumerState<IslamicPrayerScreen> {
       context: context,
       builder: (context) => PrayerLogDialog(
         prayerType: prayerType,
+        scheduledTime: scheduledTime,
+      ),
+    );
+  }
+
+  void _showEditDialog(PrayerType prayerType, dynamic existingEvent, DateTime? scheduledTime) {
+    CoreLoggingUtility.info(
+      'IslamicPrayerScreen',
+      '_showEditDialog',
+      'Opening edit dialog for ${prayerType.englishName}',
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => PrayerEditDialog(
+        prayerType: prayerType,
+        existingEvent: existingEvent,
         scheduledTime: scheduledTime,
       ),
     );

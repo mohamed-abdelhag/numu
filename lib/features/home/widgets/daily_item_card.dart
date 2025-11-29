@@ -212,8 +212,9 @@ class DailyItemCard extends ConsumerWidget {
   /// **Validates: Requirements 7.2, 7.3**
   Widget _buildPrayerCard(BuildContext context, WidgetRef ref, ThemeData theme) {
     final prayerStatus = item.prayerStatus ?? PrayerStatus.pending;
-    final isCompleted = item.isCompleted;
+    final isCompleted = prayerStatus.isCompleted;
     final isMissed = prayerStatus == PrayerStatus.missed;
+    final isLate = prayerStatus == PrayerStatus.completedLate;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -278,8 +279,27 @@ class DailyItemCard extends ConsumerWidget {
                         ],
                       ),
                     ],
-                    // Status indicator
-                    if (isMissed) ...[
+                    // Status indicator for late or missed
+                    if (isLate) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.schedule,
+                            size: 14,
+                            color: Colors.orange,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Late',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else if (isMissed) ...[
                       const SizedBox(height: 4),
                       Row(
                         children: [
@@ -322,6 +342,10 @@ class DailyItemCard extends ConsumerWidget {
         iconColor = const Color(0xFF4CAF50); // Green
         backgroundColor = const Color(0xFF4CAF50).withValues(alpha: 0.1);
         break;
+      case PrayerStatus.completedLate:
+        iconColor = Colors.orange;
+        backgroundColor = Colors.orange.withValues(alpha: 0.1);
+        break;
       case PrayerStatus.pending:
         iconColor = theme.colorScheme.primary;
         backgroundColor = theme.colorScheme.primary.withValues(alpha: 0.1);
@@ -356,7 +380,7 @@ class DailyItemCard extends ConsumerWidget {
     ThemeData theme,
     PrayerStatus status,
   ) {
-    // If already completed, show checkmark
+    // If already completed (on time), show green checkmark
     if (status == PrayerStatus.completed) {
       return Container(
         width: 48,
@@ -368,6 +392,23 @@ class DailyItemCard extends ConsumerWidget {
         child: const Icon(
           Icons.check,
           color: Color(0xFF4CAF50),
+          size: 24,
+        ),
+      );
+    }
+
+    // If completed late, show orange checkmark
+    if (status == PrayerStatus.completedLate) {
+      return Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.orange.withValues(alpha: 0.1),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.check,
+          color: Colors.orange,
           size: 24,
         ),
       );

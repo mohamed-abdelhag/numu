@@ -4,10 +4,12 @@ import '../models/prayer_event.dart';
 import '../models/enums/prayer_type.dart';
 import '../models/enums/prayer_status.dart';
 import '../repositories/prayer_repository.dart';
+import '../repositories/prayer_settings_repository.dart';
 import '../services/prayer_status_service.dart';
 import '../services/prayer_score_service.dart';
 import 'prayer_settings_provider.dart';
 import 'prayer_schedule_provider.dart';
+import 'prayer_score_provider.dart';
 
 part 'prayer_provider.g.dart';
 
@@ -54,6 +56,7 @@ class PrayerState {
 @riverpod
 class PrayerNotifier extends _$PrayerNotifier {
   PrayerRepository? _repository;
+  PrayerSettingsRepository? _settingsRepository;
   PrayerScoreService? _scoreService;
   
   bool _isMounted = true;
@@ -61,6 +64,7 @@ class PrayerNotifier extends _$PrayerNotifier {
   @override
   Future<PrayerState> build() async {
     _repository = PrayerRepository();
+    _settingsRepository = PrayerSettingsRepository();
     _scoreService = PrayerScoreService();
     _isMounted = true;
     
@@ -131,6 +135,12 @@ class PrayerNotifier extends _$PrayerNotifier {
     return _repository!;
   }
   
+  /// Get settings repository, ensuring it's initialized
+  PrayerSettingsRepository _getSettingsRepository() {
+    _settingsRepository ??= PrayerSettingsRepository();
+    return _settingsRepository!;
+  }
+  
   /// Get score service, ensuring it's initialized
   PrayerScoreService _getScoreService() {
     _scoreService ??= PrayerScoreService();
@@ -168,9 +178,18 @@ class PrayerNotifier extends _$PrayerNotifier {
         throw ArgumentError(validation.errorMessage);
       }
 
+      // Check mounted before async operations
+      if (!_isMounted) return;
+
       // Get current schedule to determine if within time window
-      final settings = await ref.read(prayerSettingsProvider.future);
-      final schedule = await ref.read(todayPrayerScheduleProvider.future);
+      // Use settings repository directly to avoid ref usage after async gaps
+      final settings = await _getSettingsRepository().getSettings();
+      if (!_isMounted) return;
+      
+      final scheduleState = await ref.read(prayerScheduleProvider.future);
+      if (!_isMounted) return;
+      
+      final schedule = scheduleState.schedule;
       
       bool withinTimeWindow = false;
       if (schedule != null) {
@@ -196,6 +215,7 @@ class PrayerNotifier extends _$PrayerNotifier {
 
       // Save to repository
       await _getRepository().logPrayerEvent(event);
+      if (!_isMounted) return;
 
       // Recalculate score for this prayer type
       await _getScoreService().recalculateScore(prayerType);
@@ -244,6 +264,147 @@ class PrayerNotifier extends _$PrayerNotifier {
         'Failed to delete prayer event: $e\n$stackTrace',
       );
       rethrow;
+    }
+  }
+
+  /// Update an existing prayer event (e.g., to edit the actual prayer time).
+  /// This is for honest self-improvement - be truthful about when you prayed.
+  Future<void> updatePrayerEvent({
+    required PrayerEvent existingEvent,
+    DateTime? newActualPrayerTime,
+    bool? prayedInJamaah,
+    String? notes,
+  }) async {
+    if (!_isMounted) {
+      CoreLoggingUtility.warning(
+        'PrayerProvider',
+        'updatePrayerEvent',
+        'Provider not mounted, aborting update',
+      );
+      return;
+    }
+    if (existingEvent.id == null) {
+      throw ArgumentError('Cannot update prayer event without an ID');
+    }
+
+    try {
+      CoreLoggingUtility.info(
+        'PrayerProvider',
+        'updatePrayerEvent',
+        'Starting update for event ID ${existingEvent.id}, '
+        'prayer: ${existingEvent.prayerType.englishName}, '
+        'newTime: ${newActualPrayerTime?.toIso8601String()}, '
+        'jamaah: $prayedInJamaah',
+      );
+
+      final now = DateTime.now();
+      final prayerTime = newActualPrayerTime ?? existingEvent.actualPrayerTime ?? now;
+
+      // Check mounted before async operations
+      if (!_isMounted) return;
+
+      // Get current schedule to determine if within time window
+      CoreLoggingUtility.info(
+        'PrayerProvider',
+        'updatePrayerEvent',
+        'Fetching settings and schedule...',
+      );
+      final settings = await _getSettingsRepository().getSettings();
+      if (!_isMounted) return;
+      
+      final scheduleState = await ref.read(prayerScheduleProvider.future);
+      if (!_isMounted) return;
+      
+      final schedule = scheduleState.schedule;
+      
+      bool withinTimeWindow = false;
+      if (schedule != null) {
+        final scheduledTime = schedule.getTimeForPrayer(existingEvent.prayerType);
+        withinTimeWindow = PrayerStatusService.isWithinTimeWindow(
+          actualPrayerTime: prayerTime,
+          scheduledPrayerTime: scheduledTime,
+          timeWindowMinutes: settings.timeWindowMinutes,
+        );
+        CoreLoggingUtility.info(
+          'PrayerProvider',
+          'updatePrayerEvent',
+          'Time window check: scheduledTime=${scheduledTime.toIso8601String()}, '
+          'actualTime=${prayerTime.toIso8601String()}, '
+          'windowMinutes=${settings.timeWindowMinutes}, '
+          'withinWindow=$withinTimeWindow',
+        );
+      }
+
+      // Update the prayer event
+      final updatedEvent = existingEvent.copyWith(
+        actualPrayerTime: newActualPrayerTime ?? existingEvent.actualPrayerTime,
+        prayedInJamaah: prayedInJamaah ?? existingEvent.prayedInJamaah,
+        withinTimeWindow: withinTimeWindow,
+        notes: notes ?? existingEvent.notes,
+        updatedAt: now,
+      );
+
+      CoreLoggingUtility.info(
+        'PrayerProvider',
+        'updatePrayerEvent',
+        'Saving updated event to repository: '
+        'id=${updatedEvent.id}, '
+        'actualTime=${updatedEvent.actualPrayerTime?.toIso8601String()}, '
+        'jamaah=${updatedEvent.prayedInJamaah}, '
+        'withinWindow=${updatedEvent.withinTimeWindow}',
+      );
+
+      // Save to repository
+      await _getRepository().updatePrayerEvent(updatedEvent);
+      if (!_isMounted) return;
+
+      CoreLoggingUtility.info(
+        'PrayerProvider',
+        'updatePrayerEvent',
+        'Repository update complete, recalculating score...',
+      );
+
+      // Recalculate score for this prayer type
+      await _getScoreService().recalculateScore(existingEvent.prayerType);
+
+      CoreLoggingUtility.info(
+        'PrayerProvider',
+        'updatePrayerEvent',
+        'Score recalculated, invalidating provider state for UI refresh...',
+      );
+
+      // Refresh state - this will trigger UI update
+      if (_isMounted) {
+        ref.invalidateSelf();
+        // Also invalidate score provider to refresh stats
+        ref.invalidate(prayerScoreProvider);
+        CoreLoggingUtility.info(
+          'PrayerProvider',
+          'updatePrayerEvent',
+          'Provider state invalidated - UI should refresh now',
+        );
+      }
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'PrayerProvider',
+        'updatePrayerEvent',
+        'Failed to update prayer event: $e\n$stackTrace',
+      );
+      rethrow;
+    }
+  }
+
+  /// Get today's event for a specific prayer type.
+  PrayerEvent? getEventForPrayer(PrayerType prayerType) {
+    final currentState = state.value;
+    if (currentState == null) return null;
+    
+    try {
+      return currentState.todayEvents.firstWhere(
+        (event) => event.prayerType == prayerType,
+      );
+    } catch (_) {
+      return null;
     }
   }
 

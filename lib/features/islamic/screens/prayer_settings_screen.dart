@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/navigation_provider.dart';
 import '../../../core/utils/core_logging_utility.dart';
 import '../../../core/widgets/shell/numu_app_bar.dart';
 import '../models/city.dart';
@@ -519,6 +520,10 @@ class _PrayerSettingsScreenState extends ConsumerState<PrayerSettingsScreen> {
 
     try {
       await ref.read(prayerSettingsProvider.notifier).setEnabled(enabled);
+
+      // Update prayer item visibility in navigation
+      // When disabled, the prayer nav item defaults to unchecked
+      await ref.read(navigationProvider.notifier).updatePrayerItemVisibility(enabled);
 
       if (enabled && mounted) {
         // Check location permission when enabling

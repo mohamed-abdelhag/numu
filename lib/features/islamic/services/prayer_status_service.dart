@@ -31,7 +31,8 @@ class PrayerStatusService {
   /// Calculates the status of a specific prayer.
   ///
   /// The status is determined as follows:
-  /// - **completed**: If there is a logged prayer event for this prayer type on the given date
+  /// - **completed**: If there is a logged prayer event for this prayer type on the given date within time window
+  /// - **completedLate**: If there is a logged prayer event but it was outside the time window
   /// - **missed**: If the time window has expired (current time > prayer time + window) and no event logged
   /// - **pending**: If the prayer time has arrived but window hasn't expired and no event logged
   ///
@@ -51,12 +52,18 @@ class PrayerStatusService {
     int timeWindowMinutes = defaultTimeWindowMinutes,
   }) {
     // Check if prayer has been completed (logged)
-    final hasCompletedEvent = events.any(
-      (event) => event.prayerType == prayerType,
+    final completedEvent = events.cast<PrayerEvent?>().firstWhere(
+      (event) => event?.prayerType == prayerType,
+      orElse: () => null,
     );
 
-    if (hasCompletedEvent) {
-      return PrayerStatus.completed;
+    if (completedEvent != null) {
+      // Check if it was completed within the time window
+      if (completedEvent.withinTimeWindow) {
+        return PrayerStatus.completed;
+      } else {
+        return PrayerStatus.completedLate;
+      }
     }
 
     // Get the window end time

@@ -42,7 +42,7 @@ extension DailyProgressGenerators on Any {
 
   /// Generator for a prayer DailyItem
   Generator<DailyItem> prayerItem(PrayerType type, PrayerStatus status) {
-    final isCompleted = status == PrayerStatus.completed;
+    final isCompleted = status.isCompleted;
     return always(DailyItem(
       id: 'prayer_${type.name}',
       title: type.englishName,
@@ -97,7 +97,7 @@ DailyItem _createPrayerItem(PrayerType type, PrayerStatus status) {
     id: 'prayer_${type.name}',
     title: type.englishName,
     type: DailyItemType.prayer,
-    isCompleted: status == PrayerStatus.completed,
+    isCompleted: status.isCompleted,
     prayerType: type,
     prayerStatus: status,
     arabicName: type.arabicName,
@@ -110,6 +110,8 @@ Color _getPrayerColor(PrayerStatus status) {
   switch (status) {
     case PrayerStatus.completed:
       return const Color(0xFF4CAF50);
+    case PrayerStatus.completedLate:
+      return const Color(0xFFFF9800);
     case PrayerStatus.pending:
       return const Color(0xFF2196F3);
     case PrayerStatus.missed:

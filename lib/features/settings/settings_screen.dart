@@ -762,13 +762,14 @@ class SettingsScreen extends ConsumerWidget {
     try {
       await ref.read(prayerSettingsProvider.notifier).setEnabled(enabled);
 
-      // Refresh navigation provider to add/remove prayers from sidebar
+      // Update prayer item visibility in navigation
+      // When disabled, the prayer nav item defaults to unchecked
       CoreLoggingUtility.info(
         'SettingsScreen',
         '_togglePrayerSystem',
-        'Refreshing navigation provider to update sidebar',
+        'Updating prayer navigation item visibility',
       );
-      await ref.read(navigationProvider.notifier).refresh();
+      await ref.read(navigationProvider.notifier).updatePrayerItemVisibility(enabled);
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -784,7 +785,7 @@ class SettingsScreen extends ConsumerWidget {
                   child: Text(
                     enabled 
                         ? 'Prayer tracking enabled - Prayers added to sidebar' 
-                        : 'Prayer tracking disabled',
+                        : 'Prayer tracking disabled - Prayers hidden from sidebar',
                   ),
                 ),
               ],

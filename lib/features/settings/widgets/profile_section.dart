@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:numu/features/settings/models/user_profile.dart';
 import 'package:numu/features/settings/providers/user_profile_provider.dart';
 import 'package:numu/core/utils/core_logging_utility.dart';
+import 'package:numu/core/providers/navigation_provider.dart';
 import 'package:numu/features/islamic/providers/prayer_settings_provider.dart';
-import 'package:numu/features/islamic/providers/prayer_score_provider.dart';
 
 /// ProfileSection widget displays and allows editing of user profile information
 /// within the settings screen. It supports view and edit modes with inline editing.
@@ -179,11 +179,7 @@ class _ProfileSectionState extends ConsumerState<ProfileSection> {
               ),
             ],
           ),
-          // Show prayer statistics summary when enabled
-          if (settings.isEnabled) ...[
-            const SizedBox(height: 16),
-            _buildPrayerStatisticsSummary(theme),
-          ],
+          // Stats moved to prayer screen for honest improvement tracking
         ],
       ),
       loading: () => Row(
@@ -234,139 +230,6 @@ class _ProfileSectionState extends ConsumerState<ProfileSection> {
     );
   }
 
-  /// Builds the prayer statistics summary display.
-  ///
-  /// **Validates: Requirements 9.3**
-  Widget _buildPrayerStatisticsSummary(ThemeData theme) {
-    final prayerScoreAsync = ref.watch(prayerScoreProvider);
-
-    return prayerScoreAsync.when(
-      data: (scoreState) {
-        if (!scoreState.isEnabled) {
-          return const SizedBox.shrink();
-        }
-
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStatItem(
-                theme,
-                Icons.trending_up,
-                '${scoreState.overallPercentage}%',
-                'Score',
-              ),
-              _buildStatItem(
-                theme,
-                Icons.local_fire_department,
-                scoreState.averageCurrentStreak.toStringAsFixed(1),
-                'Avg Streak',
-              ),
-              _buildStatItem(
-                theme,
-                Icons.groups,
-                '${scoreState.averageJamaahPercentage}%',
-                'Jamaah',
-              ),
-            ],
-          ),
-        );
-      },
-      loading: () => Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Center(
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          ),
-        ),
-      ),
-      error: (error, stackTrace) {
-        CoreLoggingUtility.error(
-          'ProfileSection',
-          '_buildPrayerStatisticsSummary',
-          'Error loading prayer scores: $error\n$stackTrace',
-        );
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 16,
-                color: theme.colorScheme.error,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Unable to load prayer statistics',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.error,
-                  ),
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.refresh, size: 16),
-                onPressed: () {
-                  ref.invalidate(prayerScoreProvider);
-                },
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  /// Builds a single statistic item for the prayer summary.
-  Widget _buildStatItem(
-    ThemeData theme,
-    IconData icon,
-    String value,
-    String label,
-  ) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          icon,
-          size: 20,
-          color: theme.colorScheme.primary,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: theme.colorScheme.primary,
-          ),
-        ),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-      ],
-    );
-  }
-
   /// Toggles the Islamic Prayer System enabled state from profile.
   ///
   /// **Validates: Requirements 9.1, 9.2**
@@ -379,6 +242,10 @@ class _ProfileSectionState extends ConsumerState<ProfileSection> {
 
     try {
       await ref.read(prayerSettingsProvider.notifier).setEnabled(enabled);
+
+      // Update prayer item visibility in navigation
+      // When disabled, the prayer nav item defaults to unchecked
+      await ref.read(navigationProvider.notifier).updatePrayerItemVisibility(enabled);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

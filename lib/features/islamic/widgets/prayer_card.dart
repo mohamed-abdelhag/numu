@@ -10,6 +10,7 @@ class PrayerCard extends StatelessWidget {
   final DateTime? prayerTime;
   final PrayerStatus status;
   final VoidCallback? onTap;
+  final VoidCallback? onEditTap;
 
   const PrayerCard({
     super.key,
@@ -17,12 +18,14 @@ class PrayerCard extends StatelessWidget {
     this.prayerTime,
     required this.status,
     this.onTap,
+    this.onEditTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final isCompleted = status.isCompleted;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -30,7 +33,7 @@ class PrayerCard extends StatelessWidget {
       elevation: 0,
       color: _getBackgroundColor(colorScheme),
       child: InkWell(
-        onTap: onTap,
+        onTap: isCompleted ? onEditTap : onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -76,8 +79,23 @@ class PrayerCard extends StatelessWidget {
                 ),
               ),
 
-              // Status badge
-              _buildStatusBadge(context),
+              // Status badge with edit hint for completed prayers
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  _buildStatusBadge(context),
+                  if (isCompleted && onEditTap != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Tap to edit',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurface.withValues(alpha: 0.5),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ],
           ),
         ),
@@ -93,6 +111,10 @@ class PrayerCard extends StatelessWidget {
       case PrayerStatus.completed:
         icon = Icons.check_circle;
         color = Colors.green;
+        break;
+      case PrayerStatus.completedLate:
+        icon = Icons.check_circle;
+        color = Colors.orange;
         break;
       case PrayerStatus.missed:
         icon = Icons.cancel;
@@ -131,6 +153,11 @@ class PrayerCard extends StatelessWidget {
         backgroundColor = Colors.green.withValues(alpha: 0.15);
         textColor = Colors.green;
         break;
+      case PrayerStatus.completedLate:
+        label = 'Late';
+        backgroundColor = Colors.orange.withValues(alpha: 0.15);
+        textColor = Colors.orange;
+        break;
       case PrayerStatus.missed:
         label = 'Missed';
         backgroundColor = Colors.red.withValues(alpha: 0.15);
@@ -163,6 +190,8 @@ class PrayerCard extends StatelessWidget {
     switch (status) {
       case PrayerStatus.completed:
         return Colors.green.withValues(alpha: 0.05);
+      case PrayerStatus.completedLate:
+        return Colors.orange.withValues(alpha: 0.05);
       case PrayerStatus.missed:
         return Colors.red.withValues(alpha: 0.05);
       case PrayerStatus.pending:

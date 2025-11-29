@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/navigation_provider.dart';
 import '../../islamic/providers/prayer_settings_provider.dart';
 import '../../islamic/services/prayer_location_service.dart';
 import '../../../core/utils/core_logging_utility.dart';
@@ -146,6 +147,9 @@ class _PrayerOnboardingCardState extends ConsumerState<PrayerOnboardingCard> {
     try {
       await ref.read(prayerSettingsProvider.notifier).setEnabled(true);
 
+      // Update prayer item visibility in navigation to enabled
+      await ref.read(navigationProvider.notifier).updatePrayerItemVisibility(true);
+
       CoreLoggingUtility.info(
         'PrayerOnboardingCard',
         '_enablePrayerSystem',
@@ -180,6 +184,9 @@ class _PrayerOnboardingCardState extends ConsumerState<PrayerOnboardingCard> {
 
     try {
       await ref.read(prayerSettingsProvider.notifier).setEnabled(false);
+
+      // Update prayer item visibility in navigation to disabled (unchecked by default)
+      await ref.read(navigationProvider.notifier).updatePrayerItemVisibility(false);
     } catch (e) {
       CoreLoggingUtility.error(
         'PrayerOnboardingCard',

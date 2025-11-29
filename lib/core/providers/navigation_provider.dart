@@ -116,36 +116,41 @@ class NavigationNotifier extends _$NavigationNotifier {
       // Start with default items
       List<NavigationItem> items = List.from(_defaultItems);
 
-      // Check if Islamic Prayer System is enabled and add prayer item
+      // Always add prayer item to navigation, but set enabled based on prayer settings
+      // When prayer is OFF, default to unchecked (but user can still enable it manually)
       // **Validates: Requirements 12.1, 12.3**
       try {
         final prayerSettings = await _prayerSettingsRepository.getSettings();
-        if (prayerSettings.isEnabled) {
-          // Insert prayer item after habits (index 3, before reminders)
-          final habitsIndex = items.indexWhere((item) => item.id == 'habits');
-          if (habitsIndex != -1) {
-            items.insert(habitsIndex + 1, _prayerItem);
-          } else {
-            // Fallback: insert before settings
-            final settingsIndex = items.indexWhere((item) => item.id == 'settings');
-            if (settingsIndex != -1) {
-              items.insert(settingsIndex, _prayerItem);
-            } else {
-              items.add(_prayerItem);
-            }
-          }
-          CoreLoggingUtility.info(
-            'NavigationNotifier',
-            '_loadNavigationItems',
-            'Added prayer navigation item (Islamic Prayer System enabled)',
-          );
+        
+        // Check if there's a saved visibility preference for prayers
+        final savedPrayerVisibility = visibility['prayers'];
+        
+        // Determine if prayer item should be enabled:
+        // - If user has explicitly set visibility, use that
+        // - Otherwise, default to prayer system enabled state
+        final bool prayerItemEnabled = savedPrayerVisibility ?? prayerSettings.isEnabled;
+        
+        // Create prayer item with appropriate enabled state
+        final prayerItemWithState = _prayerItem.copyWith(isEnabled: prayerItemEnabled);
+        
+        // Insert prayer item after habits (index 3, before reminders)
+        final habitsIndex = items.indexWhere((item) => item.id == 'habits');
+        if (habitsIndex != -1) {
+          items.insert(habitsIndex + 1, prayerItemWithState);
         } else {
-          CoreLoggingUtility.info(
-            'NavigationNotifier',
-            '_loadNavigationItems',
-            'Prayer navigation item hidden (Islamic Prayer System disabled)',
-          );
+          // Fallback: insert before settings
+          final settingsIndex = items.indexWhere((item) => item.id == 'settings');
+          if (settingsIndex != -1) {
+            items.insert(settingsIndex, prayerItemWithState);
+          } else {
+            items.add(prayerItemWithState);
+          }
         }
+        CoreLoggingUtility.info(
+          'NavigationNotifier',
+          '_loadNavigationItems',
+          'Added prayer navigation item (enabled: $prayerItemEnabled, prayerSystemEnabled: ${prayerSettings.isEnabled})',
+        );
       } catch (e) {
         CoreLoggingUtility.warning(
           'NavigationNotifier',
@@ -582,6 +587,58 @@ class NavigationNotifier extends _$NavigationNotifier {
         'NavigationNotifier',
         'removeCategoryItem',
         'Failed to remove category item: $e',
+      );
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
+  /// Updates the prayer item visibility when the prayer system is toggled.
+  /// When prayer system is disabled, the prayer nav item defaults to unchecked.
+  /// The user can still manually enable it from settings if they want.
+  Future<void> updatePrayerItemVisibility(bool prayerSystemEnabled) async {
+    if (!state.hasValue) {
+      CoreLoggingUtility.warning(
+        'NavigationNotifier',
+        'updatePrayerItemVisibility',
+        'Cannot update prayer item: state not loaded',
+      );
+      return;
+    }
+
+    try {
+      final currentState = state.requireValue;
+
+      CoreLoggingUtility.info(
+        'NavigationNotifier',
+        'updatePrayerItemVisibility',
+        'Updating prayer item visibility, system enabled: $prayerSystemEnabled',
+      );
+
+      // Update the prayer item's enabled state
+      final updatedItems = currentState.map((item) {
+        if (item.id == 'prayers') {
+          // When prayer system is disabled, default the nav item to unchecked
+          // When enabled, default to checked
+          return item.copyWith(isEnabled: prayerSystemEnabled);
+        }
+        return item;
+      }).toList();
+
+      state = AsyncValue.data(updatedItems);
+
+      // Also save this preference so it persists
+      await saveChanges();
+
+      CoreLoggingUtility.info(
+        'NavigationNotifier',
+        'updatePrayerItemVisibility',
+        'Successfully updated prayer item visibility to: $prayerSystemEnabled',
+      );
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'NavigationNotifier',
+        'updatePrayerItemVisibility',
+        'Failed to update prayer item visibility: $e',
       );
       state = AsyncValue.error(e, stackTrace);
     }

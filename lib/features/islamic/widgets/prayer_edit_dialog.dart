@@ -1,39 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/utils/core_logging_utility.dart';
 import '../models/enums/prayer_type.dart';
+import '../models/prayer_event.dart';
 import '../providers/prayer_provider.dart';
 import '../providers/prayer_settings_provider.dart';
 
-/// Dialog for logging a prayer as completed.
-/// Allows marking prayer with Jamaah option and specifying actual prayer time.
-///
-/// **Validates: Requirements 2.1, 2.2, 2.3, 6.4**
-class PrayerLogDialog extends ConsumerStatefulWidget {
+/// Dialog for editing a completed prayer event.
+/// Allows editing the actual prayer time and jamaah status.
+/// Includes honest messaging - this is for improvement, not to impress.
+class PrayerEditDialog extends ConsumerStatefulWidget {
   final PrayerType prayerType;
+  final PrayerEvent existingEvent;
   final DateTime? scheduledTime;
 
-  const PrayerLogDialog({
+  const PrayerEditDialog({
     super.key,
     required this.prayerType,
+    required this.existingEvent,
     this.scheduledTime,
   });
 
   @override
-  ConsumerState<PrayerLogDialog> createState() => _PrayerLogDialogState();
+  ConsumerState<PrayerEditDialog> createState() => _PrayerEditDialogState();
 }
 
-class _PrayerLogDialogState extends ConsumerState<PrayerLogDialog> {
-  bool _prayedInJamaah = false;
-  bool _specifyTime = false;
-  TimeOfDay _selectedTime = TimeOfDay.now();
+class _PrayerEditDialogState extends ConsumerState<PrayerEditDialog> {
+  late bool _prayedInJamaah;
+  late TimeOfDay _selectedTime;
   bool _isLoading = false;
-  final TextEditingController _notesController = TextEditingController();
-  int _timeWindowMinutes = 30; // Default, will be loaded from settings
+  late TextEditingController _notesController;
+  int _timeWindowMinutes = 30;
 
   @override
   void initState() {
     super.initState();
-    _selectedTime = TimeOfDay.now();
+    CoreLoggingUtility.info(
+      'PrayerEditDialog',
+      'initState',
+      'Opening edit dialog for ${widget.prayerType.englishName}, event ID: ${widget.existingEvent.id}',
+    );
+    _prayedInJamaah = widget.existingEvent.prayedInJamaah;
+    final actualTime = widget.existingEvent.actualPrayerTime ?? 
+                       widget.existingEvent.eventTimestamp;
+    _selectedTime = TimeOfDay.fromDateTime(actualTime);
+    _notesController = TextEditingController(text: widget.existingEvent.notes ?? '');
     _loadSettings();
   }
 
@@ -56,38 +67,37 @@ class _PrayerLogDialogState extends ConsumerState<PrayerLogDialog> {
     super.dispose();
   }
 
-  /// Check if the selected/current time is before the prayer's scheduled time
+  /// Check if the selected time is before the prayer's scheduled time
   bool _isBeforePrayerTime() {
     if (widget.scheduledTime == null) return false;
     
     final now = DateTime.now();
-    final prayerDateTime = _specifyTime
-        ? DateTime(now.year, now.month, now.day, _selectedTime.hour, _selectedTime.minute)
-        : now;
+    final selectedDateTime = DateTime(
+      now.year, now.month, now.day, 
+      _selectedTime.hour, _selectedTime.minute
+    );
     
-    return prayerDateTime.isBefore(widget.scheduledTime!);
+    return selectedDateTime.isBefore(widget.scheduledTime!);
   }
 
-  /// Check if the selected/current time is after the time window (late)
+  /// Check if the selected time is after the time window (late)
   bool _isLate() {
     if (widget.scheduledTime == null) return false;
     
     final now = DateTime.now();
-    final prayerDateTime = _specifyTime
-        ? DateTime(now.year, now.month, now.day, _selectedTime.hour, _selectedTime.minute)
-        : now;
+    final selectedDateTime = DateTime(
+      now.year, now.month, now.day, 
+      _selectedTime.hour, _selectedTime.minute
+    );
     
     final windowEnd = widget.scheduledTime!.add(Duration(minutes: _timeWindowMinutes));
-    return prayerDateTime.isAfter(windowEnd);
+    return selectedDateTime.isAfter(windowEnd);
   }
 
-  /// Get the time that will be used for logging
-  DateTime _getEffectivePrayerTime() {
+  /// Get the selected prayer time as DateTime
+  DateTime _getSelectedPrayerTime() {
     final now = DateTime.now();
-    if (_specifyTime) {
-      return DateTime(now.year, now.month, now.day, _selectedTime.hour, _selectedTime.minute);
-    }
-    return now;
+    return DateTime(now.year, now.month, now.day, _selectedTime.hour, _selectedTime.minute);
   }
 
   @override
@@ -106,7 +116,7 @@ class _PrayerLogDialogState extends ConsumerState<PrayerLogDialog> {
               shape: BoxShape.circle,
             ),
             child: Icon(
-              Icons.mosque,
+              Icons.edit,
               color: colorScheme.primary,
               size: 24,
             ),
@@ -117,7 +127,7 @@ class _PrayerLogDialogState extends ConsumerState<PrayerLogDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Log ${widget.prayerType.englishName}',
+                  'Edit ${widget.prayerType.englishName}',
                   style: theme.textTheme.titleLarge,
                 ),
                 Text(
@@ -136,6 +146,36 @@ class _PrayerLogDialogState extends ConsumerState<PrayerLogDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Honest reminder banner
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.info_outline,
+                    size: 20,
+                    color: Colors.blue,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Be honest — this is for your improvement, not to impress anyone 💙',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.blue.shade800,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
             // Scheduled time info
             if (widget.scheduledTime != null) ...[
               Container(
@@ -164,23 +204,62 @@ class _PrayerLogDialogState extends ConsumerState<PrayerLogDialog> {
               const SizedBox(height: 12),
             ],
 
-            // Status info banner - shows when prayer will be marked
+            // Status info banner - shows validation status
             _buildStatusInfoBanner(theme, colorScheme),
+            const SizedBox(height: 12),
+
+            // Time picker
+            Text(
+              'Actual Prayer Time',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            InkWell(
+              onTap: _pickTime,
+              borderRadius: BorderRadius.circular(8),
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.access_time),
+                ),
+                child: Text(
+                  _formatTimeOfDay(_selectedTime),
+                  style: theme.textTheme.bodyLarge,
+                ),
+              ),
+            ),
             const SizedBox(height: 16),
 
             // Jamaah checkbox
-            _buildJamaahCheckbox(theme, colorScheme),
-            const SizedBox(height: 16),
-
-            // Specify time option
-            _buildSpecifyTimeOption(theme, colorScheme),
-
-            // Time picker (if specifying time)
-            if (_specifyTime) ...[
-              const SizedBox(height: 12),
-              _buildTimePicker(theme, colorScheme),
-            ],
-
+            Container(
+              decoration: BoxDecoration(
+                color: _prayedInJamaah
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+                border: _prayedInJamaah
+                    ? Border.all(color: Colors.green.withValues(alpha: 0.5))
+                    : null,
+              ),
+              child: CheckboxListTile(
+                title: const Text('Prayed in Jamaah (جماعة)'),
+                subtitle: const Text('Congregational prayer'),
+                value: _prayedInJamaah,
+                onChanged: (value) {
+                  setState(() {
+                    _prayedInJamaah = value ?? false;
+                  });
+                },
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                controlAffinity: ListTileControlAffinity.leading,
+                secondary: Icon(
+                  Icons.groups,
+                  color: _prayedInJamaah ? Colors.green : colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
             const SizedBox(height: 16),
 
             // Notes field
@@ -203,7 +282,7 @@ class _PrayerLogDialogState extends ConsumerState<PrayerLogDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: _isLoading || _isBeforePrayerTime() ? null : _logPrayer,
+          onPressed: _isLoading || _isBeforePrayerTime() ? null : _updatePrayer,
           style: _isLate()
               ? FilledButton.styleFrom(
                   backgroundColor: Colors.orange,
@@ -216,47 +295,17 @@ class _PrayerLogDialogState extends ConsumerState<PrayerLogDialog> {
                   height: 16,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : Text(_isLate() ? 'Mark as Late' : 'Mark Complete'),
+              : Text(_isLate() ? 'Save as Late' : 'Save Changes'),
         ),
       ],
     );
   }
 
-  Widget _buildJamaahCheckbox(ThemeData theme, ColorScheme colorScheme) {
-    return Container(
-      decoration: BoxDecoration(
-        color: _prayedInJamaah
-            ? Colors.green.withValues(alpha: 0.1)
-            : colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-        border: _prayedInJamaah
-            ? Border.all(color: Colors.green.withValues(alpha: 0.5))
-            : null,
-      ),
-      child: CheckboxListTile(
-        title: const Text('Prayed in Jamaah (جماعة)'),
-        subtitle: const Text('Congregational prayer'),
-        value: _prayedInJamaah,
-        onChanged: (value) {
-          setState(() {
-            _prayedInJamaah = value ?? false;
-          });
-        },
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-        controlAffinity: ListTileControlAffinity.leading,
-        secondary: Icon(
-          Icons.groups,
-          color: _prayedInJamaah ? Colors.green : colorScheme.onSurfaceVariant,
-        ),
-      ),
-    );
-  }
-
-  /// Build status info banner showing when prayer will be marked
+  /// Build status info banner showing validation status
   Widget _buildStatusInfoBanner(ThemeData theme, ColorScheme colorScheme) {
     final isBeforePrayer = _isBeforePrayerTime();
     final isLate = _isLate();
-    final effectiveTime = _getEffectivePrayerTime();
+    final effectiveTime = _getSelectedPrayerTime();
 
     // If before prayer time, show error banner
     if (isBeforePrayer) {
@@ -277,7 +326,7 @@ class _PrayerLogDialogState extends ConsumerState<PrayerLogDialog> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Cannot mark prayer before its scheduled time',
+                'Cannot set time before the scheduled prayer time',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: Colors.red.shade800,
                 ),
@@ -307,7 +356,7 @@ class _PrayerLogDialogState extends ConsumerState<PrayerLogDialog> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Prayer will be marked as late (${_formatTime(effectiveTime)})',
+                'Will be marked as late (${_formatTime(effectiveTime)})',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: Colors.orange.shade800,
                 ),
@@ -336,46 +385,13 @@ class _PrayerLogDialogState extends ConsumerState<PrayerLogDialog> {
           const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Prayer will be marked now (${_formatTime(effectiveTime)})',
+              'On time (${_formatTime(effectiveTime)})',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: Colors.green.shade800,
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSpecifyTimeOption(ThemeData theme, ColorScheme colorScheme) {
-    return CheckboxListTile(
-      title: const Text('Specify actual prayer time'),
-      subtitle: const Text('When you actually prayed'),
-      value: _specifyTime,
-      onChanged: (value) {
-        setState(() {
-          _specifyTime = value ?? false;
-        });
-      },
-      contentPadding: EdgeInsets.zero,
-      controlAffinity: ListTileControlAffinity.leading,
-    );
-  }
-
-  Widget _buildTimePicker(ThemeData theme, ColorScheme colorScheme) {
-    return InkWell(
-      onTap: _pickTime,
-      borderRadius: BorderRadius.circular(8),
-      child: InputDecorator(
-        decoration: const InputDecoration(
-          labelText: 'Actual Prayer Time',
-          border: OutlineInputBorder(),
-          suffixIcon: Icon(Icons.access_time),
-        ),
-        child: Text(
-          _formatTimeOfDay(_selectedTime),
-          style: theme.textTheme.bodyLarge,
-        ),
       ),
     );
   }
@@ -387,19 +403,29 @@ class _PrayerLogDialogState extends ConsumerState<PrayerLogDialog> {
     );
 
     if (picked != null && mounted) {
+      CoreLoggingUtility.info(
+        'PrayerEditDialog',
+        '_pickTime',
+        'Time picked: ${picked.hour}:${picked.minute}',
+      );
       setState(() {
         _selectedTime = picked;
       });
     }
   }
 
-  Future<void> _logPrayer() async {
-    // Validate - cannot mark before prayer time
+  Future<void> _updatePrayer() async {
+    // Validate - cannot set time before prayer time
     if (_isBeforePrayerTime()) {
+      CoreLoggingUtility.warning(
+        'PrayerEditDialog',
+        '_updatePrayer',
+        'Attempted to set time before scheduled prayer time',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Cannot mark prayer before its scheduled time'),
+            content: const Text('Cannot set time before the scheduled prayer time'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -412,49 +438,62 @@ class _PrayerLogDialogState extends ConsumerState<PrayerLogDialog> {
     });
 
     try {
-      // Calculate actual prayer time if specified
-      DateTime? actualPrayerTime;
-      if (_specifyTime) {
-        final now = DateTime.now();
-        actualPrayerTime = DateTime(
-          now.year,
-          now.month,
-          now.day,
-          _selectedTime.hour,
-          _selectedTime.minute,
-        );
-      }
+      // Calculate new actual prayer time
+      final now = DateTime.now();
+      final newActualPrayerTime = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        _selectedTime.hour,
+        _selectedTime.minute,
+      );
 
-      await ref.read(prayerProvider.notifier).logPrayer(
-            prayerType: widget.prayerType,
-            actualPrayerTime: actualPrayerTime,
+      CoreLoggingUtility.info(
+        'PrayerEditDialog',
+        '_updatePrayer',
+        'Updating ${widget.prayerType.englishName}: '
+        'newTime=${newActualPrayerTime.toIso8601String()}, '
+        'jamaah=$_prayedInJamaah, '
+        'eventId=${widget.existingEvent.id}',
+      );
+
+      await ref.read(prayerProvider.notifier).updatePrayerEvent(
+            existingEvent: widget.existingEvent,
+            newActualPrayerTime: newActualPrayerTime,
             prayedInJamaah: _prayedInJamaah,
             notes: _notesController.text.isNotEmpty ? _notesController.text : null,
           );
 
+      CoreLoggingUtility.info(
+        'PrayerEditDialog',
+        '_updatePrayer',
+        'Update completed successfully, closing dialog',
+      );
+
       if (mounted) {
         Navigator.of(context).pop(true);
-        final isLate = _isLate();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isLate 
-                  ? '${widget.prayerType.englishName} logged as late'
-                  : '${widget.prayerType.englishName} logged successfully!',
+              '${widget.prayerType.englishName} updated — honesty is the best policy! 🙏',
             ),
-            backgroundColor: isLate ? Colors.orange : null,
             duration: const Duration(seconds: 2),
           ),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      CoreLoggingUtility.error(
+        'PrayerEditDialog',
+        '_updatePrayer',
+        'Failed to update prayer: $e\n$stackTrace',
+      );
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to log prayer: $e'),
+            content: Text('Failed to update prayer: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
